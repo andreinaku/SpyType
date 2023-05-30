@@ -85,21 +85,6 @@ class VarAssign(hdict):
         for varname in common_keys:
             newvi[varname] = deepcopy(vi1[varname])
         return newvi, r1, r2
-        # for varname in common_keys:
-        #     if vi1[varname] == vi2[varname]:
-        #         newvi[varname] = deepcopy(vi1[varname])
-        #         continue
-        #     if SPECTYPE_MARKER in vi1[varname].varexp and SPECTYPE_MARKER not in vi2[varname].varexp:
-        #         new_vtype = deepcopy(vi2[varname])
-        #     elif SPECTYPE_MARKER not in vi1[varname].varexp and SPECTYPE_MARKER in vi2[varname].varexp:
-        #         new_vtype = deepcopy(vi1[varname])
-        #     else:
-        #         new_vtype = generate_new_vtype(vi1[varname], all_vtypes)
-        #     repl[vi1[varname]] = new_vtype
-        #     repl[vi2[varname]] = new_vtype
-        #     newvi[varname] = new_vtype
-        #     all_vtypes.add(new_vtype)
-        # return newvi, r1, r2
 
     @staticmethod
     def glb(vi1, vi2):
@@ -889,6 +874,38 @@ class Context(hdict):
                 continue
             newtd[vt] = deepcopy(self[replace_with])
         return newtd
+
+    def squash_te(self, te: TypeExpression):
+        # list<set<T_c>>, where, in context, we have T_c:str+float -> list<set<str+float>>
+        newte = TypeExpression()
+        for t in te:
+            if isinstance(t, VarType):
+                if t not in self:  # unconstrained vartype
+                    # newte.add(t)
+                    newte.add(VarType('T_any'))
+                else:
+                    newte |= self.squash_te(self[t][0])
+            else:
+                if t.contains:
+                    newte.add(PyType(t.ptype, self.squash_te(t.contains)))
+                else:
+                    newte.add(t)
+        return newte
+
+    def __eq__(self, other):
+        for vt, types in self.items():
+            if vt not in other:
+                return False
+            if len(types) != 1 or len(other[vt]) != 1:
+                raise RuntimeError('More than one TE not supported in __eq__')
+            te1 = self.squash_te(types[0])
+            te2 = self.squash_te(other[vt][0])
+            if te1 != te2:
+                return False
+        return True
+
+    def __hash__(self):
+        return super().__hash__()
 
 
 class AbsState:

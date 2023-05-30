@@ -7,7 +7,8 @@ class TestErrror(Exception):
 
 def translate_test(arg, trans_func, expected):
     result = trans_func(arg)
-    if not result.same_as(expected):
+    if hash(result) != hash(expected):
+        # if not result.same_as(expected):
         raise TestErrror("ERROR\nExpected: ", expected, "\nGot: ", result)
     print(trans_func.__name__ + "(" + str(locals()["arg"]) + ")" + " OK!")
 
@@ -61,6 +62,12 @@ def te_tests():
                expected=True)
     types_test(r'int+float', r'int+str', trans_func=Translator.translate_te, func=TypeExpression.__le__,
                raise_exc=RuntimeError("Cannot compare types"))
+    types_test(r'int+float', r'int+float', trans_func=Translator.translate_te, func=TypeExpression.__eq__,
+               expected=True)
+    types_test(r'int+float', r'int+float+T_b', trans_func=Translator.translate_te, func=TypeExpression.__eq__,
+               expected=False)
+    types_test(r'int+float+T_a', r'int+float+T_b+T_c', trans_func=Translator.translate_te, func=TypeExpression.__eq__,
+               expected=True)
 
 
 def va_tests():
@@ -83,6 +90,32 @@ def ctx_tests():
     translate_test(r'T_a:int+float /\ T_b:list<set<str>> /\ T_c:float+str', Translator.translate_ctx,
                    expected_translation)
 
+    # r'T_a:T_b'
+    expected_translation = Context([
+        ('T_a', hset({TypeExpression([VarType('T_b')])}))
+    ])
+    translate_test(r'T_a:T_b', Translator.translate_ctx, expected_translation)
+
+    # r'T_a:int+float /\ T_b:T_c /\ T_c:float+str'
+    expected_translation = Context([
+        ('T_a', hset({TypeExpression([PyType(int), PyType(float)])})),
+        ('T_b', hset({TypeExpression([VarType('T_c')])})),
+        ('T_c', hset({TypeExpression([PyType(float), PyType(str)])}))
+    ])
+    translate_test(r'T_a:int+float /\ T_b:T_c /\ T_c:float+str', Translator.translate_ctx,
+                   expected_translation)
+
+    types_test(r'T_a:list<T_b> /\ T_b:set<int+str>',
+               r'T_a:list<set<int+str>> /\ T_b:set<int+str>',
+               func=Context.__eq__,
+               trans_func=Translator.translate_ctx,
+               expected=True)
+    types_test(r'T_a:list<T_b>',
+               r'T_a:list<T_c>',
+               func=Context.__eq__,
+               trans_func=Translator.translate_ctx,
+               expected=True)
+
 
 def tc_tests():
     # r'(T_a:int+float /\ T_b:list<set<str>> /\ T_c:float+str) \/ (T_a:int /\ T_b:int /\ T_c:int)'
@@ -96,7 +129,9 @@ def tc_tests():
         ('T_b', hset({TypeExpression([PyType(int)])})),
         ('T_c', hset({TypeExpression([PyType(int)])}))
     ])
-    expected_translation = TypeConstraint({ctx1, ctx2})
+    expected_translation = TypeConstraint()
+    expected_translation.add(ctx1)
+    expected_translation.add(ctx2)
     translate_test(r'(T_a:int+float /\ T_b:list<set<str>> /\ T_c:float+str) \/ (T_a:int /\ T_b:int /\ T_c:int)',
                    Translator.translate_tc, expected_translation)
 
@@ -115,7 +150,7 @@ def as_tests():
     ])
     ctx2 = Context([
         ('T_a', hset({TypeExpression([PyType(float)])})),
-        ('T_b', hset({VarType('T_c')})),
+        ('T_b', hset({TypeExpression([VarType('T_c')])})),
         ('T_c', hset({TypeExpression([PyType(float)])}))
     ])
     tc = TypeConstraint({ctx1, ctx2})
@@ -132,3 +167,5 @@ if __name__ == "__main__":
     ctx_tests()
     print('\n----------------\n')
     tc_tests()
+    print('\n----------------\n')
+    as_tests()

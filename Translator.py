@@ -153,6 +153,6 @@ class Translator:
             (str_va, str_tc) = (str_as, '')
         else:
             (str_va, str_tc) = str_as.split(r' ^ ')
-        va = Translator.translate_vinfo(str_va)
+        va = Translator.translate_va(str_va)
         tc = Translator.translate_tc(str_tc)
         return AbsState(va, tc)

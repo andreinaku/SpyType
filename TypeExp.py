@@ -91,9 +91,6 @@ class GenericType:
         else:
             raise RuntimeError('Intersection case not treated: {} & {}'.format(self, other))
 
-    def same_as(self, other):
-        return self == other
-
 
 class PyType(GenericType):
     def __init__(self, ptype, contains=None):
@@ -534,6 +531,25 @@ class TypeExpression(hset):
         if sign2 == SIGN_LE:
             return True
         return False
+
+    def __eq__(self, other):
+        if not self.comparable(other):
+            raise RuntimeError('Cannot compare types')
+        lv1 = self.get_level()
+        lv2 = other.get_level()
+        has_vartype1 = any(isinstance(t, VarType) for t in lv1)
+        has_vartype2 = any(isinstance(t, VarType) for t in lv2)
+        if (has_vartype1 and has_vartype2) or (not has_vartype1 and not has_vartype2):
+            ptypes1 = self.get_pytypes()
+            ptypes2 = other.get_pytypes()
+            if ptypes1 != ptypes2:
+                return False
+        else:
+            return False
+        return True
+
+    def __hash__(self):
+        return super().__hash__()
 
     # def __contains__(self, item):
     #     item: TypeExpression

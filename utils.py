@@ -84,14 +84,6 @@ class hset(set):
     def __repr__(self):
         return str(self)
 
-    def same_as(self, other):
-        if len(self) != len(other):
-            return False
-        for elem in self:
-            if elem not in other:
-                return False
-        return True
-
 
 class hdict(dict):
     def __key(self):
@@ -114,16 +106,6 @@ class hdict(dict):
 
     def __ne__(self, other):
         return not (self == other)
-
-    def same_as(self, other):
-        if len(self) != len(other):
-            return False
-        if self.keys() != other.keys():
-            return False
-        for k, v in self.items():
-            if not v.same_as(other[k]):
-                return False
-        return True
 
     @staticmethod
     def meet(hd1, hd2):
