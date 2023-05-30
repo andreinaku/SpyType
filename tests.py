@@ -13,7 +13,7 @@ def translate_test(arg, trans_func, expected):
     print(trans_func.__name__ + "(" + str(locals()["arg"]) + ")" + " OK!")
 
 
-def types_test(*args, func, trans_func, expected=None, raise_exc=None):
+def op_test(*args, func, trans_func, expected=None, raise_exc=None):
     te_list = []
     for arg in args:
         aux = trans_func(arg)
@@ -45,29 +45,29 @@ def te_tests():
             VarType('T_c')])
     translate_test(r'int+float+str+list<set<str+float+T_a>+T_b>+T_c', Translator.translate_te, expected_translation)
 
-    types_test(r'int+float', r'int+float+str', trans_func=Translator.translate_te, func=TypeExpression.comparable,
-               expected=True)
-    types_test(r'int+T_b', r'int+float+str+T_a', trans_func=Translator.translate_te, func=TypeExpression.comparable,
-               expected=True)
-    types_test(r'T_a+T_b', r'T_c', trans_func=Translator.translate_te, func=TypeExpression.comparable,
-               expected=True)
-    types_test(r'int+float', r'int+str', trans_func=Translator.translate_te, func=TypeExpression.comparable,
-               expected=False)
+    op_test(r'int+float', r'int+float+str', trans_func=Translator.translate_te, func=TypeExpression.comparable,
+            expected=True)
+    op_test(r'int+T_b', r'int+float+str+T_a', trans_func=Translator.translate_te, func=TypeExpression.comparable,
+            expected=True)
+    op_test(r'T_a+T_b', r'T_c', trans_func=Translator.translate_te, func=TypeExpression.comparable,
+            expected=True)
+    op_test(r'int+float', r'int+str', trans_func=Translator.translate_te, func=TypeExpression.comparable,
+            expected=False)
 
-    types_test(r'int+float', r'int+float+str', trans_func=Translator.translate_te, func=TypeExpression.__le__,
-               expected=True)
-    types_test(r'int+T_b', r'int+float+str+T_a', trans_func=Translator.translate_te, func=TypeExpression.__le__,
-               expected=False)
-    types_test(r'T_a+T_b', r'T_c', trans_func=Translator.translate_te, func=TypeExpression.__le__,
-               expected=True)
-    types_test(r'int+float', r'int+str', trans_func=Translator.translate_te, func=TypeExpression.__le__,
-               raise_exc=RuntimeError("Cannot compare types"))
-    types_test(r'int+float', r'int+float', trans_func=Translator.translate_te, func=TypeExpression.__eq__,
-               expected=True)
-    types_test(r'int+float', r'int+float+T_b', trans_func=Translator.translate_te, func=TypeExpression.__eq__,
-               expected=False)
-    types_test(r'int+float+T_a', r'int+float+T_b+T_c', trans_func=Translator.translate_te, func=TypeExpression.__eq__,
-               expected=True)
+    op_test(r'int+float', r'int+float+str', trans_func=Translator.translate_te, func=TypeExpression.__le__,
+            expected=True)
+    op_test(r'int+T_b', r'int+float+str+T_a', trans_func=Translator.translate_te, func=TypeExpression.__le__,
+            expected=False)
+    op_test(r'T_a+T_b', r'T_c', trans_func=Translator.translate_te, func=TypeExpression.__le__,
+            expected=True)
+    op_test(r'int+float', r'int+str', trans_func=Translator.translate_te, func=TypeExpression.__le__,
+            expected=False)
+    op_test(r'int+float', r'int+float', trans_func=Translator.translate_te, func=TypeExpression.__eq__,
+            expected=True)
+    op_test(r'int+float', r'int+float+T_b', trans_func=Translator.translate_te, func=TypeExpression.__eq__,
+            expected=False)
+    op_test(r'int+float+T_a', r'int+float+T_b+T_c', trans_func=Translator.translate_te, func=TypeExpression.__eq__,
+            expected=True)
 
 
 def va_tests():
@@ -105,16 +105,28 @@ def ctx_tests():
     translate_test(r'T_a:int+float /\ T_b:T_c /\ T_c:float+str', Translator.translate_ctx,
                    expected_translation)
 
-    types_test(r'T_a:list<T_b> /\ T_b:set<int+str>',
-               r'T_a:list<set<int+str>> /\ T_b:set<int+str>',
-               func=Context.__eq__,
-               trans_func=Translator.translate_ctx,
-               expected=True)
-    types_test(r'T_a:list<T_b>',
-               r'T_a:list<T_c>',
-               func=Context.__eq__,
-               trans_func=Translator.translate_ctx,
-               expected=True)
+    op_test(r'T_a:list<T_b> /\ T_b:set<int+str>',
+            r'T_a:list<set<int+str>> /\ T_b:set<int+str>',
+            func=Context.__eq__,
+            trans_func=Translator.translate_ctx,
+            expected=True)
+    op_test(r'T_a:list<T_b>',
+            r'T_a:list<T_c>',
+            func=Context.__eq__,
+            trans_func=Translator.translate_ctx,
+            expected=True)
+    op_test(r'T_a:int /\ T_b:int /\ T_c:int',
+            r'T_a:int /\ T_b:int /\ T_c:T_d /\ T_d:int',
+            func=Context.__eq__,
+            trans_func=Translator.translate_ctx,
+            expected=False)
+    op_test(
+        r'T_a:int /\ T_b:int /\ T_c:int',
+        r'T_a:int+float /\ T_b:int+float /\ T_c:int+float',
+        func=Context.__le__,
+        trans_func=Translator.translate_ctx,
+        expected=True
+    )
 
 
 def tc_tests():
@@ -134,6 +146,28 @@ def tc_tests():
     expected_translation.add(ctx2)
     translate_test(r'(T_a:int+float /\ T_b:list<set<str>> /\ T_c:float+str) \/ (T_a:int /\ T_b:int /\ T_c:int)',
                    Translator.translate_tc, expected_translation)
+
+    op_test(
+        r'(T_a:int /\ T_b:int /\ T_c:int) \/ (T_a:T_b /\ T_b:int /\ T_c:int)',
+        r'T_a:int /\ T_b:int /\ T_c:int',
+        func=TypeConstraint.__eq__,
+        trans_func=Translator.translate_tc,
+        expected=True
+    )
+    op_test(
+        r'(T_a:int /\ T_b:int /\ T_c:int) \/ (T_a:T_b /\ T_b:int /\ T_c:int)',
+        r'T_a:int /\ T_b:int /\ T_c:int',
+        func=TypeConstraint.__le__,
+        trans_func=Translator.translate_tc,
+        expected=True
+    )
+    op_test(
+        r'(T_a:int /\ T_b:int /\ T_c:int) \/ (T_a:T_b /\ T_b:int /\ T_c:int)',
+        r'T_a:int+float /\ T_b:int+float /\ T_c:int+float',
+        func=TypeConstraint.__le__,
+        trans_func=Translator.translate_tc,
+        expected=True
+    )
 
 
 def as_tests():
@@ -157,6 +191,28 @@ def as_tests():
     expected_translation = AbsState(va, tc)
     translate_test(r'a:T_a /\ b:T_b /\ c:T_c ^ (T_a:int /\ T_b:int /\ T_c:int) \/ (T_a:float /\ T_b:T_c /\ T_c:float)',
                    Translator.translate_as, expected_translation)
+
+    op_test(
+        r'a:T_a /\ b:T_b /\ c:T_c ^ (T_a:int /\ T_b:int /\ T_c:int) \/ (T_a:float /\ T_b:T_c /\ T_c:float)',
+        r'a:T_a /\ b:T_b /\ c:T_c ^ (T_a:int /\ T_b:int /\ T_c:int) \/ (T_a:float /\ T_b:T_c /\ T_c:float)',
+        func=AbsState.__eq__,
+        trans_func=Translator.translate_as,
+        expected=True
+    )
+    op_test(
+        r'a:T_a /\ b:T_b /\ c:T_c ^ (T_a:int /\ T_b:int /\ T_c:int) \/ (T_a:float /\ T_b:T_c /\ T_c:float)',
+        r'a:T_a /\ b:T_b /\ c:T_c ^ (T_a:int+float /\ T_b:int+float /\ T_c:int+float)',
+        func=AbsState.__eq__,
+        trans_func=Translator.translate_as,
+        expected=False
+    )
+    op_test(
+        r'a:T_a /\ b:T_b /\ c:T_c ^ (T_a:int /\ T_b:int /\ T_c:int) \/ (T_a:float /\ T_b:T_c /\ T_c:float)',
+        r'a:T_a /\ b:T_b /\ c:T_c ^ (T_a:int+float /\ T_b:int+float /\ T_c:int+float)',
+        func=AbsState.__le__,
+        trans_func=Translator.translate_as,
+        expected=True
+    )
 
 
 if __name__ == "__main__":

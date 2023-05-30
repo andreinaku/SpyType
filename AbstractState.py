@@ -459,6 +459,30 @@ class TypeConstraint(hset):
             newti.add(newtd)
         return newti
 
+    def __hash__(self):
+        return super().__hash__()
+
+    def __eq__(self, other):
+        for ctx in self:
+            if ctx not in other:
+                return False
+        for ctx in other:
+            if ctx not in self:
+                return False
+        return True
+
+    def __le__(self, other):
+        for ctx in self:
+            if ctx not in other:
+                return False
+        return True
+
+    def __contains__(self, item: Context):
+        for ctx in self:
+            if item <= ctx:
+                return True
+        return False
+
 
 class Context(hdict):
 
@@ -805,7 +829,9 @@ class Context(hdict):
         if not (self.keys() <= other.keys()):
             return False
         for k, v in self.items():
-            if not (v <= self[k]):
+            te1 = self.squash_te(v[0])
+            te2 = other.squash_te(other[k][0])
+            if not (te1 <= te2):
                 return False
         return True
 
@@ -942,6 +968,22 @@ class AbsState:
         return hash(self.__key())
 
     def __eq__(self, other: AbsState):
+        if self.va.keys() != other.va.keys():
+            return False
+        r1, r2 = VarAssign.get_uid_repl(self.va, other.va)
+        tc1 = self.tc.vartype_replace_by_dict(r1)
+        tc2 = other.tc.vartype_replace_by_dict(r2)
+        return tc1 == tc2
+
+    def __le__(self, other: AbsState):
+        if self.va.keys() != other.va.keys():
+            return False
+        r1, r2 = VarAssign.get_uid_repl(self.va, other.va)
+        tc1 = self.tc.vartype_replace_by_dict(r1)
+        tc2 = other.tc.vartype_replace_by_dict(r2)
+        return tc1 <= tc2
+
+    def old__eq__(self, other: AbsState):
         if self.va.keys() != other.va.keys():
             return False
         r1, r2 = VarAssign.get_uid_repl(self.va, other.va)
@@ -1226,12 +1268,6 @@ class AbsState:
             repl[origname] = inputname
             repl[varname] = outputname
             index = index + 1
-        # for varname in param_list:
-        #     if varname != RETURN_NAME:
-        #         newname = INMARKER + 'p{}'.format(index)
-        #         index = index + 1
-        #     else:
-        #         newname = varname
         for varname in repl:
             vt = self.va[varname]
             newname = repl[varname]

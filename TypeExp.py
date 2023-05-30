@@ -506,7 +506,8 @@ class TypeExpression(hset):
 
     def __le__(self, other):
         if not self.comparable(other):
-            raise RuntimeError('Cannot compare types')
+            return False
+            # raise RuntimeError('Cannot compare types')
         lv1 = self.get_level()
         lv2 = other.get_level()
         has_vartype1 = any(isinstance(t, VarType) for t in lv1)
@@ -534,7 +535,8 @@ class TypeExpression(hset):
 
     def __eq__(self, other):
         if not self.comparable(other):
-            raise RuntimeError('Cannot compare types')
+            return False
+            # raise RuntimeError('Cannot compare types')
         lv1 = self.get_level()
         lv2 = other.get_level()
         has_vartype1 = any(isinstance(t, VarType) for t in lv1)
