@@ -486,19 +486,30 @@ class TypeConstraint(hset):
 
 class Context(hdict):
 
+    # def __str__(self):
+    #     expr: str
+    #     cte_set: set
+    #     retstr = '('
+    #     for vtype, te_set in self.items():
+    #         if len(te_set) > 1:
+    #             retstr += '('
+    #         for te in te_set:
+    #             retstr += '{}:{} /\\ '.format(vtype, te)
+    #         retstr = retstr[:-4]
+    #         if len(te_set) > 1:
+    #             retstr += ')'
+    #         retstr += ' /\\ '
+    #     retstr = retstr[:-4]
+    #     retstr += ')'
+    #     return retstr
+
     def __str__(self):
-        expr: str
-        cte_set: set
         retstr = '('
-        for vtype, te_set in self.items():
-            if len(te_set) > 1:
-                retstr += '('
+        vt: VarType
+        te_set: hset[TypeExpression]
+        for vt, te_set in self.items():
             for te in te_set:
-                retstr += '{}:{} & '.format(vtype, te)
-            retstr = retstr[:-3]
-            if len(te_set) > 1:
-                retstr += ')'
-            retstr += ' /\\ '
+                retstr += '{}:{} /\\ '.format(vt, te)
         retstr = retstr[:-4]
         retstr += ')'
         return retstr
