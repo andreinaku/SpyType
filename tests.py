@@ -43,6 +43,10 @@ def op_test(*args, func, expected=None, raise_exc=None):
             return Translator.translate_tc
         elif tip == AbsState:
             return Translator.translate_as
+        elif tip == VarType:
+            return Translator.translate_type
+        elif tip == PyType:
+            return Translator.translate_type
         else:
             raise TestErrror("Unknown type to translate: {}".format(tip))
 
@@ -58,7 +62,7 @@ def op_test(*args, func, expected=None, raise_exc=None):
             raise TestErrror("ERROR\nExpected Exception: ", raise_exc, "\nGot: ", type(e))
         if str(e) != str(raise_exc):
             raise TestErrror("ERROR\nExpected Exception text: ", str(raise_exc), "\nGot: ", str(e))
-    if result != expected:
+    if hash(result) != hash(expected):
         raise TestErrror("ERROR\nExpected: ", expected, "\nGot: ", result)
     print(func.__name__ + "(" + str(locals()["args"]) + ")" + " OK!")
 
@@ -155,6 +159,48 @@ def ctx_tests():
         func=Context.__le__,
         expected=True
     )
+    op_test(
+        (r'T_a:int+float+T_b /\ T_b:T_a+str', Context),
+        (r'T_a', VarType),
+        (r'T_a', VarType),
+        (r'int+float+T_b', TypeExpression),
+        func=Context.squash_te,
+        expected=hset({Translator.translate_te(r'int+float+str+T_a')})
+    )
+    op_test(
+        (r'T_a:int+float+T_b /\ T_b:T_c+str /\ T_c:complex+T_a', Context),
+        (r'T_a', VarType),
+        (r'T_a', VarType),
+        (r'int+float+T_b', TypeExpression),
+        func=Context.squash_te,
+        expected=hset({Translator.translate_te(r'int+float+str+complex+T_a')})
+    )
+    op_test(
+        (r'T_a:list<T_b>+str+float /\ T_b:int /\ T_b:float+str', Context),
+        (r'T_a', VarType),
+        func=Context.squash_vt,
+        expected=hset({Translator.translate_te(r'str+float+list<int>'),
+                       Translator.translate_te(r'str+float+list<float+str>')})
+    )
+    op_test(
+        (r'T_a:int+T_b /\ T_b:str+T_a', Context),
+        (r'T_a', VarType),
+        func=Context.squash_vt,
+        expected=hset({Translator.translate_te(r'int+str+T_a')})
+    )
+    op_test(
+        (r'T_a:int+T_b /\ T_b:str+T_a', Context),
+        (r'T_b', VarType),
+        func=Context.squash_vt,
+        expected=hset({Translator.translate_te(r'int+str+T_b')})
+    )
+    op_test(
+        (r'T_a:list<T_b>+int /\ T_b:set<T_c> /\ T_c:int /\ T_c:str+T_a', Context),
+        (r'T_a', VarType),
+        func=Context.squash_vt,
+        expected=hset({Translator.translate_te(r'int+list<set<int>>'),
+                       Translator.translate_te(r'int+list<set<str+T_a>>')})
+    )
 
 
 def tc_tests():
@@ -237,6 +283,11 @@ def as_tests():
         expected=True
     )
 
+
+def aux_tests():
+    pass
+
+
 if __name__ == "__main__":
     te_tests()
     print('\n----------------\n')
@@ -247,3 +298,5 @@ if __name__ == "__main__":
     tc_tests()
     print('\n----------------\n')
     as_tests()
+    print('\n----------------\n')
+    aux_tests()

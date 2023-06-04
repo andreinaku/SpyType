@@ -836,16 +836,6 @@ class Context(hdict):
             newtd[k2] = deepcopy(td2[k2])
         return newtd
 
-    def __le__(self, other: Context):
-        if not (self.keys() <= other.keys()):
-            return False
-        for k, v in self.items():
-            te1 = self.squash_te(v[0])
-            te2 = other.squash_te(other[k][0])
-            if not (te1 <= te2):
-                return False
-        return True
-
     def get_keys_for_vartype(self, vtype: VarType):
         key_set = set()
         if vtype not in self.keys():
@@ -912,33 +902,118 @@ class Context(hdict):
             newtd[vt] = deepcopy(self[replace_with])
         return newtd
 
-    def squash_te(self, te: TypeExpression):
-        # list<set<T_c>>, where, in context, we have T_c:str+float -> list<set<str+float>>
-        newte = TypeExpression()
-        for t in te:
-            if isinstance(t, VarType):
-                if t not in self:  # unconstrained vartype
-                    # newte.add(t)
-                    newte.add(VarType('T_any'))
-                else:
-                    newte |= self.squash_te(self[t][0])
+    # def squash_te(self, vt: VarType, te: TypeExpression):
+    #     # list<set<T_c>>, where, in context, we have T_c:str+float -> list<set<str+float>>
+    #     newte = TypeExpression()
+    #     for t in te:
+    #         if isinstance(t, VarType):
+    #             if t not in self:  # unconstrained vartype
+    #                 # newte.add(t)
+    #                 newte.add(VarType('T_any'))
+    #             elif t == vt:
+    #                 newte.add(t)
+    #             else:
+    #                 newte |= self.squash_te(vt, self[t][0])
+    #         else:
+    #             if t.contains:
+    #                 newte.add(PyType(t.ptype, self.squash_te(vt, t.contains)))
+    #             else:
+    #                 newte.add(t)
+    #     return newte
+
+    def is_simple(self, vt: VarType, orig: VarType, t: GenericType):
+        if isinstance(t, PyType):
+            if not t.contains:
+                return True
             else:
-                if t.contains:
-                    newte.add(PyType(t.ptype, self.squash_te(t.contains)))
-                else:
-                    newte.add(t)
-        return newte
+                return False
+        elif isinstance(t, VarType):
+            if t not in self:
+                return True
+            elif t == vt:
+                return True
+            elif t == orig:
+                return True
+            else:
+                return False
+        raise RuntimeError('Generic Type for {} = {} not recognized in is_simple'.format(t, type(t)))
+
+    def squash_te(self, vt: VarType, orig: VarType, te: TypeExpression):
+        retset = hset()
+        newte = TypeExpression()
+        not_simple = []
+        for t in te:
+            if self.is_simple(vt, orig, t):
+                newte.add(t)
+            else:
+                not_simple.append(t)
+        retset.add(newte)
+        for t in not_simple:
+            if isinstance(t, PyType):  # has to have contains here
+                contained_set = self.squash_te(vt, orig, t.contains)
+                auxset = hset()
+                for contained_elem in contained_set:
+                    auxte = TypeExpression()
+                    new_pytype = PyType(t.ptype, contained_elem)
+                    auxte.add(new_pytype)
+                    auxset.add(auxte)
+                retset = retset * auxset
+            elif isinstance(t, VarType):
+                auxset = self.squash_vt(t, orig)
+                retset = retset * auxset
+        return retset
+
+    def squash_vt(self, vt, orig=None):
+        if orig is None:
+            orig = vt
+        retset = hset()
+        for te in self[vt]:
+            retset |= self.squash_te(vt, orig, te)
+        return retset
+
+    def __le__(self, other: Context):
+        if not (self.keys() <= other.keys()):
+            return False
+        for vt in self:
+            # hset1 <= hset2 iff for all te1 in hset1, there exists te2 in hset2 such that te1 <= te2
+            hset1 = self.squash_vt(vt)
+            hset2 = other.squash_vt(vt)
+            for te1 in hset1:
+                found = False
+                for te2 in hset2:
+                    if te1 <= te2:
+                        found = True
+                        break
+                if not found:
+                    return False
+        return True
 
     def __eq__(self, other):
-        for vt, types in self.items():
+        for vt in self:
             if vt not in other:
                 return False
-            if len(types) != 1 or len(other[vt]) != 1:
-                raise RuntimeError('More than one TE not supported in __eq__')
-            te1 = self.squash_te(types[0])
-            te2 = self.squash_te(other[vt][0])
-            if te1 != te2:
+        for vt in other:
+            if vt not in self:
                 return False
+        for vt, types in self.items():
+            hset1 = self.squash_vt(vt)
+            hset2 = other.squash_vt(vt)
+            for te1 in hset1:
+                found = False
+                for te2 in hset2:
+                    if te1 == te2:
+                        found = True
+                        break
+                if not found:
+                    return False
+            for te2 in hset2:
+                found = False
+                for te1 in hset1:
+                    if te1 == te2:
+                        found = True
+                        break
+                if not found:
+                    return False
         return True
 
     def __hash__(self):

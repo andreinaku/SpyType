@@ -84,6 +84,18 @@ class hset(set):
     def __repr__(self):
         return str(self)
 
+    def __mul__(self, other):
+        # only for sets of type expressions
+        retset = hset()
+        if not len(self):
+            return deepcopy(other)
+        if not len(other):
+            return deepcopy(self)
+        for te1 in self:
+            for te2 in other:
+                retset.add(te1 + te2)
+        return retset
+
 
 class hdict(dict):
     def __key(self):
