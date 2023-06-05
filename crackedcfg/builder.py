@@ -11,7 +11,7 @@ import astor
 
 import crackedcfg
 from .model import Block, Link, CFG
-from utilsv2 import tosrc
+from utils import tosrc
 from copy import deepcopy
 
 

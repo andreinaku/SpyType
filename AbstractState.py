@@ -222,24 +222,24 @@ class VarAssign(hdict):
         return r1, r2
 
     def replace_spectypes(self, repl: dict[VarType, hset[TypeExpression]]):
-        newvi = VarAssign()
-        ti_remove = set()
+        newva = VarAssign()
+        tc_remove = set()
         for varname, vt in self.items():
             if vt not in repl:
-                newvi[varname] = deepcopy(vt)
+                newva[varname] = deepcopy(vt)
                 continue
             if len(repl[vt]) != 1:
-                newvi[varname] = deepcopy(vt)
+                newva[varname] = deepcopy(vt)
                 continue
             te: TypeExpression
             te = repl[vt][0]
             if not te.is_single_vartype():
-                newvi[varname] = deepcopy(vt)
+                newva[varname] = deepcopy(vt)
                 continue
             newvt = repl[vt][0][0]
-            newvi[varname] = newvt
-            ti_remove.add(deepcopy(vt))
-        return newvi, ti_remove
+            newva[varname] = newvt
+            tc_remove.add(deepcopy(vt))
+        return newva, tc_remove
 
 
 class TypeConstraint(hset):
@@ -319,23 +319,23 @@ class TypeConstraint(hset):
         return newti
 
     def simplify_spectypes(self):
-        newti = TypeConstraint()
-        for td in self:
-            newtd = td.simplify_spectypes()
-            newti.add(newtd)
-        return newti
+        newtc = TypeConstraint()
+        for ctx in self:
+            newtd = ctx.simplify_spectypes()
+            newtc.add(newtd)
+        return newtc
 
     def simplify_elim_inconsistencies(self):
-        newti = TypeConstraint()
+        newtc = TypeConstraint()
         if len(self) == 0:
-            return newti
-        for td in self:
-            if not td.is_consistent():
+            return newtc
+        for ctx in self:
+            if not ctx.is_consistent():
                 continue
-            newti.add(deepcopy(td))
-        if len(newti) == 0:
+            newtc.add(deepcopy(ctx))
+        if len(newtc) == 0:
             raise RuntimeError('Cannot infer further due to inconsistencies')
-        return newti
+        return newtc
 
     def trim_entries(self, inter_types):
         newti = TypeConstraint()
@@ -370,9 +370,9 @@ class TypeConstraint(hset):
 
     def get_all_direct_replacements(self, vtype: VarType) -> hset[VarType]:
         repl = hset()
-        for td in self:
-            newrepl = td.get_direct_replacements(vtype)
-            repl = hset(repl & newrepl)
+        for ctx in self:
+            newrepl = ctx.get_direct_replacements(vtype)
+            repl = hset(repl | newrepl)
         return repl
 
     def simplify_elim_selfinfo(self):
@@ -611,21 +611,21 @@ class Context(hdict):
 
     def simplify_spectypes(self):
         repl = self.get_vartype_replacements()
-        newtd = Context()
+        newctx = Context()
         for vtype, te_set in self.items():
             te_set: hset[TypeExpression]
             if len(te_set) == 1:
-                newtd[vtype] = deepcopy(te_set)
+                newctx[vtype] = deepcopy(te_set)
                 continue
             if len(te_set) != 2:
                 raise RuntimeError('This case is not yet treated')
             if repl is None:
                 raise RuntimeError('2 entries and no replacement. why?')
             for k, v in repl.items():
-                newtd[vtype] = hset({deepcopy(k)})
+                newctx[vtype] = hset({deepcopy(k)})
                 aux_vtype = k[0]
-                newtd[aux_vtype] = hset({deepcopy(v)})
-        return newtd
+                newctx[aux_vtype] = hset({deepcopy(v)})
+        return newctx
 
     def is_consistent(self):
         for vtype, te_set in self.items():
@@ -1173,19 +1173,19 @@ class AbsState:
             if len(rr) == 1:
                 repl[vtype] = deepcopy(rr[0])
                 continue
-            possible_type = VarType(vtype.varexp.replace(SPECTYPE_MARKER, '_'))
+            possible_type = VarType(vtype.varexp.replace(SPECTYPE_MARKER, '#'))
             new_vtype = generate_new_vtype(possible_type, all_vtypes)
             repl[vtype] = new_vtype
-        newtas = self.vartype_replace_by_dict(repl)
-        return newtas
+        new_as = self.vartype_replace_by_dict(repl)
+        return new_as
 
     def replace_spectypes(self):
         repl = self.tc.get_spectype_equalities()
-        newvi, ti_remove = self.va.replace_spectypes(repl)
-        newti = self.tc.remove_by_keys(ti_remove)
+        newva, ti_remove = self.va.replace_spectypes(repl)
+        newtc = self.tc.remove_by_keys(ti_remove)
         newtas = AbsState()
-        newtas.va = newvi
-        newtas.tc = newti
+        newtas.va = newva
+        newtas.tc = newtc
         return newtas
 
     def _old_simplify_spectypes(self):
@@ -1196,11 +1196,11 @@ class AbsState:
         return newtas
 
     def simplify_spectypes(self):
-        newtas = AbsState()
-        newtas.va = deepcopy(self.va)
+        new_as = AbsState()
+        new_as.va = deepcopy(self.va)
         # vi_types = self.vi.get_all_vartypes()
-        newtas.tc = self.tc.simplify_spectypes()
-        return newtas
+        new_as.tc = self.tc.simplify_spectypes()
+        return new_as
 
     def simplify_elim_inconsistencies(self):
         newtas = AbsState()
@@ -1281,14 +1281,15 @@ class AbsState:
         newtas.tc = self.tc.simplify_unused_vartypes(vi_vtypes)
         return newtas
 
-    def intermediary_simplifications(self, param_list: hset[str]):
+    def intermediary_simplifications(self, param_list: hset[str]=None):
         new_as = deepcopy(self)
         new_as = new_as.simplify_elim_inconsistencies()
-        new_as = new_as.simplify_spectypes()
+        # new_as = new_as.simplify_spectypes()
         new_as = new_as.replace_spectypes()
         new_as = new_as.rename_spectypes()
         new_as = new_as.simplify_trim_intermediaries()
-        new_as = new_as.ingest_output_vars(param_list)
+        # if param_list is not None:
+            # new_as = new_as.ingest_output_vars(param_list)
         new_as = new_as.simplify_unused_vartypes()
         return new_as
 

@@ -193,12 +193,13 @@ class ExpVisit(ast.NodeVisitor):
             newspec.va[k] = deepcopy(spec_as.va[k])
         auxtc = spec_as.tc.vartype_replace_by_dict(repl)
         newspec.tc = deepcopy(auxtc)
-        print('spec` = {}'.format(newspec))
+        # print('spec` = {}'.format(newspec))
         # newva = newspec.va | current_tas.va
         # newva = VInfo.lub(newspec.va, current_tas.va)
         newva = VarAssign()
         for vname, vt in current_as.va.items():
             if vname not in newspec.va:
+                newva[vname] = deepcopy(vt)
                 continue
             if vt.varexp == BOTTOM:
                 newva[vname] = deepcopy(newspec.va[vname])
@@ -212,7 +213,7 @@ class ExpVisit(ast.NodeVisitor):
         new_as = AbsState()
         new_as.va = VarAssign(deepcopy(newva))
         new_as.tc = deepcopy(newtc)
-        print('as` = {}'.format(new_as))
+        # print('as` = {}'.format(new_as))
         return new_as
 
     # @staticmethod
