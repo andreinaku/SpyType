@@ -63,42 +63,36 @@ class VarAssign(hdict):
         return repl1, repl2, all_vtypes
 
     @staticmethod
-    def unify(vi1, vi2, _all_vtypes: hset[VarType], mode):
-        vi1: VarAssign
-        vi2: VarAssign
-        newvi = VarAssign()
+    def unify(va1: VarAssign, va2: VarAssign, _all_vtypes: hset[VarType], mode):
+        newva = VarAssign()
         # repl = hdict()
         all_vtypes = deepcopy(_all_vtypes)
-        common_keys = vi1.keys() & vi2.keys()
+        common_keys = va1.keys() & va2.keys()
 
-        r1, r2, av = VarAssign._get_repl(vi1, vi2, all_vtypes)
-        vi1 = vi1.vartype_replace_by_dict(r1)
-        vi2 = vi2.vartype_replace_by_dict(r2)
+        r1, r2, av = VarAssign._get_repl(va1, va2, all_vtypes)
+        va1 = va1.vartype_replace_by_dict(r1)
+        va2 = va2.vartype_replace_by_dict(r2)
 
-        if vi1.keys() != vi2.keys() and mode == LUB:
-            just_v1 = vi1.keys() - vi2.keys()
+        if va1.keys() != va2.keys() and mode == LUB:
+            just_v1 = va1.keys() - va2.keys()
             for v1key in just_v1:
-                newvi[v1key] = deepcopy(vi1[v1key])
-            just_v2 = vi2.keys() - vi1.keys()
+                newva[v1key] = deepcopy(va1[v1key])
+            just_v2 = va2.keys() - va1.keys()
             for v2key in just_v2:
-                newvi[v2key] = deepcopy(vi2[v2key])
+                newva[v2key] = deepcopy(va2[v2key])
         for varname in common_keys:
-            newvi[varname] = deepcopy(vi1[varname])
-        return newvi, r1, r2
+            newva[varname] = deepcopy(va1[varname])
+        return newva, r1, r2
 
     @staticmethod
-    def glb(vi1, vi2):
-        vi1: VarAssign
-        vi2: VarAssign
-        all_vtypes = hset(vi1.get_all_vartypes() | vi2.get_all_vartypes())
-        return VarAssign.unify(vi1, vi2, all_vtypes, GLB)
+    def glb(va1: VarAssign, va2: VarAssign):
+        all_vtypes = hset(va1.get_all_vartypes() | va2.get_all_vartypes())
+        return VarAssign.unify(va1, va2, all_vtypes, GLB)
 
     @staticmethod
-    def lub(vi1, vi2, all_vtypes):
-        vi1: VarAssign
-        vi2: VarAssign
+    def lub(va1: VarAssign, va2: VarAssign, all_vtypes):
         # all_vtypes = hset(vi1.get_all_vartypes() | vi2.get_all_vartypes())
-        return VarAssign.unify(vi1, vi2, all_vtypes, LUB)
+        return VarAssign.unify(va1, va2, all_vtypes, LUB)
 
     def split_spec_vi(self, funcname: str):
         out_vi = VarAssign()
@@ -247,43 +241,40 @@ class TypeConstraint(hset):
         return self.__str__()
 
     @staticmethod
-    def glb(ti1, ti2):
-        newti = TypeConstraint()
-        if len(ti1) == 0 and len(ti2) == 0:
-            return newti
-        elif len(ti2) == 0:
-            return deepcopy(ti1)
-        elif len(ti1) == 0:
-            return deepcopy(ti2)
-        for td1 in ti1:
-            for td2 in ti2:
-                newtd = hdict.meet(td1, td2)
+    def glb(tc1, tc2):
+        newtc = TypeConstraint()
+        if len(tc1) == 0 and len(tc2) == 0:
+            return newtc
+        elif len(tc2) == 0:
+            return deepcopy(tc1)
+        elif len(tc1) == 0:
+            return deepcopy(tc2)
+        for ctx1 in tc1:
+            for ctx2 in tc2:
+                newtd = hdict.meet(ctx1, ctx2)
                 newtd = Context(newtd)
-                newti.add(newtd)
-        return newti
+                newtc.add(newtd)
+        return newtc
 
     @staticmethod
-    def lub_1(ti1, ti2):
-        # newti = TInfo(ti1 | ti2)
-        if len(ti1) == 0 and len(ti2) == 0:
-            return deepcopy(ti1)
-        if len(ti1) == 0 and len(ti2) != 0:
-            return deepcopy(ti2)
-        if len(ti2) == 0 and len(ti1) != 0:
-            return deepcopy(ti1)
-        # if len(ti1) != 1 and len(ti2) != 1:
-        #     raise RuntimeError('Why is not all data collected?')
-        newti = TypeConstraint()
-        for td1 in ti1:
-            for td2 in ti2:
-                newtd = Context.lub_1(td1, td2)
-                newti.add(newtd)
-        return newti
+    def lub_1(tc1: TypeConstraint, tc2: TypeConstraint):
+        if len(tc1) == 0 and len(tc2) == 0:
+            return deepcopy(tc1)
+        if len(tc1) == 0 and len(tc2) != 0:
+            return deepcopy(tc2)
+        if len(tc2) == 0 and len(tc1) != 0:
+            return deepcopy(tc1)
+        newtc = TypeConstraint()
+        for ctx1 in tc1:
+            for ctx2 in tc2:
+                newctx = Context.lub_1(ctx1, ctx2)
+                newtc.add(newctx)
+        return newtc
 
     @staticmethod
-    def lub_2(ti1, ti2):
-        newti = TypeConstraint(ti1 | ti2)
-        return newti
+    def lub_2(tc1: TypeConstraint, tc2: TypeConstraint):
+        newtc = TypeConstraint(tc1 | tc2)
+        return newtc
 
     def get_all_vartypes(self):
         vtypes = hset()
@@ -1106,41 +1097,32 @@ class AbsState:
         return newtas
 
     @staticmethod
-    def glb(tas1, tas2):
-        tas1: AbsState
-        tas2: AbsState
-        newtas = AbsState()
-        newtas.va, r1, r2 = VarAssign.glb(tas1.va, tas2.va)
-        t1 = tas1.tc.var()
-        newtas.tc = TypeConstraint.glb(tas1.tc, tas2.tc)
-        # newtas = newtas.vartype_replace_by_dict(repl)
-        return newtas
+    def glb(as1: AbsState, as2: AbsState):
+        new_as = AbsState()
+        new_as.va, r1, r2 = VarAssign.glb(as1.va, as2.va)
+        new_as.tc = TypeConstraint.glb(as1.tc, as2.tc)
+        return new_as
 
     @staticmethod
-    def lub_1(tas1, tas2):
-        tas1: AbsState
-        tas2: AbsState
-        newtas = AbsState()
-        all_vtypes = (tas1.get_all_vartypes() | tas2.get_all_vartypes())
-        newtas.va, r1, r2 = VarAssign.lub(tas1.va, tas2.va, all_vtypes)
-        ti1 = tas1.tc.vartype_replace_by_dict(r1)
-        ti2 = tas2.tc.vartype_replace_by_dict(r2)
-        newtas.tc = TypeConstraint.lub_1(ti1, ti2)
-        # newtas = newtas.vartype_replace_by_dict(repl)
-        return newtas
+    def lub_1(as1: AbsState, as2: AbsState):
+        new_as = AbsState()
+        all_vtypes = (as1.get_all_vartypes() | as2.get_all_vartypes())
+        new_as.va, r1, r2 = VarAssign.lub(as1.va, as2.va, all_vtypes)
+        tc1 = as1.tc.vartype_replace_by_dict(r1)
+        tc2 = as2.tc.vartype_replace_by_dict(r2)
+        new_as.tc = TypeConstraint.lub_1(tc1, tc2)
+        # new_as = new_as.vartype_replace_by_dict(repl)
+        return new_as
 
     @staticmethod
-    def lub_2(tas1, tas2):
-        tas1: AbsState
-        tas2: AbsState
-        newtas = AbsState()
-        all_vtypes = (tas1.get_all_vartypes() | tas2.get_all_vartypes())
-        newtas.va, r1, r2 = VarAssign.lub(tas1.va, tas2.va, all_vtypes)
-        ti1 = tas1.tc.vartype_replace_by_dict(r1)
-        ti2 = tas2.tc.vartype_replace_by_dict(r2)
-        newtas.tc = TypeConstraint.lub_2(ti1, ti2)
-        # newtas = newtas.vartype_replace_by_dict(repl)
-        return newtas
+    def lub_2(as1: AbsState, as2: AbsState):
+        new_as = AbsState()
+        all_vtypes = (as1.get_all_vartypes() | as2.get_all_vartypes())
+        new_as.va, r1, r2 = VarAssign.lub(as1.va, as2.va, all_vtypes)
+        tc1 = as1.tc.vartype_replace_by_dict(r1)
+        tc2 = as2.tc.vartype_replace_by_dict(r2)
+        new_as.tc = TypeConstraint.lub_2(tc1, tc2)
+        return new_as
 
     @staticmethod
     def lub_3(tas1, tas2):

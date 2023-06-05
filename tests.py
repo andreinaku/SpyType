@@ -1,7 +1,11 @@
 from Translator import *
 
 
-class TestErrror(Exception):
+COMP_SINTACTIC = 1
+COMP_SEMANTIC = 2
+
+
+class TestError(Exception):
     pass
 
 
@@ -9,29 +13,11 @@ def translate_test(arg, trans_func, expected):
     result = trans_func(arg)
     if hash(result) != hash(expected):
         # if not result.same_as(expected):
-        raise TestErrror("ERROR\nExpected: ", expected, "\nGot: ", result)
+        raise TestError("ERROR\nExpected: ", expected, "\nGot: ", result)
     print(trans_func.__name__ + "(" + str(locals()["arg"]) + ")" + " OK!")
 
 
-# def op_test(*args, func, trans_func, expected=None, raise_exc=None):
-#     te_list = []
-#     for arg in args:
-#         aux = trans_func(arg)
-#         te_list.append(aux)
-#     result = None
-#     try:
-#         result = func(*te_list)
-#     except Exception as e:
-#         if e is raise_exc:
-#             raise TestErrror("ERROR\nExpected Exception: ", raise_exc, "\nGot: ", type(e))
-#         if str(e) != str(raise_exc):
-#             raise TestErrror("ERROR\nExpected Exception text: ", str(raise_exc), "\nGot: ", str(e))
-#     if result != expected:
-#         raise TestErrror("ERROR\nExpected: ", expected, "\nGot: ", result)
-#     print(func.__name__ + "(" + str(locals()["args"]) + ")" + " OK!")
-
-
-def op_test(*args, func, expected=None, raise_exc=None):
+def op_test(*args, func, expected=None, raise_exc=None, compare_type=COMP_SINTACTIC):
     def get_transfunc(tip):
         if tip == TypeExpression:
             return Translator.translate_te
@@ -48,7 +34,7 @@ def op_test(*args, func, expected=None, raise_exc=None):
         elif tip == PyType:
             return Translator.translate_type
         else:
-            raise TestErrror("Unknown type to translate: {}".format(tip))
+            raise TestError("Unknown type to translate: {}".format(tip))
 
     arglist = []
     for arg in args:
@@ -59,12 +45,18 @@ def op_test(*args, func, expected=None, raise_exc=None):
         result = func(*arglist)
     except Exception as e:
         if e is raise_exc:
-            raise TestErrror("ERROR\nExpected Exception: ", raise_exc, "\nGot: ", type(e))
+            raise TestError("ERROR\nExpected Exception: ", raise_exc, "\nGot: ", type(e))
         if str(e) != str(raise_exc):
-            raise TestErrror("ERROR\nExpected Exception text: ", str(raise_exc), "\nGot: ", str(e))
-    if hash(result) != hash(expected):
-        raise TestErrror("ERROR\nExpected: ", expected, "\nGot: ", result)
-    print(func.__name__ + "(" + str(locals()["args"]) + ")" + " OK!")
+            raise TestError("ERROR\nExpected Exception text: ", str(raise_exc), "\nGot: ", str(e))
+    if compare_type == COMP_SINTACTIC:
+        diff_flag = (hash(result) != hash(expected))
+    elif compare_type == COMP_SEMANTIC:
+        diff_flag = (result != expected)
+    else:
+        raise TestError('Unknown compare type: {}'.format(compare_type))
+    if diff_flag:
+        raise TestError("ERROR\nExpected: ", expected, "\nGot: ", result)
+    print("OK! " + func.__name__ + "(" + str(locals()["args"]) + ")")
 
 
 def te_tests():
@@ -282,21 +274,47 @@ def as_tests():
         func=AbsState.__le__,
         expected=True
     )
+    op_test(
+        (r'a:T_a /\ b:T_b ^ (T_a:int /\ T_b:int)', AbsState),
+        (r'a:T_1 ^ (T_1:float)', AbsState),
+        func=AbsState.lub,
+        expected=Translator.translate_as(r'a:T_a /\ b:T_b ^ (T_a:int /\ T_b:int) \/ (T_a:float)'),
+        compare_type=COMP_SEMANTIC
+    )
+    op_test(
+        (r'a:T_a /\ b:T_b /\ c:T_c ^ (T_a:int /\ T_b:int /\ T_c:int) \/ (T_a:float /\ T_b:float /\ T_c:float)', AbsState),
+        (r'a:T_1 /\ b:T_2 /\ c:T_3 ^ (T_1:int /\ T_2:int /\ T_3:int)', AbsState),
+        func=AbsState.lub,
+        expected=Translator.translate_as(
+            r'a:T_a /\ b:T_b /\ c:T_c ^ (T_a:int /\ T_b:int /\ T_c:int) \/ (T_a:float /\ T_b:float /\ T_c:float)'
+        ),
+        compare_type=COMP_SEMANTIC
+    )
 
 
 def aux_tests():
+    op_test(
+        (r'a:T_a /\ b:T_b ^ (T_a:int /\ T_b:int) \/ (T_a:float /\ T_b:float)', AbsState),
+        (r'a:T_a /\ b:T_b ^ (T_a:str /\ T_b:str)', AbsState),
+        func=AbsState.glb,
+        expected=Translator.translate_as(
+            r'a:T_a /\ b:T_b ^ (T_a:int /\ T_a:str /\ T_b:int /\ T_b:str) \/ '
+            r'(T_a:float /\ T_a:str /\ T_b:float /\ T_b:str)'
+        ),
+        compare_type=COMP_SEMANTIC
+    )
     pass
 
 
 if __name__ == "__main__":
-    te_tests()
-    print('\n----------------\n')
-    va_tests()
-    print('\n----------------\n')
-    ctx_tests()
-    print('\n----------------\n')
-    tc_tests()
-    print('\n----------------\n')
-    as_tests()
-    print('\n----------------\n')
+    # te_tests()
+    # print('\n----------------\n')
+    # va_tests()
+    # print('\n----------------\n')
+    # ctx_tests()
+    # print('\n----------------\n')
+    # tc_tests()
+    # print('\n----------------\n')
+    # as_tests()
+    # print('\n----------------\n')
     aux_tests()
