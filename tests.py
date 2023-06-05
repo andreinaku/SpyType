@@ -359,26 +359,20 @@ def visit_tests():
 
 
 def aux_tests():
-    visit_test(
-        r'a:T_a',
-        r'a.append(3)',
-        r'a:T_a /\ 3:T_c /\ __out_a:T_o ^ (T_a:list<T_1> /\ T_c:int /\ T_o:list<T_1+int>)',
-        compare_type=COMP_SEMANTIC
-    )
     pass
 
 
 if __name__ == "__main__":
-    # te_tests()
-    # print('\n----------------\n')
-    # va_tests()
-    # print('\n----------------\n')
-    # ctx_tests()
-    # print('\n----------------\n')
-    # tc_tests()
-    # print('\n----------------\n')
-    # as_tests()
-    # print('\n----------------\n')
-    # visit_tests()
-    # print('\n----------------\n')
+    te_tests()
+    print('\n----------------\n')
+    va_tests()
+    print('\n----------------\n')
+    ctx_tests()
+    print('\n----------------\n')
+    tc_tests()
+    print('\n----------------\n')
+    as_tests()
+    print('\n----------------\n')
+    visit_tests()
+    print('\n----------------\n')
     aux_tests()
