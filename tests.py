@@ -1,4 +1,5 @@
 from Translator import *
+from ExpVisitor import *
 
 
 COMP_SINTACTIC = 1
@@ -57,6 +58,24 @@ def op_test(*args, func, expected=None, raise_exc=None, compare_type=COMP_SINTAC
     if diff_flag:
         raise TestError("ERROR\nExpected: ", expected, "\nGot: ", result)
     print("OK! " + func.__name__ + "(" + str(locals()["args"]) + ")")
+
+
+def visit_test(str_in_state: str, str_code: str, str_expected: str, compare_type=COMP_SINTACTIC):
+    node_ast = ast.parse(str_code)
+    input_state = Translator.translate_as(str_in_state)
+    expected_state = Translator.translate_as(str_expected)
+    ev = ExpVisit(input_state)
+    ev.visit(node_ast)
+    result = ev.current_as
+    if compare_type == COMP_SINTACTIC:
+        diff_flag = (hash(result) != hash(expected_state))
+    elif compare_type == COMP_SEMANTIC:
+        diff_flag = (result != expected_state)
+    else:
+        raise TestError('Unknown compare type: {}'.format(compare_type))
+    if diff_flag:
+        raise TestError("ERROR\nExpected: ", expected_state, "\nGot: ", result)
+    print("OK! " + "visit_test(" + str_in_state + ", " + str_code + ", " + str_expected + ")")
 
 
 def te_tests():
@@ -234,7 +253,8 @@ def tc_tests():
 
 
 def as_tests():
-    # r'a:T_a /\ b:T_b /\ c:T_c ^ (T_a:int /\ T_a:float /\ T_b:int /\ T_c:int) \/ (T_a:float /\ T_a:str /\ T_b:T_c /\ T_c:float)'
+    # r'a:T_a /\ b:T_b /\ c:T_c ^ (T_a:int /\ T_a:float /\ T_b:int /\ T_c:int) \/
+    #   (T_a:float /\ T_a:str /\ T_b:T_c /\ T_c:float)'
     va = VarAssign([
         ('a', VarType('T_a')),
         ('b', VarType('T_b')),
@@ -282,7 +302,8 @@ def as_tests():
         compare_type=COMP_SEMANTIC
     )
     op_test(
-        (r'a:T_a /\ b:T_b /\ c:T_c ^ (T_a:int /\ T_b:int /\ T_c:int) \/ (T_a:float /\ T_b:float /\ T_c:float)', AbsState),
+        (r'a:T_a /\ b:T_b /\ c:T_c ^ '
+         r'(T_a:int /\ T_b:int /\ T_c:int) \/ (T_a:float /\ T_b:float /\ T_c:float)', AbsState),
         (r'a:T_1 /\ b:T_2 /\ c:T_3 ^ (T_1:int /\ T_2:int /\ T_3:int)', AbsState),
         func=AbsState.lub,
         expected=Translator.translate_as(
@@ -290,9 +311,6 @@ def as_tests():
         ),
         compare_type=COMP_SEMANTIC
     )
-
-
-def aux_tests():
     op_test(
         (r'a:T_a /\ b:T_b ^ (T_a:int /\ T_b:int) \/ (T_a:float /\ T_b:float)', AbsState),
         (r'a:T_a /\ b:T_b ^ (T_a:str /\ T_b:str)', AbsState),
@@ -301,6 +319,50 @@ def aux_tests():
             r'a:T_a /\ b:T_b ^ (T_a:int /\ T_a:str /\ T_b:int /\ T_b:str) \/ '
             r'(T_a:float /\ T_a:str /\ T_b:float /\ T_b:str)'
         ),
+        compare_type=COMP_SEMANTIC
+    )
+
+
+def visit_tests():
+    visit_test(r'a:T_bot /\ b:T_bot',
+               'a=3',
+               r'a:T_a /\ b:T_bot /\ 3:T_a ^ (T_a:int)',
+               compare_type=COMP_SEMANTIC)
+    visit_test(
+        r'a:T_bot /\ b:T_bot',
+        r'a+b',
+        r'a:T_a /\ b:T_b /\ a + b:T_c ^ (T_a:int /\ T_b:int /\ T_c:int) \/ '
+        r'(T_a:list<T_1> /\ T_b:list<T_2> /\ T_c:list<T_1+T_2>)',
+        compare_type=COMP_SEMANTIC
+    )
+    visit_test(
+        r'a:T_a /\ b:T_b ^ (T_a:float /\ T_b:float)',
+        r'a+b',
+        r'a:T_a /\ b:T_b /\ a + b:T_c ^ (T_a:int /\ T_a:float /\ T_b:int /\ T_b:float /\ T_c:int) \/ '
+        r'(T_a:list<T_1> /\ T_a:float /\ T_b:list<T_2> /\ T_b:float /\ T_c:list<T_1+T_2>)',
+        compare_type=COMP_SEMANTIC
+    )
+    # interesting cases on account of the semantic equivalence of the types of __out_a
+    visit_test(
+        r'a:T_a',
+        r'a.append(3)',
+        r'a:T_a /\ 3:T_c /\ __out_a:T_o ^ (T_a:list<T_1> /\ T_c:int /\ T_o:list<T_1+T_c>)',
+        compare_type=COMP_SEMANTIC
+    )
+    visit_test(
+        r'a:T_a',
+        r'a.append(3)',
+        r'a:T_a /\ 3:T_c /\ __out_a:T_o ^ (T_a:list<T_1> /\ T_c:int /\ T_o:list<T_1+int>)',
+        compare_type=COMP_SEMANTIC
+    )
+    #
+
+
+def aux_tests():
+    visit_test(
+        r'a:T_a',
+        r'a.append(3)',
+        r'a:T_a /\ 3:T_c /\ __out_a:T_o ^ (T_a:list<T_1> /\ T_c:int /\ T_o:list<T_1+int>)',
         compare_type=COMP_SEMANTIC
     )
     pass
@@ -316,5 +378,7 @@ if __name__ == "__main__":
     # tc_tests()
     # print('\n----------------\n')
     # as_tests()
+    # print('\n----------------\n')
+    # visit_tests()
     # print('\n----------------\n')
     aux_tests()

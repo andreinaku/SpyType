@@ -476,7 +476,7 @@ class TypeExpression(hset):
             ptypes2 = other.get_pytypes()
             if not ptypes1 and not ptypes2:
                 sign2 = SIGN_LE
-            elif ptypes1 > ptypes2:
+            elif ptypes1 >= ptypes2:
                 sign2 = SIGN_LE
             else:
                 sign2 = SIGN_GT

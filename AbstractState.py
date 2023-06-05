@@ -4,6 +4,21 @@ from uuid import uuid4
 import traceback
 
 
+def gen_vtype_for_base(_as: AbsState, base: VarType):
+    index = 0
+    all_vtypes = _as.get_all_vartypes()
+    if not vtype_exists(base.varexp, all_vtypes):
+        return deepcopy(base)
+    while True:
+        new_varexp = '{}_{}'.format(base.varexp, index)
+        if vtype_exists(new_varexp, all_vtypes):
+            index = index + 1
+            continue
+        break
+    new_vtype = VarType(new_varexp)
+    return new_vtype
+
+
 class VarAssign(hdict):
     def __str__(self):
         if len(self.items()) == 0:
@@ -39,26 +54,26 @@ class VarAssign(hdict):
         return newvi
 
     @staticmethod
-    def _get_repl(vi1, vi2, _all_vtypes: hset[VarType]):
+    def _get_repl(va1: VarAssign, va2: VarAssign, _all_vtypes: hset[VarType]):
         repl1 = hdict()
         repl2 = hdict()
         all_vtypes = deepcopy(_all_vtypes)
-        common_keys = vi1.keys() & vi2.keys()
+        common_keys = va1.keys() & va2.keys()
         for varname in common_keys:
-            if vi1[varname] == vi2[varname]:
+            if va1[varname] == va2[varname]:
                 continue
-            if vi1[varname].varexp == BOTTOM:
-                new_vtype = deepcopy(vi2[varname])
-            elif vi2[varname].varexp == BOTTOM:
-                new_vtype = deepcopy(vi1[varname])
-            elif SPECTYPE_MARKER in vi1[varname].varexp and SPECTYPE_MARKER not in vi2[varname].varexp:
-                new_vtype = deepcopy(vi2[varname])
-            elif SPECTYPE_MARKER not in vi1[varname].varexp and SPECTYPE_MARKER in vi2[varname].varexp:
-                new_vtype = deepcopy(vi1[varname])
+            if va1[varname].varexp == BOTTOM:
+                new_vtype = deepcopy(va2[varname])
+            elif va2[varname].varexp == BOTTOM:
+                new_vtype = deepcopy(va1[varname])
+            elif SPECTYPE_MARKER in va1[varname].varexp and SPECTYPE_MARKER not in va2[varname].varexp:
+                new_vtype = deepcopy(va2[varname])
+            elif SPECTYPE_MARKER not in va1[varname].varexp and SPECTYPE_MARKER in va2[varname].varexp:
+                new_vtype = deepcopy(va1[varname])
             else:
-                new_vtype = generate_new_vtype(vi1[varname], all_vtypes)
-            repl1[vi1[varname]] = deepcopy(new_vtype)
-            repl2[vi2[varname]] = deepcopy(new_vtype)
+                new_vtype = generate_new_vtype(va1[varname], all_vtypes)
+            repl1[va1[varname]] = deepcopy(new_vtype)
+            repl2[va2[varname]] = deepcopy(new_vtype)
             all_vtypes.add(new_vtype)
         return repl1, repl2, all_vtypes
 
@@ -94,15 +109,15 @@ class VarAssign(hdict):
         # all_vtypes = hset(vi1.get_all_vartypes() | vi2.get_all_vartypes())
         return VarAssign.unify(va1, va2, all_vtypes, LUB)
 
-    def split_spec_vi(self, funcname: str):
-        out_vi = VarAssign()
-        in_vi = VarAssign()
+    def split_spec_va(self, funcname: str):
+        out_va = VarAssign()
+        in_va = VarAssign()
         for varname, vtype in self.items():
             if varname.startswith('__out_') or varname == funcname:
-                out_vi[varname] = deepcopy(vtype)
+                out_va[varname] = deepcopy(vtype)
                 continue
-            in_vi[varname] = deepcopy(vtype)
-        return in_vi, out_vi
+            in_va[varname] = deepcopy(vtype)
+        return in_va, out_va
 
     def _a_varname_has_it(self, vtype):
         for varname, vt in self.items():
@@ -195,15 +210,15 @@ class VarAssign(hdict):
         return newvi
 
     @staticmethod
-    def get_uid_repl(vi1: VarAssign, vi2: VarAssign) -> tuple[hdict[VarType, VarType], hdict[VarType, VarType]]:
+    def get_uid_repl(va1: VarAssign, va2: VarAssign) -> tuple[hdict[VarType, VarType], hdict[VarType, VarType]]:
         r1 = hdict()
         r2 = hdict()
-        if vi1.keys() != vi2.keys():
-            raise RuntimeError('VInfo keys should be the same')
-        for k in vi1:
+        if va1.keys() != va2.keys():
+            raise RuntimeError('VarAssign keys should be the same')
+        for k in va1:
             new_vtype = VarType(varexp='T_{}'.format(uuid4().hex))
-            r1[vi1[k]] = new_vtype
-            r2[vi2[k]] = new_vtype
+            r1[va1[k]] = new_vtype
+            r2[va2[k]] = new_vtype
         return r1, r2
 
     def replace_spectypes(self, repl: dict[VarType, hset[TypeExpression]]):
@@ -1047,6 +1062,9 @@ class AbsState:
     def __eq__(self, other: AbsState):
         if self.va.keys() != other.va.keys():
             return False
+        for varname, vt in self.va.items():
+            if vt.varexp == BOTTOM and other.va[varname].varexp != BOTTOM:
+                return False
         r1, r2 = VarAssign.get_uid_repl(self.va, other.va)
         tc1 = self.tc.vartype_replace_by_dict(r1)
         tc2 = other.tc.vartype_replace_by_dict(r2)
@@ -1264,44 +1282,15 @@ class AbsState:
         return newtas
 
     def intermediary_simplifications(self, param_list: hset[str]):
-        newtas = deepcopy(self)
-        newtas = newtas.simplify_elim_inconsistencies()
-        newtas = newtas.simplify_spectypes()
-        newtas = newtas.replace_spectypes()
-        newtas = newtas.rename_spectypes()
-        newtas = newtas.simplify_trim_intermediaries()
-        newtas = newtas.ingest_output_vars(param_list)
-        newtas = newtas.simplify_unused_vartypes()
-        return newtas
-
-    def _intermediary_simplifications(self, param_list: hset[str]):
-        newtas = deepcopy(self)
-        oldtas = deepcopy(self)
-        newtas = newtas.simplify_elim_inconsistencies()
-        newtas.integrity_checks()
-        oldtas = deepcopy(newtas)
-        newtas = newtas._old_simplify_spectypes()
-        newtas.integrity_checks()
-        oldtas = deepcopy(newtas)
-        newtas = newtas.rename_spectypes()
-        newtas = newtas.simplify_elim_selfinfo()
-        newtas.integrity_checks()
-        oldtas = deepcopy(newtas)
-        newtas = newtas.simplify_no_vartypes()
-        newtas.integrity_checks()
-        oldtas = deepcopy(newtas)
-        newtas = newtas.simplify_redundant_vartypes()
-        newtas.integrity_checks()
-        oldtas = deepcopy(newtas)
-        newtas = newtas.ingest_output_vars(param_list)
-        newtas.integrity_checks()
-        oldtas = deepcopy(newtas)
-        newtas = newtas.simplify_trim_intermediaries()
-        newtas.integrity_checks()
-        oldtas = deepcopy(newtas)
-        newtas = newtas.simplify_unused_vartypes()
-        newtas.integrity_checks()
-        return newtas
+        new_as = deepcopy(self)
+        new_as = new_as.simplify_elim_inconsistencies()
+        new_as = new_as.simplify_spectypes()
+        new_as = new_as.replace_spectypes()
+        new_as = new_as.rename_spectypes()
+        new_as = new_as.simplify_trim_intermediaries()
+        new_as = new_as.ingest_output_vars(param_list)
+        new_as = new_as.simplify_unused_vartypes()
+        return new_as
 
     def final_simplifications(self, param_list: hset[str]):
         newtas = deepcopy(self)
