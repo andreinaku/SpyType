@@ -419,7 +419,7 @@ class TypeExpression(hset):
                 return ptip.contains.contains_any_vartype()
         return False
 
-    def replace_te(self, to_replace, replace_with):
+    def old_replace_te(self, to_replace, replace_with):
         to_replace: TypeExpression
         replace_with: TypeExpression
         if to_replace not in self:
@@ -437,7 +437,7 @@ class TypeExpression(hset):
                 newte.add(deepcopy(t))
                 continue
             newtip = PyType(ptype=t.ptype)
-            newtip.contains = t.contains.replace_te(to_replace, replace_with)
+            newtip.contains = t.contains.old_replace_te(to_replace, replace_with)
             newte.add(newtip)
         return newte
 
@@ -633,3 +633,50 @@ class TypeExpression(hset):
         if isinstance(ptip, VarType):
             return TypeExpression({ptip})
         return ptip.contains.get_single_vartype()
+
+    def __contains__(self, other: TypeExpression):
+        contains_flag = True
+        for tip in other:
+            found = False
+            for tip2 in self:
+                if hash(tip) == hash(tip2):
+                    found = True
+                    break
+            if not found:
+                contains_flag = False
+                break
+        if contains_flag:
+            return True
+        for tip2 in self:
+            if (isinstance(tip2, PyType) and tip2.contains is None) or isinstance(tip2, VarType):
+                continue
+            contains_flag = tip2.contains.__contains__(other)
+            if contains_flag:
+                return True
+        return False
+
+    def replace_in_te(self, to_replace: TypeExpression, replace_with: TypeExpression):
+        if to_replace not in self:
+            return self
+        new_te = TypeExpression()
+        newself = deepcopy(self)
+        for tip in self:
+            if (isinstance(tip, PyType) and tip.contains is None) or isinstance(tip, VarType):
+                continue
+            aux_te = TypeExpression()
+            newself = TypeExpression(newself - TypeExpression({tip}))
+            new_pytype = PyType(tip.ptype)
+            new_pytype.contains = tip.contains.replace_in_te(to_replace, replace_with)
+            aux_te += TypeExpression({new_pytype})
+            newself += aux_te
+        if to_replace in newself:
+            new_te = TypeExpression(newself - to_replace) + replace_with
+        else:
+            new_te = newself
+        return new_te
+
+    def replace_by_dict(self, repl: dict[TypeExpression, TypeExpression]):
+        new_te = deepcopy(self)
+        for k, v in repl.items():
+            new_te = new_te.replace_in_te(k, v)
+        return new_te

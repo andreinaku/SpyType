@@ -589,7 +589,7 @@ class Context(hdict):
                         found = True
                         break
                 if found:
-                    newte = te.replace_te(to_replace, replace_with)
+                    newte = te.old_replace_te(to_replace, replace_with)
                 else:
                     newte = te.replace_vartype(ctx.spec_repl)
                 newset.add(newte)
@@ -612,19 +612,12 @@ class Context(hdict):
     def simplify_spectypes(self):
         repl = self.get_vartype_replacements()
         newctx = Context()
-        for vtype, te_set in self.items():
-            te_set: hset[TypeExpression]
-            if len(te_set) == 1:
-                newctx[vtype] = deepcopy(te_set)
-                continue
-            if len(te_set) != 2:
-                raise RuntimeError('This case is not yet treated')
-            if repl is None:
-                raise RuntimeError('2 entries and no replacement. why?')
-            for k, v in repl.items():
-                newctx[vtype] = hset({deepcopy(k)})
-                aux_vtype = k[0]
-                newctx[aux_vtype] = hset({deepcopy(v)})
+        for vt, te_set in self.items():
+            new_set = hset()
+            te: TypeExpression
+            for te in te_set:
+                new_set.add(te.replace_by_dict(repl))
+            newctx[vt] = new_set
         return newctx
 
     def is_consistent(self):
@@ -1060,14 +1053,16 @@ class AbsState:
         return hash(self.__key())
 
     def __eq__(self, other: AbsState):
-        if self.va.keys() != other.va.keys():
+        _self = self.simplify_unused_vartypes()
+        _other = other.simplify_unused_vartypes()
+        if _self.va.keys() != _other.va.keys():
             return False
-        for varname, vt in self.va.items():
-            if vt.varexp == BOTTOM and other.va[varname].varexp != BOTTOM:
+        for varname, vt in _self.va.items():
+            if vt.varexp == BOTTOM and _other.va[varname].varexp != BOTTOM:
                 return False
-        r1, r2 = VarAssign.get_uid_repl(self.va, other.va)
-        tc1 = self.tc.vartype_replace_by_dict(r1)
-        tc2 = other.tc.vartype_replace_by_dict(r2)
+        r1, r2 = VarAssign.get_uid_repl(_self.va, _other.va)
+        tc1 = _self.tc.vartype_replace_by_dict(r1)
+        tc2 = _other.tc.vartype_replace_by_dict(r2)
         return tc1 == tc2
 
     def __le__(self, other: AbsState):
@@ -1173,7 +1168,7 @@ class AbsState:
             if len(rr) == 1:
                 repl[vtype] = deepcopy(rr[0])
                 continue
-            possible_type = VarType(vtype.varexp.replace(SPECTYPE_MARKER, '#'))
+            possible_type = VarType(vtype.varexp.replace(SPECTYPE_MARKER, '_'))
             new_vtype = generate_new_vtype(possible_type, all_vtypes)
             repl[vtype] = new_vtype
         new_as = self.vartype_replace_by_dict(repl)
@@ -1284,7 +1279,7 @@ class AbsState:
     def intermediary_simplifications(self, param_list: hset[str]=None):
         new_as = deepcopy(self)
         new_as = new_as.simplify_elim_inconsistencies()
-        # new_as = new_as.simplify_spectypes()
+        new_as = new_as.simplify_spectypes()
         new_as = new_as.replace_spectypes()
         new_as = new_as.rename_spectypes()
         new_as = new_as.simplify_trim_intermediaries()

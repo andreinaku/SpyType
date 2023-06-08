@@ -133,6 +133,20 @@ def te_tests():
             expected=False)
     op_test((r'int+float+T_a', TypeExpression), (r'int+float+T_b+T_c', TypeExpression), func=TypeExpression.__eq__,
             expected=True)
+    op_test(
+        (r'int+float+T_a+list<list<T_a>+float>', TypeExpression),
+        (r'T_a', TypeExpression),
+        (r'complex+str', TypeExpression),
+        func=TypeExpression.replace_in_te,
+        expected=Translator.translate_te(r'int+float+complex+str+list<list<complex+str>+float>')
+    )
+    op_test(
+        (r'int+float+complex+T_b+set<list<T_a+T_b>+complex>', TypeExpression),
+        (r'float+T_b', TypeExpression),
+        (r'T_any', TypeExpression),
+        func=TypeExpression.replace_in_te,
+        expected=Translator.translate_te(r'int+complex+T_any+set<list<T_a+T_b>+complex>')
+    )
 
 
 def va_tests():
@@ -379,6 +393,15 @@ def transfer_tests():
         compare_type=COMP_SEMANTIC
     )
     #
+    transfer_test(
+        r'b:T_b /\ a:T_a ^ (T_a:int /\ T_b:int /\ T_r:int) \/ '
+        r'(T_a:list<T_3> /\ T_b:list<T_4> /\ T_r:list<T_4+T_3>)',
+        r'a.append(3)',
+        str_expected=r'a:T_a /\ b:T_b /\ __out_a:T_o ^ '
+                     r'(T_a:list<T_3> /\ T_b:list<T_4> /\ T_c:int /\ T_o:list<T_3+int>)',
+        compare_type=COMP_SEMANTIC,
+        apply_simps=True
+    )
 
 
 def inference_tests():
@@ -388,30 +411,35 @@ def inference_tests():
         str_expected=r'a:T_c ^ (T_c:int)',
         compare_type=COMP_SEMANTIC
     )
-    # inference_test(
-    #     'test_funcs.py',
-    #     'g',
-    #     str_expected=r'a:T_a /\ b:T_b /\ c:T_c /\ return:T_c ^ (T_a:int /\ T_b:int /\ T_c:int) \/ '
-    #     r'(T_a:list<T_1> /\ T_b:list<T_2> /\ T_c:list<T_1+T_2>)',
-    #     compare_type=COMP_SEMANTIC
-    # )
-
-
-def aux_tests():
-    transfer_test(
-        r'b:T_b /\ a + b:T_r /\ a:T_a /\ c:T_r ^ (T_a:int /\ T_b:int /\ T_r:int) \/ '
-        r'(T_a:list<T_3> /\ T_b:list<T_4> /\ T_r:list<T_4+T_3>)',
-        r'a.append(3)',
-        str_expected=r'a:T_a',
-        compare_type=COMP_SEMANTIC,
-        apply_simps=True
-    )
     inference_test(
         'test_funcs.py',
         'h',
-        str_expected=r'a:T_a',
+        str_expected=r'a:T_a /\ b:T_b /\ c:T_c /\ __out_a:T_o ^ '
+                     r'(T_a:list<T_1> /\ T_b:list<T_2> /\ T_c:list<T_1+T_2> /\ T_o:list<T_1+int>)',
         compare_type=COMP_SEMANTIC
     )
+    inference_test(
+        'test_funcs.py',
+        'g',
+        str_expected=r'a:T_a /\ b:T_b /\ c:T_c /\ return:T_c ^ '
+                     r'(T_a:int /\ T_b:int /\ T_c:int) \/ '
+                     r'(T_a:int /\ T_b:float /\ T_c:float) \/ '
+                     r'(T_a:float /\ T_b:int /\ T_c:float) \/ '
+                     r'(T_a:float /\ T_b:float /\ T_c:float) \/ '
+                     r'(T_a:list<T_1> /\ T_b:list<T_2> /\ T_c:list<T_1+T_2>)',
+        compare_type=COMP_SEMANTIC
+    )
+    inference_test(
+        'test_funcs.py',
+        'i',
+        str_expected=r'a:T_a /\ b:T_b /\ return:T_b ^ '
+                     r'(T_a:int /\ T_b:int) \/ '
+                     r'(T_a:float /\ T_b:float)',
+        compare_type=COMP_SEMANTIC
+    )
+
+
+def aux_tests():
     pass
 
 
@@ -430,4 +458,4 @@ if __name__ == "__main__":
     print('\n----------------\n')
     inference_tests()
     print('\n----------------\n')
-    # aux_tests()
+    aux_tests()
