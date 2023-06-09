@@ -69,7 +69,7 @@ def analyze(blockinfo: dict, init: AbsState, dataclass, cfg: CFG, dbg=False):
             try:
                 newout = dataclass.transfer(nodecode, _in)
                 oldout = deepcopy(newout)
-                newout = newout.intermediary_simplifications(cfg.params)
+                newout = newout.intermediary_simplifications()
             except RuntimeError as rerr:
                 dump_trounds(Trounds)
                 dump_roundineqs(round_ineqs)

@@ -19,3 +19,10 @@ def i():
         a = 3.5
     b = a + 10
     return b
+
+
+def j(a):
+    while True:
+        a.append(3)
+        b = a
+    return b

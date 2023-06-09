@@ -140,25 +140,29 @@ class VarAssign(hdict):
             newvi[varname] = deepcopy(vtype)
         return newvi
 
-    def ingest_output_vars(self, func_params):
-        newvi = VarAssign()
-        for varname, vtype in self.items():
-            if not varname.startswith(OUTMARKER):
+    def _is_also_output(self, varname: str):
+        for vname in self:
+            if vname.startswith(OUTMARKER) and vname[len(OUTMARKER):] == varname:
+                return True
+        return False
+
+    def ingest_output_vars(self):
+        newva = VarAssign()
+        visited = set()
+        for vname, vt in self.items():
+            if not self._is_also_output(vname):
+                if vname not in visited:
+                    newva[vname] = deepcopy(vt)
+                    visited.add(vname)
                 continue
-            auxname = varname[len(OUTMARKER):]
-            newvi[auxname] = deepcopy(vtype)
-            if auxname not in func_params:
-                continue
-            origname = '{}{}'.format(ORIGMARKER, auxname)
-            if origname in self:
-                newvi[origname] = deepcopy(self[origname])
-            else:
-                newvi[origname] = deepcopy(self[auxname])
-        for varname, vtype in self.items():
-            if varname in newvi or varname.startswith(OUTMARKER):
-                continue
-            newvi[varname] = deepcopy(vtype)
-        return newvi
+            origname = '{}{}'.format(ORIGMARKER, vname)
+            outname = '{}{}'.format(OUTMARKER, vname)
+            if origname not in self:
+                newva[origname] = deepcopy(vt)
+            newva[vname] = deepcopy(self[outname])
+            visited.add(vname)
+            visited.add(outname)
+        return newva
 
     def get_param_vtypes(self, param_list: hset[str]):
         param_vtypes = hset()
@@ -1221,11 +1225,12 @@ class AbsState:
         newtas.tc = self.tc.trim_entries(inter_types)
         return newtas
 
-    def ingest_output_vars(self, func_params):
-        newtas = AbsState()
-        newtas.tc = deepcopy(self.tc)
-        newtas.va = self.va.ingest_output_vars(func_params)
-        return newtas
+    def ingest_output_vars(self):  #, func_params):
+        new_state = AbsState()
+        new_state.tc = deepcopy(self.tc)
+        # new_state.va = self.va.ingest_output_vars(func_params)
+        new_state.va = self.va.ingest_output_vars()
+        return new_state
 
     def simplify_no_vartypes(self):
         newtas = AbsState()
@@ -1276,15 +1281,14 @@ class AbsState:
         newtas.tc = self.tc.simplify_unused_vartypes(vi_vtypes)
         return newtas
 
-    def intermediary_simplifications(self, param_list: hset[str]=None):
+    def intermediary_simplifications(self):
         new_as = deepcopy(self)
         new_as = new_as.simplify_elim_inconsistencies()
         new_as = new_as.simplify_spectypes()
         new_as = new_as.replace_spectypes()
         new_as = new_as.rename_spectypes()
         new_as = new_as.simplify_trim_intermediaries()
-        # if param_list is not None:
-            # new_as = new_as.ingest_output_vars(param_list)
+        new_as = new_as.ingest_output_vars()
         new_as = new_as.simplify_unused_vartypes()
         return new_as
 
