@@ -322,10 +322,10 @@ class TypeConstraint(hset):
             newti.add(newtd)
         return newti
 
-    def simplify_spectypes(self):
+    def simplify_spectypes(self, va_types: hset[VarType]):
         newtc = TypeConstraint()
         for ctx in self:
-            newtd = ctx.simplify_spectypes()
+            newtd = ctx.simplify_spectypes(va_types)
             newtc.add(newtd)
         return newtc
 
@@ -380,18 +380,18 @@ class TypeConstraint(hset):
         return repl
 
     def simplify_elim_selfinfo(self):
-        newti = TypeConstraint()
-        for td in self:
-            newtd = td.simplify_elim_selfinfo()
-            newti.add(newtd)
-        return newti
+        newtc = TypeConstraint()
+        for ctx in self:
+            newctx = ctx.simplify_elim_selfinfo()
+            newtc.add(newctx)
+        return newtc
 
-    def simplify_unused_vartypes(self, vi_vtypes: hset[VarType]):
-        newti = TypeConstraint()
-        for td in self:
-            newtd = td.simplify_unused_vartypes(vi_vtypes)
-            newti.add(newtd)
-        return newti
+    def simplify_unused_vartypes(self, va_vtypes: hset[VarType]):
+        newtc = TypeConstraint()
+        for ctx in self:
+            newctx = ctx.simplify_unused_vartypes(va_vtypes)
+            newtc.add(newctx)
+        return newtc
 
     def integrity_checks(self):
         for td in self:
@@ -438,6 +438,27 @@ class TypeConstraint(hset):
         newti.add(newtd)
         return newti
 
+    def _is_maximal(self, elem: Context):
+        for ctx in self:
+            if elem == ctx:
+                continue
+            if elem <= ctx:
+                return False
+        return True
+
+    def simplify_keep_maximals(self):
+        maximals = TypeConstraint()
+        for ctx in self:
+            if self._is_maximal(ctx):
+                already_there = False
+                for maxx in maximals:
+                    if ctx == maxx:
+                        already_there = True
+                        break
+                if not already_there:
+                    maximals.add(deepcopy(ctx))
+        return maximals
+
     def get_ti_from_vartype(self, vtype):
         newti = TypeConstraint()
         for td in self:
@@ -455,12 +476,12 @@ class TypeConstraint(hset):
                 continue  # may not be a key in all TDicts
         return newti
 
-    def replace_unconstrained(self):
-        newti = TypeConstraint()
-        for td in self:
-            newtd = td.replace_unconstrained()
-            newti.add(newtd)
-        return newti
+    def replace_unconstrained(self, va_vtypes: hset[VarType]):
+        newtc = TypeConstraint()
+        for ctx in self:
+            newctx = ctx.replace_unconstrained(va_vtypes)
+            newtc.add(newctx)
+        return newtc
 
     def reassign_vartypes(self, to_replace: VarType, replace_with: VarType):
         newti = TypeConstraint()
@@ -613,7 +634,7 @@ class Context(hdict):
             new_repl = TypeExpression.get_vartype_repl(te_set[0], te_set[1])
         return new_repl
 
-    def simplify_spectypes(self):
+    def simplify_spectypes(self,va_vtypes: hset[VarType]):
         repl = self.get_vartype_replacements()
         newctx = Context()
         for vt, te_set in self.items():
@@ -622,6 +643,14 @@ class Context(hdict):
             for te in te_set:
                 new_set.add(te.replace_by_dict(repl))
             newctx[vt] = new_set
+        ###
+        for k in repl:
+            if len(k) != 1:
+                continue
+            if not isinstance(k[0], VarType):
+                continue
+            vt = k[0]
+            newctx[vt] = hset({repl[k]})
         return newctx
 
     def is_consistent(self):
@@ -742,7 +771,7 @@ class Context(hdict):
         return repl
 
     def simplify_elim_selfinfo(self):
-        newtd = Context()
+        newctx = Context()
         for vt, te_set in self.items():
             newset = hset()
             for te in te_set:
@@ -757,8 +786,8 @@ class Context(hdict):
                     newset.add(deepcopy(te))
                     continue
             if len(newset) > 0:
-                newtd[vt] = newset
-        return newtd
+                newctx[vt] = newset
+        return newctx
 
     def _replace_vartypes(self, repl: hdict[VarType, TypeExpression]):
         newtd = Context()
@@ -775,21 +804,21 @@ class Context(hdict):
             oldtd = deepcopy(newtd)
         return newtd
 
-    def simplify_unused_vartypes(self, vi_vtypes: hset[VarType]):
-        newtd = Context()
+    def simplify_unused_vartypes(self, va_vtypes: hset[VarType]):
+        newctx = Context()
         repl = hdict()
         for vt, te_set in self.items():
-            if vt in vi_vtypes:
-                newtd[vt] = deepcopy(te_set)
+            if vt in va_vtypes:
+                newctx[vt] = deepcopy(te_set)
                 continue
             if len(te_set) > 1:
-                newtd[vt] = deepcopy(te_set)
+                newctx[vt] = deepcopy(te_set)
                 continue
             te = te_set[0]
             repl[vt] = deepcopy(te)
         # print(repl)
-        newtd = newtd._replace_vartypes(repl)
-        return newtd
+        newctx = newctx._replace_vartypes(repl)
+        return newctx
 
     def integrity_checks(self):
         for vt, te_set in self.items():
@@ -879,7 +908,7 @@ class Context(hdict):
         newtd[vtype] = hset({self.get_eq(vtype)})
         return newtd
 
-    def replace_unconstrained(self):
+    def replace_unconstrained(self, va_vtypes: hset[VarType]):
         newtd = Context()
         repl = dict()
         newvt = VarType('T_any')
@@ -887,6 +916,8 @@ class Context(hdict):
             te = teset[0]
             vtypes = te.get_all_vartypes()
             for vtype in vtypes:
+                if vtype in va_vtypes:
+                    continue
                 repl[vtype] = TypeExpression({deepcopy(newvt)})
             newte = te.replace_vartype(repl)
             newtd[vt] = hset({newte})
@@ -1056,9 +1087,17 @@ class AbsState:
     def __hash__(self):
         return hash(self.__key())
 
+    def replace_unconstrained(self):
+        newva = deepcopy(self.va)
+        va_vtypes = self.va.get_all_vartypes()
+        newtc = self.tc.replace_unconstrained(va_vtypes)
+        return AbsState(newva, newtc)
+
     def __eq__(self, other: AbsState):
-        _self = self.simplify_unused_vartypes()
-        _other = other.simplify_unused_vartypes()
+        _self = self.replace_unconstrained()
+        _other = other.replace_unconstrained()
+        _self = _self.simplify_unused_vartypes()
+        _other = _other.simplify_unused_vartypes()
         if _self.va.keys() != _other.va.keys():
             return False
         for varname, vt in _self.va.items():
@@ -1197,8 +1236,8 @@ class AbsState:
     def simplify_spectypes(self):
         new_as = AbsState()
         new_as.va = deepcopy(self.va)
-        # vi_types = self.vi.get_all_vartypes()
-        new_as.tc = self.tc.simplify_spectypes()
+        va_types = self.va.get_all_vartypes()
+        new_as.tc = self.tc.simplify_spectypes(va_types)
         return new_as
 
     def simplify_elim_inconsistencies(self):
@@ -1269,17 +1308,23 @@ class AbsState:
         return newtas
 
     def simplify_elim_selfinfo(self):
-        newtas = AbsState()
-        newtas.va = deepcopy(self.va)
-        newtas.tc = self.tc.simplify_elim_selfinfo()
-        return newtas
+        new_as = AbsState()
+        new_as.va = deepcopy(self.va)
+        new_as.tc = self.tc.simplify_elim_selfinfo()
+        return new_as
 
     def simplify_unused_vartypes(self):
-        newtas = AbsState()
-        newtas.va = deepcopy(self.va)
-        vi_vtypes = newtas.va.get_all_vartypes()
-        newtas.tc = self.tc.simplify_unused_vartypes(vi_vtypes)
-        return newtas
+        new_as = AbsState()
+        new_as.va = deepcopy(self.va)
+        va_vtypes = new_as.va.get_all_vartypes()
+        new_as.tc = self.tc.simplify_unused_vartypes(va_vtypes)
+        return new_as
+
+    def simplify_keep_maximals(self):
+        new_as = AbsState()
+        new_as.va = deepcopy(self.va)
+        new_as.tc = self.tc.simplify_keep_maximals()
+        return new_as
 
     def intermediary_simplifications(self):
         new_as = deepcopy(self)
@@ -1290,6 +1335,8 @@ class AbsState:
         new_as = new_as.simplify_trim_intermediaries()
         new_as = new_as.ingest_output_vars()
         new_as = new_as.simplify_unused_vartypes()
+        new_as = new_as.simplify_elim_selfinfo()
+        new_as = new_as.simplify_keep_maximals()
         return new_as
 
     def final_simplifications(self, param_list: hset[str]):

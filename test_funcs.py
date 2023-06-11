@@ -26,3 +26,18 @@ def j(a):
         a.append(3)
         b = a
     return b
+
+
+def k():
+    a = []
+    while True:
+        a.append(3)
+    return True
+
+
+def l():
+    a = []
+    while True:
+        b = a.pop()
+        a.append(3)
+    return True

@@ -1,4 +1,3 @@
-from Translator import *
 from ExpVisitor import *
 from run_inference import *
 
@@ -19,7 +18,7 @@ def translate_test(arg, trans_func, expected):
     print(trans_func.__name__ + "(" + str(locals()["arg"]) + ")" + " OK!")
 
 
-def op_test(*args: tuple, func, expected=None, raise_exc=None, compare_type=COMP_SINTACTIC):
+def op_test(*args, func, expected=None, raise_exc=None, compare_type=COMP_SINTACTIC):
     def get_transfunc(tip):
         if tip == TypeExpression:
             return Translator.translate_te
@@ -83,7 +82,7 @@ def transfer_test(str_in_state: str, str_code: str, str_expected: str, compare_t
 
 
 def inference_test(filepath: str, funcname: str, str_expected: str, compare_type=COMP_SINTACTIC):
-    (rounds, result_as) = run_infer(filepath, funcname)
+    (_rounds, result_as) = run_infer(filepath, funcname)
     expected_as = Translator.translate_as(str_expected)
     if compare_type == COMP_SINTACTIC:
         diff_flag = (hash(result_as) != hash(expected_as))
@@ -146,6 +145,12 @@ def te_tests():
         (r'T_any', TypeExpression),
         func=TypeExpression.replace_in_te,
         expected=Translator.translate_te(r'int+complex+T_any+set<list<T_a+T_b>+complex>')
+    )
+    op_test(
+        (r'int+T_any', TypeExpression),
+        (r'int+T_any', TypeExpression),
+        func=TypeExpression.__le__,
+        expected=True
     )
 
 
@@ -359,6 +364,16 @@ def as_tests():
         expected=Translator.translate_as(r'__orig_a:T_a /\ a:T_o ^ (T_a:int /\ T_o:list<int>)'),
         compare_type=COMP_SINTACTIC
     )
+    op_test(
+        (r'__orig_a:T_1 /\ a:T_d4cbb29_1 /\ b:T_d4cbb29_0 ^ '
+         r'(T_d4cbb29_1:list<T_d4cbb29_0>) \/ '
+         r'(T_d4cbb29_1:list<int+T_r> /\ T_1:list<T_r> /\ T_d4cbb29_0:int+T_r)', AbsState),
+        (r'__orig_a:T_1 /\ a:T_d4cbb29_1 /\ b:T_d4cbb29_0 ^ '
+         r'(T_d4cbb29_1:list<T_d4cbb29_0>) \/ '
+         r'(T_d4cbb29_1:list<T_3+int> /\ T_1:list<T_3> /\ T_d4cbb29_0:T_3+int)', AbsState),
+        func=AbsState.__eq__,
+        expected=True
+    )
 
 
 def transfer_tests():
@@ -454,6 +469,22 @@ def inference_tests():
         'test_funcs.py',
         'j',
         str_expected=r'__orig_a:T_a /\ b:T_o /\ return:T_o /\ a:T_o ^ (T_a:list<T_1> /\ T_o:list<T_1+int>)',
+        compare_type=COMP_SEMANTIC
+    )
+    inference_test(
+        filepath='test_funcs.py',
+        funcname='k',
+        str_expected=r'__orig_a:T_o /\ a:T_a /\ return:T_r ^ '
+                     r'(T_a:list<T_1> /\ T_r:bool) \/ '
+                     r'(T_o:list<T_1> /\ T_a:list<T_1+int> /\ T_r:bool)',
+        compare_type=COMP_SEMANTIC
+    )
+    inference_test(
+        filepath='test_funcs.py',
+        funcname='l',
+        str_expected=r'__orig_a:T_a /\ b:T_b /\ a:T_o /\ return:T_r ^ '
+                     r'(T_o:list<T_1> /\ T_r:bool) \/ '
+                     r'(T_a:list<T_1> /\ T_o:list<T_1+int> /\ T_b:T_1+int /\ T_r:bool)',
         compare_type=COMP_SEMANTIC
     )
 

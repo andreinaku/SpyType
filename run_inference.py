@@ -1,4 +1,4 @@
-from crackedcfg.builder import NameReplacer, ParamReplacer
+from crackedcfg.builder import NameReplacer
 from AbstractState import *
 from copy import deepcopy
 import ast
@@ -95,7 +95,7 @@ def get_variable_names(node):
 def run_infer(filepath, funcname):
     # get the function CFG based on the function name
     cfg = get_cfg(filepath, makepng=False)
-    func_cfg = get_func_cfg(cfg, funcname, False)
+    func_cfg = get_func_cfg(cfg, funcname, True)
     # construct the initial abstract state
     init_as = AbsState()
     newva = VarAssign()
@@ -109,19 +109,18 @@ def run_infer(filepath, funcname):
     init_as.va = newva
     init_as.tc = newtc
     # run the fixpoint algorithm
-    entryblock = func_cfg.entryblock
+    # entryblock = func_cfg.entryblock
     finalid = func_cfg.finalblocks[0].id
-    rounds = fixpoint.analyze(func_cfg.cfgdict, init_as, ASFlow, func_cfg, dbg=True)
+    _rounds = fixpoint.analyze(func_cfg.cfgdict, init_as, ASFlow, func_cfg, dbg=True)
     # get the final abstract state
-    _out = rounds[len(rounds) - 1]
+    _out = _rounds[len(_rounds) - 1]
     if len(func_cfg.finalblocks) != 1:
         raise RuntimeError('Multiple exit blocks not supported yet')
-    final_as: AbsState
-    final_as = _out[finalid].out_as
-    return rounds, final_as
+    final_state: AbsState
+    final_state = _out[finalid].out_as
+    return _rounds, final_state
 
 
 if __name__ == "__main__":
     (rounds, final_as) = run_infer(sys.argv[1], sys.argv[2])
     print(final_as)
-

@@ -233,7 +233,7 @@ class CFG(object):
                   file after building the visualisation.
         """
         graph = self._build_visual(format, calls)
-        graph.render(filepath, view=True)
+        graph.render(filepath, view=False)
         # import os
         # os.system('graph-easy ' + filepath)
 

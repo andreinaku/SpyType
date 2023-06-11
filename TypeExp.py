@@ -512,7 +512,9 @@ class TypeExpression(hset):
         lv2 = other.get_level()
         has_vartype1 = any(isinstance(t, VarType) for t in lv1)
         has_vartype2 = any(isinstance(t, VarType) for t in lv2)
-        if has_vartype1 and has_vartype2:
+        if self == other:
+            sign2 = SIGN_LE
+        elif has_vartype1 and has_vartype2:
             ptypes1 = self.get_pytypes()
             ptypes2 = other.get_pytypes()
             if not ptypes1 and not ptypes2:
