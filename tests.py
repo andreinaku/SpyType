@@ -358,10 +358,16 @@ def as_tests():
         ),
         compare_type=COMP_SEMANTIC
     )
+    # op_test(
+    #     (r'a:T_a /\ __out_a:T_o ^ (T_a:int /\ T_o:list<int>)', AbsState),
+    #     func=AbsState.ingest_output_vars,
+    #     expected=Translator.translate_as(r'__orig_a:T_a /\ a:T_o ^ (T_a:int /\ T_o:list<int>)'),
+    #     compare_type=COMP_SINTACTIC
+    # )
     op_test(
         (r'a:T_a /\ __out_a:T_o ^ (T_a:int /\ T_o:list<int>)', AbsState),
         func=AbsState.ingest_output_vars,
-        expected=Translator.translate_as(r'__orig_a:T_a /\ a:T_o ^ (T_a:int /\ T_o:list<int>)'),
+        expected=Translator.translate_as(r'a:T_o ^ (T_a:int /\ T_o:list<int>)'),
         compare_type=COMP_SINTACTIC
     )
     op_test(
@@ -414,19 +420,35 @@ def transfer_tests():
         compare_type=COMP_SEMANTIC
     )
     #
+    # transfer_test(
+    #     str_in_state=r'b:T_b /\ a:T_a ^ (T_a:int /\ T_b:int /\ T_r:int) \/ '
+    #                  r'(T_a:list<T_3> /\ T_b:list<T_4> /\ T_r:list<T_4+T_3>)',
+    #     str_code=r'a.append(3)',
+    #     str_expected=r'__orig_a:T_a /\ b:T_b /\ a:T_o ^ '
+    #                  r'(T_a:list<T_3> /\ T_b:list<T_4> /\ T_c:int /\ T_o:list<T_3+int>)',
+    #     compare_type=COMP_SEMANTIC,
+    #     apply_simps=True
+    # )
     transfer_test(
         str_in_state=r'b:T_b /\ a:T_a ^ (T_a:int /\ T_b:int /\ T_r:int) \/ '
                      r'(T_a:list<T_3> /\ T_b:list<T_4> /\ T_r:list<T_4+T_3>)',
         str_code=r'a.append(3)',
-        str_expected=r'__orig_a:T_a /\ b:T_b /\ a:T_o ^ '
-                     r'(T_a:list<T_3> /\ T_b:list<T_4> /\ T_c:int /\ T_o:list<T_3+int>)',
+        str_expected=r'b:T_b /\ a:T_o ^ '
+                     r'(T_b:list<T_4> /\ T_c:int /\ T_o:list<T_3+int>)',
         compare_type=COMP_SEMANTIC,
         apply_simps=True
     )
+    # transfer_test(
+    #     r'a:T_a /\ b:T_bot',
+    #     r'a.append(3)',
+    #     r'__orig_a:T_a /\ a:T_o /\ b:T_bot ^ (T_a:list<T_1> /\ T_o:list<T_1+int>)',
+    #     compare_type=COMP_SEMANTIC,
+    #     apply_simps=True
+    # )
     transfer_test(
         r'a:T_a /\ b:T_bot',
         r'a.append(3)',
-        r'__orig_a:T_a /\ a:T_o /\ b:T_bot ^ (T_a:list<T_1> /\ T_o:list<T_1+int>)',
+        r'a:T_o /\ b:T_bot ^ (T_o:list<T_1+int>)',
         compare_type=COMP_SEMANTIC,
         apply_simps=True
     )
@@ -439,11 +461,18 @@ def inference_tests():
         str_expected=r'a:T_c ^ (T_c:int)',
         compare_type=COMP_SEMANTIC
     )
+    # inference_test(
+    #     'test_funcs.py',
+    #     'h',
+    #     str_expected=r'__orig_a:T_a /\ b:T_b /\ c:T_c /\ a:T_o ^ '
+    #                  r'(T_a:list<T_1> /\ T_b:list<T_2> /\ T_c:list<T_1+T_2> /\ T_o:list<T_1+int>)',
+    #     compare_type=COMP_SEMANTIC
+    # )
     inference_test(
         'test_funcs.py',
         'h',
-        str_expected=r'__orig_a:T_a /\ b:T_b /\ c:T_c /\ a:T_o ^ '
-                     r'(T_a:list<T_1> /\ T_b:list<T_2> /\ T_c:list<T_1+T_2> /\ T_o:list<T_1+int>)',
+        str_expected=r'b:T_b /\ c:T_c /\ a:T_o ^ '
+                     r'(T_b:list<T_2> /\ T_c:list<T_1+T_2> /\ T_o:list<T_1+int>)',
         compare_type=COMP_SEMANTIC
     )
     inference_test(
@@ -465,26 +494,48 @@ def inference_tests():
                      r'(T_a:float /\ T_b:float)',
         compare_type=COMP_SEMANTIC
     )
+    # inference_test(
+    #     'test_funcs.py',
+    #     'j',
+    #     str_expected=r'__orig_a:T_a /\ b:T_o /\ return:T_o /\ a:T_o ^ (T_a:list<T_1> /\ T_o:list<T_1+int>)',
+    #     compare_type=COMP_SEMANTIC
+    # )
     inference_test(
         'test_funcs.py',
         'j',
-        str_expected=r'__orig_a:T_a /\ b:T_o /\ return:T_o /\ a:T_o ^ (T_a:list<T_1> /\ T_o:list<T_1+int>)',
+        str_expected=r'b:T_o /\ return:T_o /\ a:T_o ^ (T_o:list<T_1+int>)',
         compare_type=COMP_SEMANTIC
     )
+    # inference_test(
+    #     filepath='test_funcs.py',
+    #     funcname='k',
+    #     str_expected=r'__orig_a:T_o /\ a:T_a /\ return:T_r ^ '
+    #                  r'(T_a:list<T_1> /\ T_r:bool) \/ '
+    #                  r'(T_o:list<T_1> /\ T_a:list<T_1+int> /\ T_r:bool)',
+    #     compare_type=COMP_SEMANTIC
+    # )
     inference_test(
         filepath='test_funcs.py',
         funcname='k',
-        str_expected=r'__orig_a:T_o /\ a:T_a /\ return:T_r ^ '
+        str_expected=r'a:T_a /\ return:T_r ^ '
                      r'(T_a:list<T_1> /\ T_r:bool) \/ '
-                     r'(T_o:list<T_1> /\ T_a:list<T_1+int> /\ T_r:bool)',
+                     r'(T_a:list<T_1+int> /\ T_r:bool)',
         compare_type=COMP_SEMANTIC
     )
+    # inference_test(
+    #     filepath='test_funcs.py',
+    #     funcname='l',
+    #     str_expected=r'__orig_a:T_a /\ b:T_b /\ a:T_o /\ return:T_r ^ '
+    #                  r'(T_o:list<T_1> /\ T_r:bool) \/ '
+    #                  r'(T_a:list<T_1> /\ T_o:list<T_1+int> /\ T_b:T_1+int /\ T_r:bool)',
+    #     compare_type=COMP_SEMANTIC
+    # )
     inference_test(
         filepath='test_funcs.py',
         funcname='l',
-        str_expected=r'__orig_a:T_a /\ b:T_b /\ a:T_o /\ return:T_r ^ '
+        str_expected=r'b:T_b /\ a:T_o /\ return:T_r ^ '
                      r'(T_o:list<T_1> /\ T_r:bool) \/ '
-                     r'(T_a:list<T_1> /\ T_o:list<T_1+int> /\ T_b:T_1+int /\ T_r:bool)',
+                     r'(T_o:list<T_1+int> /\ T_b:T_1+int /\ T_r:bool)',
         compare_type=COMP_SEMANTIC
     )
 

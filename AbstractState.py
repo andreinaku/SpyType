@@ -164,6 +164,25 @@ class VarAssign(hdict):
             visited.add(outname)
         return newva
 
+    def ingest_output_vars_2(self):
+        newva = VarAssign()
+        visited = set()
+        for vname, vt in self.items():
+            if OUTMARKER in vname:
+                origname = vname[len(OUTMARKER):]
+                newva[origname] = self[vname]
+                visited.add(vname)
+                visited.add(origname)
+            elif not self._is_also_output(vname):
+                newva[vname] = deepcopy(vt)
+                visited.add(vname)
+            else:
+                outname = '{}{}'.format(OUTMARKER, vname)
+                newva[vname] = self[outname]
+                visited.add(vname)
+                visited.add(outname)
+        return newva
+
     def get_param_vtypes(self, param_list: hset[str]):
         param_vtypes = hset()
         for paramname in param_list:
@@ -1268,7 +1287,7 @@ class AbsState:
         new_state = AbsState()
         new_state.tc = deepcopy(self.tc)
         # new_state.va = self.va.ingest_output_vars(func_params)
-        new_state.va = self.va.ingest_output_vars()
+        new_state.va = self.va.ingest_output_vars_2()
         return new_state
 
     def simplify_no_vartypes(self):
