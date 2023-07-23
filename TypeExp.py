@@ -465,7 +465,31 @@ class TypeExpression(hset):
                 pytypes.add(t.ptype)
         return pytypes
 
-    def comparable(self, other, sign=None):
+    def comparable(self: TypeExpression, other: TypeExpression, sign=None):
+        lv1 = self.get_level()
+        lv2 = other.get_level()
+        if lv1 <= lv2:
+            sign2 = SIGN_LE
+        elif lv1 > lv2:
+            sign2 = SIGN_GT
+        else:
+            return False
+        if sign is not None and sign != sign2:
+            return False
+        # go to the next levels
+        for t1 in self:
+            if isinstance(t1, VarType):
+                continue
+            if not t1.contains:
+                continue
+            t2 = other.get_by_type(t1.ptype)
+            te1 = t1.contains
+            te2 = t2.contains
+            if not te1.comparable(te2, sign2):
+                return False
+        return True
+
+    def old_comparable(self, other, sign=None):
         # compare first levels
         lv1 = self.get_level()
         lv2 = other.get_level()
@@ -510,6 +534,14 @@ class TypeExpression(hset):
             # raise RuntimeError('Cannot compare types')
         lv1 = self.get_level()
         lv2 = other.get_level()
+        return lv1 <= lv2
+
+    def old__le__(self, other):
+        if not self.comparable(other):
+            return False
+            # raise RuntimeError('Cannot compare types')
+        lv1 = self.get_level()
+        lv2 = other.get_level()
         has_vartype1 = any(isinstance(t, VarType) for t in lv1)
         has_vartype2 = any(isinstance(t, VarType) for t in lv2)
         if self == other:
@@ -536,6 +568,27 @@ class TypeExpression(hset):
         return False
 
     def __eq__(self, other):
+        if not self.comparable(other):
+            return False
+            # raise RuntimeError('Cannot compare types')
+        lv1 = self.get_level()
+        lv2 = other.get_level()
+        if lv1 != lv2:
+            return False
+        # go to the next levels
+        for t1 in self:
+            if isinstance(t1, VarType):
+                continue
+            if not t1.contains:
+                continue
+            t2 = other.get_by_type(t1.ptype)
+            te1 = t1.contains
+            te2 = t2.contains
+            if te1 != te2:
+                return False
+        return True
+
+    def old__eq__(self, other):
         if not self.comparable(other):
             return False
             # raise RuntimeError('Cannot compare types')

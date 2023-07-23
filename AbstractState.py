@@ -1113,6 +1113,8 @@ class AbsState:
         return AbsState(newva, newtc)
 
     def __eq__(self, other: AbsState):
+        # _self = self
+        # _other = other
         _self = self.replace_unconstrained()
         _other = other.replace_unconstrained()
         _self = _self.simplify_unused_vartypes()

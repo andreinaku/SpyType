@@ -121,6 +121,16 @@ def run_infer(filepath, funcname):
     return _rounds, final_state
 
 
+def print_rounds(rounds: list):
+    for i in range(0, len(rounds)):
+        print('round = {}'.format(i))
+        for label, nodeinf in rounds[i].items():
+            print('label = {}'.format(label))
+            print('in: {}'.format(nodeinf.in_as))
+            print('out: {}'.format(nodeinf.out_as))
+
+
 if __name__ == "__main__":
     (rounds, final_as) = run_infer(sys.argv[1], sys.argv[2])
+    # print_rounds(rounds)
     print(final_as)

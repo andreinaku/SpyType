@@ -112,18 +112,20 @@ def te_tests():
     op_test((r'int+float', TypeExpression), (r'int+float+str', TypeExpression), func=TypeExpression.comparable,
             expected=True)
     op_test((r'int+T_b', TypeExpression), (r'int+float+str+T_a', TypeExpression), func=TypeExpression.comparable,
-            expected=True)
+            expected=False)
     op_test((r'T_a+T_b', TypeExpression), (r'T_c', TypeExpression), func=TypeExpression.comparable,
-            expected=True)
+            expected=False)
     op_test((r'int+float', TypeExpression), (r'int+str', TypeExpression), func=TypeExpression.comparable,
             expected=False)
 
+    op_test((r'list<T_1>+int', TypeExpression), (r'list<int+T_1>+int+float', TypeExpression), func=TypeExpression.__le__,
+            expected=True)
     op_test((r'int+float', TypeExpression), (r'int+float+str', TypeExpression), func=TypeExpression.__le__,
             expected=True)
     op_test((r'int+T_b', TypeExpression), (r'int+float+str+T_a', TypeExpression), func=TypeExpression.__le__,
             expected=False)
     op_test((r'T_a+T_b', TypeExpression), (r'T_c', TypeExpression), func=TypeExpression.__le__,
-            expected=True)
+            expected=False)
     op_test((r'int+float', TypeExpression), (r'int+str', TypeExpression), func=TypeExpression.__le__,
             expected=False)
     op_test((r'int+float', TypeExpression), (r'int+float', TypeExpression), func=TypeExpression.__eq__,
@@ -131,7 +133,7 @@ def te_tests():
     op_test((r'int+float', TypeExpression), (r'int+float+T_b', TypeExpression), func=TypeExpression.__eq__,
             expected=False)
     op_test((r'int+float+T_a', TypeExpression), (r'int+float+T_b+T_c', TypeExpression), func=TypeExpression.__eq__,
-            expected=True)
+            expected=False)
     op_test(
         (r'int+float+T_a+list<list<T_a>+float>', TypeExpression),
         (r'T_a', TypeExpression),
@@ -152,6 +154,8 @@ def te_tests():
         func=TypeExpression.__le__,
         expected=True
     )
+    op_test((r'list<T_1>', TypeExpression), (r'list<int+T_1>', TypeExpression), func=TypeExpression.__eq__,
+            expected=False)
 
 
 def va_tests():
@@ -196,7 +200,7 @@ def ctx_tests():
     op_test((r'T_a:list<T_b>', Context),
             (r'T_a:list<T_c>', Context),
             func=Context.__eq__,
-            expected=True)
+            expected=False)
     op_test((r'T_a:int /\ T_b:int /\ T_c:int', Context),
             (r'T_a:int /\ T_b:int /\ T_c:T_d /\ T_d:int', Context),
             func=Context.__eq__,
@@ -379,6 +383,12 @@ def as_tests():
          r'(T_d4cbb29_1:list<T_3+int> /\ T_1:list<T_3> /\ T_d4cbb29_0:T_3+int)', AbsState),
         func=AbsState.__eq__,
         expected=True
+    )
+    op_test(
+        (r'a:T_a /\ return:T_r ^ (T_a:list<int+T_1> /\ T_r:bool) \/ (T_a:list<T_1> /\ T_r:bool)', AbsState),
+        func=AbsState.simplify_keep_maximals,
+        expected=Translator.translate_as(r'a:T_a /\ return:T_r ^ (T_a:list<int+T_1> /\ T_r:bool)'),
+        compare_type=COMP_SINTACTIC
     )
 
 

@@ -17,6 +17,8 @@ GLB = 1
 LUB = 2
 SIGN_LE = "<="
 SIGN_GT = ">"
+SIGN_EQ = "=="
+SIGN_LT = "<"
 
 
 class BottomType:

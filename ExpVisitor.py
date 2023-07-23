@@ -267,13 +267,17 @@ class ExpVisit(ast.NodeVisitor):
         target_src = 'return'
         valuesrc = tosrc(node.value)
         new_as: AbsState = deepcopy(self.current_as)
-        changed = True
-        try:
-            new_as.va[target_src] = deepcopy(self.current_as.va[valuesrc])
-        except KeyError:
-            changed = False
-        if changed:
-            self.current_as = new_as
+        # changed = True
+        # try:
+        #     new_as.va[target_src] = deepcopy(self.current_as.va[valuesrc])
+        # except KeyError:
+        #     changed = False
+        # if changed:
+        #     self.current_as = new_as
+        new_as.va[target_src] = deepcopy(self.current_as.va[valuesrc])
+        # print(self.current_as)
+        # print(new_as)
+        self.current_as = new_as
 
     def visit_While(self, node: ast.While):
         pass
