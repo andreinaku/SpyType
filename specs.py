@@ -13,7 +13,7 @@ def compute_opspecs():
             LShift: r'__in_p1:T?1 /\ __in_p2:T?2 /\ return:T?r ^ (T?1:int /\ T?2:int /\ T?r:int)',
             Mult: r'__in_p1:T?1 /\ __in_p2:T?2 /\ return:T?r ^ '
                   r'(T?1:int /\ T?2:int /\ T?r:int) \/ '
-                  r'(T?1:float /\ T?2:float /\ T?r:float) \/ '
+                  r'(T?1:float /\ T?2:float /\ T?r:float) \/ '  
                   r'(T?1:int /\ T?2:float /\ T?r:float) \/ '
                   r'(T?1:float /\ T?2:int /\ T?r:float)'
         }

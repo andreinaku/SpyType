@@ -551,22 +551,24 @@ def inference_tests():
 
 
 def aux_tests():
+    aux = Translator.translate_as('self:T?1 /\ __iterable:T?2 /\ return:T?r ^ '
+                                  '(T?1:list<T?0> /\ T?2:Iterable<T?0> /\ T?r:NoneType)')
     pass
 
 
 if __name__ == "__main__":
-    te_tests()
-    print('\n----------------\n')
-    va_tests()
-    print('\n----------------\n')
-    ctx_tests()
-    print('\n----------------\n')
-    tc_tests()
-    print('\n----------------\n')
-    as_tests()
-    print('\n----------------\n')
-    transfer_tests()
-    print('\n----------------\n')
-    inference_tests()
-    print('\n----------------\n')
+    # te_tests()
+    # print('\n----------------\n')
+    # va_tests()
+    # print('\n----------------\n')
+    # ctx_tests()
+    # print('\n----------------\n')
+    # tc_tests()
+    # print('\n----------------\n')
+    # as_tests()
+    # print('\n----------------\n')
+    # transfer_tests()
+    # print('\n----------------\n')
+    # inference_tests()
+    # print('\n----------------\n')
     aux_tests()

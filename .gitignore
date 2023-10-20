@@ -162,3 +162,5 @@ cython_debug/
 *.png
 trounds.txt
 troundineqs.txt
+pyiparser/specs.txt
+pyiparser/types.txt

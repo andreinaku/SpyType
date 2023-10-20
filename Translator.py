@@ -1,7 +1,8 @@
 from __future__ import annotations
 from AbstractState import *
 import re
-
+from pyiparser import type_equivalences
+from pyiparser.type_equivalences import *
 
 class Translator:
     @staticmethod
@@ -84,7 +85,7 @@ class Translator:
             raise RuntimeError('Type {} does not represent a valid container type'.format(strtype))
         foundtuple = foundlist[0]
         btip = eval(foundtuple[0])
-        if type(btip) != type:
+        if type(btip) is not type:
             raise RuntimeError('Type {} does not eval to a type type'.format(type))
         c_strtypes = Translator.get_types_from_list(foundtuple[1], start_br, end_br, sep)
         # c_types = hset()
