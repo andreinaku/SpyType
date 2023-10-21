@@ -17,10 +17,10 @@ class SupportsRichComparison:
 
 class SupportsRichComparisonT:
     pass
-
-
-class NoneType:
-    pass
+#
+#
+# class NoneType:
+#     pass
 
 
 rules = {

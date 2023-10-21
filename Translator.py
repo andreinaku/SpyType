@@ -4,6 +4,10 @@ import re
 from pyiparser import type_equivalences
 from pyiparser.type_equivalences import *
 
+
+NONE_TYPE = 'NoneType'
+
+
 class Translator:
     @staticmethod
     def _elim_paren(foo):
@@ -73,7 +77,10 @@ class Translator:
         # for simple types: int, str, float that eval to a type
         id_patt = r'^[a-zA-Z_][a-zA-Z0-9_]*$'
         if re.match(id_patt, strtype):
-            btip = eval(strtype)
+            if strtype == NONE_TYPE:
+                btip = type(None)
+            else:
+                btip = eval(strtype)
             if not type(btip) == type:
                 raise RuntimeError('Type {} does not denote  a Python type'.format(strtype))
             return PyType(btip)
@@ -86,6 +93,7 @@ class Translator:
         foundtuple = foundlist[0]
         btip = eval(foundtuple[0])
         if type(btip) is not type:
+        # if not isinstance(type(btip), type):
             raise RuntimeError('Type {} does not eval to a type type'.format(type))
         c_strtypes = Translator.get_types_from_list(foundtuple[1], start_br, end_br, sep)
         # c_types = hset()

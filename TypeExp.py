@@ -109,7 +109,8 @@ class PyType(GenericType):
         elif isinstance(self.ptype, VarType):
             retstr = self.ptype.varexp
         else:
-            retstr = str(self.ptype).split("'")[1]
+            # retstr = str(self.ptype).split("'")[1]
+            retstr = self.ptype.__name__
         if self.contains is not None:
             retstr += '<'
             # for c_type in self.contains:
