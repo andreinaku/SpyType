@@ -400,6 +400,12 @@ def transfer_tests():
         compare_type=COMP_SEMANTIC
     )
     transfer_test(
+        r'a:T_bot',
+        'a=None',
+        r'a:T_a /\ None:T_a ^ (T_a:NoneType)',
+        compare_type=COMP_SEMANTIC
+    )
+    transfer_test(
         r'a:T_bot /\ b:T_bot',
         r'a+b',
         r'a:T_a /\ b:T_b /\ a + b:T_c ^ (T_a:int /\ T_b:int /\ T_c:int) \/ '
@@ -551,14 +557,6 @@ def inference_tests():
 
 
 def aux_tests():
-    aux = Translator.translate_as('self:T?1 /\ __iterable:T?2 /\ return:T?r ^ '
-                                  '(T?1:list<T?0> /\ T?2:Iterable<T?0> /\ T?r:NoneType)')
-    # transfer_test(
-    #     r'a:T_bot',
-    #     'a=None',
-    #     r'a:T_a /\ b:T_bot /\ 3:T_a ^ (T_a:NoneType)',
-    #     compare_type=COMP_SEMANTIC
-    # )
     pass
 
 
