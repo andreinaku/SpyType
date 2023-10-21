@@ -22,7 +22,8 @@ class ClassDefParser(ast.NodeVisitor):
     def __init__(self):
         self.spec_dict = dict()
 
-    def parse_node_type(self, node: ast.expr) -> str:
+    @classmethod
+    def parse_node_type(cls, node: ast.expr) -> str:
         if isinstance(node, ast.Name):
             open('types.txt', 'a').write(node.id + '\n')
             if node.id in TYPE_REPLACE:
@@ -41,10 +42,10 @@ class ClassDefParser(ast.NodeVisitor):
             contained_str = ''
             if isinstance(contained, ast.Tuple):
                 for aux in contained.elts:
-                    contained_str += self.parse_node_type(aux) + '+'
+                    contained_str += cls.parse_node_type(aux) + '+'
                 contained_str = contained_str[:-1]
             else:
-                contained_str = self.parse_node_type(contained)
+                contained_str = cls.parse_node_type(contained)
             if container == NAME_LITERAL:
                 return contained_str
             else:
@@ -52,12 +53,12 @@ class ClassDefParser(ast.NodeVisitor):
         elif isinstance(node, ast.BinOp):
             if not isinstance(node.op, ast.BitOr):
                 raise TypeError(f'{node.op} operation not supported for types')
-            return self.parse_node_type(node.left) + '+' + self.parse_node_type(node.right)
+            return cls.parse_node_type(node.left) + '+' + cls.parse_node_type(node.right)
         elif isinstance(node, ast.List):
             container = 'list'
             contained_str = ''
             for aux in node.elts:
-                contained_str += self.parse_node_type(aux) + '+'
+                contained_str += cls.parse_node_type(aux) + '+'
             contained_str = contained_str[-1]
             return container + '<' + contained_str + '>'
         else:
@@ -70,7 +71,8 @@ class ClassDefParser(ast.NodeVisitor):
                 return True
         return False
 
-    def parse_FunctionDef(self, node: ast.FunctionDef, selftype: str) -> tuple[str, str, str]:
+    @classmethod
+    def parse_FunctionDef(cls, node: ast.FunctionDef, selftype: str) -> tuple[str, str, str]:
 
         def get_parameter_specs(param: ast.arg, param_nr: int, prefix: str=None) -> tuple[str, str]:
             # todo: tratat def __rpow__(self, __value: int, __mod: int | None = None) -> Any: ...
@@ -83,10 +85,10 @@ class ClassDefParser(ast.NodeVisitor):
             else:
                 # todo: aici putem avea si ast.Constant, de ex __mod: None
                 # todo: aici putem avea si ast.BinOp, de ex __mod: int | None
-                parsed_type = self.parse_node_type(param.annotation)
-                if self.is_ignored(parsed_type):
+                parsed_type = cls.parse_node_type(param.annotation)
+                if cls.is_ignored(parsed_type):
                     raise IgnoredTypeError('ignored type (for now)')
-                tname += self.parse_node_type(param.annotation)
+                tname += cls.parse_node_type(param.annotation)
             return pname, tname
 
         def get_abs_state():
@@ -95,7 +97,8 @@ class ClassDefParser(ast.NodeVisitor):
             param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
             # parameters = node.args.args
             param_nr = 1
-            ta = '('
+            # ta = '('
+            ta = ''
             tc = '('
             for i in range(0, len(param_lists)):
             # for parameters in param_lists:
@@ -111,8 +114,8 @@ class ClassDefParser(ast.NodeVisitor):
                     ta += prefix + pname + r' /\ '
                     tc += tname + r' /\ '
             # rtype = get_returntype()
-            rtype = self.parse_node_type(node.returns)
-            if rtype == 'Any' or self.is_ignored(rtype):
+            rtype = cls.parse_node_type(node.returns)
+            if rtype == 'Any' or cls.is_ignored(rtype):
                 raise IgnoredTypeError('return type ignored (for now)')
             tname = 'T?r:'
             pname = f'return:{tname[:-1]}'
@@ -122,7 +125,7 @@ class ClassDefParser(ast.NodeVisitor):
             return ta, tc
 
         _ta, _tc = get_abs_state()
-        return node.name, _ta[:-4] + ')', _tc[:-4] + ')'
+        return node.name, _ta[:-4], _tc[:-4] + ')'
         # return funcname + ')'
 
     def visit_ClassDef(self, node: ast.ClassDef):
