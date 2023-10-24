@@ -80,7 +80,7 @@ class ClassDefParser(ast.NodeVisitor):
             tname = f'T?{param_nr}:'
             pname = f'{param.arg}:{tname[:-1]}'
             param_nr += 1
-            if param.arg in ['self', 'cls']:
+            if param.arg in ['self', 'cls'] and param.annotation is None:
                 tname += f'{selftype}'
             else:
                 # todo: aici putem avea si ast.Constant, de ex __mod: None
