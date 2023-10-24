@@ -17,6 +17,10 @@ class SupportsRichComparison:
 
 class SupportsRichComparisonT:
     pass
+
+
+class Iterator:
+    pass
 #
 #
 # class NoneType:

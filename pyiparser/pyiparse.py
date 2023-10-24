@@ -10,7 +10,8 @@ DEFAULT_TYPEVAR = '_T'
 SPEC_DEFAULT_TYPEVAR = 'T?0'
 param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
 PREFIX_POSONLY, PREFIX_ARGS, PREFIX_VARARG, PREFIX_KWONLY, PREFIX_KWARG = range(5)
-TYPE_REPLACE = {'_T': 'T?0', '_PositiveInteger': 'int', '_NegativeInteger': 'int'}
+TYPE_REPLACE = {'_T': 'T?0', '_PositiveInteger': 'int',
+                '_NegativeInteger': 'int', '_S': 'T?s', 'object': 'TopType'}
 
 
 class IgnoredTypeError(Exception):
@@ -24,12 +25,24 @@ class ClassDefParser(ast.NodeVisitor):
 
     @classmethod
     def parse_node_type(cls, node: ast.expr) -> str:
+
+        def get_types_from_list(_elts: list):
+            _type_set = set()
+            for _type in _elts:
+                str_type = cls.parse_node_type(_type)
+                if cls.is_ignored(str_type):
+                    continue
+                if str_type == '':
+                    continue
+                _type_set.add(str_type)
+            return _type_set
+
         if isinstance(node, ast.Name):
             open('types.txt', 'a').write(node.id + '\n')
-            if node.id in TYPE_REPLACE:
-                return TYPE_REPLACE[node.id]
-            else:
-                return node.id
+            return_id = TYPE_REPLACE[node.id] if node.id in TYPE_REPLACE else node.id
+            if cls.is_ignored(return_id):
+                return ''
+            return return_id
         elif isinstance(node, ast.Constant):
             open('types.txt', 'a').write(type(node.value).__name__ + '\n')
             return type(node.value).__name__
@@ -41,9 +54,8 @@ class ClassDefParser(ast.NodeVisitor):
             open('types.txt', 'a').write(container + '\n')
             contained_str = ''
             if isinstance(contained, ast.Tuple):
-                for aux in contained.elts:
-                    contained_str += cls.parse_node_type(aux) + '+'
-                contained_str = contained_str[:-1]
+                type_set = get_types_from_list(contained.elts)
+                contained_str = '+'.join(type_set)
             else:
                 contained_str = cls.parse_node_type(contained)
             if container == NAME_LITERAL:
@@ -53,13 +65,13 @@ class ClassDefParser(ast.NodeVisitor):
         elif isinstance(node, ast.BinOp):
             if not isinstance(node.op, ast.BitOr):
                 raise TypeError(f'{node.op} operation not supported for types')
-            return cls.parse_node_type(node.left) + '+' + cls.parse_node_type(node.right)
+            type_set = get_types_from_list([node.left, node.right])
+            return '+'.join(type_set)
+            # return cls.parse_node_type(node.left) + '+' + cls.parse_node_type(node.right)
         elif isinstance(node, ast.List):
             container = 'list'
-            contained_str = ''
-            for aux in node.elts:
-                contained_str += cls.parse_node_type(aux) + '+'
-            contained_str = contained_str[-1]
+            type_set = get_types_from_list(node.elts)
+            contained_str = '+'.join(type_set)
             return container + '<' + contained_str + '>'
         else:
             raise TypeError(f'{type(node)} is not supported')
@@ -86,7 +98,7 @@ class ClassDefParser(ast.NodeVisitor):
                 # todo: aici putem avea si ast.Constant, de ex __mod: None
                 # todo: aici putem avea si ast.BinOp, de ex __mod: int | None
                 parsed_type = cls.parse_node_type(param.annotation)
-                if cls.is_ignored(parsed_type):
+                if parsed_type == '':
                     raise IgnoredTypeError('ignored type (for now)')
                 tname += cls.parse_node_type(param.annotation)
             return pname, tname
