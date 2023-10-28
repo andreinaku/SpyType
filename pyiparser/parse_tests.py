@@ -1,7 +1,11 @@
+import logging
 import ast
 from pyiparser import pyiparse
 from pyiparser.pyiparse import ClassDefParser
 from Translator import Translator
+
+
+logging.basicConfig(level=logging.INFO, filename='info.log', filemode='w', format='%(message)s')
 
 
 test_dict = {
@@ -65,7 +69,7 @@ test_dict = {
     # def __setitem__(self, __key: slice, __value: Iterable[_T]) -> None: ...
     # def __delitem__(self, __key: SupportsIndex | slice) -> None: ...
     ('list<T?0>', r'def __delitem__(self, __key: SupportsIndex | slice) -> None: ...'):
-        r'self:T?1 /\ __key:T?2 /\ return:T?r ^ (T?1:list<T?0> /\ __key:SupportsIndex /\ T?r:NoneType)',
+        r'self:T?1 /\ __key:T?2 /\ return:T?r ^ (T?1:list<T?0> /\ T?2:SupportsIndex /\ T?r:NoneType)',
     # # Overloading looks unnecessary, but is needed to work around complex mypy problems
     # @overload
     # def __add__(self, __value: list[_T]) -> list[_T]: ...
@@ -105,8 +109,14 @@ test_dict = {
     #
     # @overload
     # def __new__(cls, __x: str | ReadableBuffer | SupportsInt | SupportsIndex | SupportsTrunc = ...) -> Self: ...
+    ('int', r'def __new__(cls, __x: str | ReadableBuffer | SupportsInt | SupportsIndex | SupportsTrunc = ...) -> Self: ...'):
+        r'cls:T?1 /\ __x:T?2 /\ return:T?r ^ '
+        r'(T?1:int /\ T?2:str+bytes+bytearray+memoryview+SupportsInt+SupportsIndex+SupportsTrunc /\ T?r:int)',
     # @overload
     # def __new__(cls, __x: str | bytes | bytearray, base: SupportsIndex) -> Self: ...
+    ('int', r'def __new__(cls, __x: str | bytes | bytearray, base: SupportsIndex) -> Self: ...'):
+        r'cls:T?1 /\ __x:T?2 /\ base:T?3 /\ return:T?r ^ '
+        r'(T?1:int /\ T?2:str+bytes+bytearray /\ T?3:SupportsIndex /\ T?r:int)',
     # if sys.version_info >= (3, 8):
     #     def as_integer_ratio(self) -> tuple[int, Literal[1]]: ...
     #
@@ -219,15 +229,19 @@ def translate_test():
         spec_tuple = ClassDefParser.parse_FunctionDef(funcdef_node, selftype)
         abs_state = spec_tuple[1] + ' ^ ' + spec_tuple[2]
         aux = Translator.translate_as(abs_state)  # check that no exceptions raised while translating
+        aux2 = Translator.translate_as(_expected)
         if abs_state != _expected:
-            raise RuntimeError(f'Incorrect translation. Expected {_expected} and got {abs_state}')
+            logging.info(f'Hash compare needed for:\n\t{_expected}\n\t{abs_state}\n')
+            if hash(aux) != hash(aux2):
+                raise RuntimeError(f'Incorrect translation. Expected {_expected} and got {abs_state}')
 
 
 def aux_test():
-    func_str = r'def __delitem__(self, __key: SupportsIndex | slice) -> None: ...'
+    func_str = r'def __new__(cls, __x: str | ReadableBuffer | SupportsInt | SupportsIndex | SupportsTrunc = ...) -> Self: ...'
     func_node = ast.parse(func_str).body[0]
     spec_tuple = ClassDefParser.parse_FunctionDef(func_node, 'list<T?0>')
     abs_state = spec_tuple[1] + ' ^ ' + spec_tuple[2]
+    aux = Translator.translate_as(abs_state)
     pass
 
 

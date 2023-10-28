@@ -4,14 +4,16 @@ import inspect
 
 
 NAME_LITERAL = 'Literal'
-NAME_SELF = 'Self'
+RET_SELF = 'Self'
 ignore_list = ['slice', 'GenericAlias', 'Callable']
 DEFAULT_TYPEVAR = '_T'
 SPEC_DEFAULT_TYPEVAR = 'T?0'
 param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
 PREFIX_POSONLY, PREFIX_ARGS, PREFIX_VARARG, PREFIX_KWONLY, PREFIX_KWARG = range(5)
 TYPE_REPLACE = {'_T': 'T?0', '_PositiveInteger': 'int',
-                '_NegativeInteger': 'int', '_S': 'T?s', 'object': 'TopType'}
+                '_NegativeInteger': 'int', '_S': 'T?s',
+                'object': 'TopType', 'ReadOnlyBuffer': 'bytes',
+                'WriteableBuffer': 'bytearray+memoryview', 'ReadableBuffer': 'bytes+bytearray+memoryview'}
 
 
 class IgnoredTypeError(Exception):
@@ -129,6 +131,8 @@ class ClassDefParser(ast.NodeVisitor):
             rtype = cls.parse_node_type(node.returns)
             if rtype == 'Any' or cls.is_ignored(rtype):
                 raise IgnoredTypeError('return type ignored (for now)')
+            if rtype == RET_SELF:
+                rtype = selftype
             tname = 'T?r:'
             pname = f'return:{tname[:-1]}'
             ta += pname + r' /\ '

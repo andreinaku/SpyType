@@ -21,6 +21,14 @@ class SupportsRichComparisonT:
 
 class Iterator:
     pass
+
+
+class SupportsInt:
+    pass
+
+
+class SupportsTrunc:
+    pass
 #
 #
 # class NoneType:
@@ -32,6 +40,8 @@ rules = {
     ('__iter__',): Iterable,
     ('__lt__', '__gt__'): SupportsRichComparison,
     ('__lt__', '__gt__'): SupportsRichComparisonT,
+    ('__int__',): SupportsInt,
+    ('__trunc__',): SupportsTrunc,
 }
 # builtin types according to the Python Library Reference: https://docs.python.org/3.11/library/stdtypes.html
 builtin_types = ['int', 'float', 'complex', 'iterator', 'list', 'tuple', 'range', 'str', 'bytes', 'bytearray',

@@ -67,7 +67,7 @@ class Translator:
         if strtype == 'err':
             return PyType(ErrorType)
         # for vartypes
-        if strtype.startswith('T'):
+        if strtype.startswith('T') and strtype != 'TopType':
             vartype_patt = r'^T[_\?][a-zA-Z0-9_`\.]+$'
             if re.match(vartype_patt, strtype):
                 # return PyType(VarType(strtype))
