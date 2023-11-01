@@ -1,6 +1,7 @@
 import ast
 import builtins
 import inspect
+from copy import deepcopy
 
 
 NAME_LITERAL = 'Literal'
@@ -24,6 +25,7 @@ class ClassDefParser(ast.NodeVisitor):
 
     def __init__(self):
         self.spec_dict = dict()
+        self.specs = dict()
 
     @classmethod
     def parse_node_type(cls, node: ast.expr) -> str:
@@ -193,18 +195,27 @@ class ClassDefParser(ast.NodeVisitor):
                         working_class[funcname] = {abs_state}
                     else:
                         working_class[funcname].add(abs_state)
-        return new_dict
+        self.specs = deepcopy(new_dict)
+        # return new_dict
 
     def print_specs(self, indent=2):
-        spex = self.get_specs()
+        self.get_specs()
+        spex = self.specs
         spaces = ' ' * indent
-        with open('specs.txt', 'w') as f:
+        with open('specs.py', 'w') as f:
+            f.write('funcspecs = {\n')
             for classname, funcdict in spex.items():
-                f.write(f'{classname}\n')
+                f.write(f'\t\'{classname}\': {{\n')
                 for funcname, spec_set in funcdict.items():
-                    f.write(f'\t{funcname}\n')
+                    f.write(f'\t\t\'{funcname}\': {{\n')
                     for single_spec in spec_set:
-                        f.write(f'\t\t{single_spec}\n')
+                        f.write(f'\t\t\tr\'{single_spec}\',\n')
+                    f.write('\t\t},\n')
+                f.write('\t},\n')
+            f.write('\n}')
+
+    def get_specs_dict(self):
+        return self.specs
 
 
 if __name__ == "__main__":
