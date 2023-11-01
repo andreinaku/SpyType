@@ -15,6 +15,7 @@ TYPE_REPLACE = {'_T': 'T?0', '_PositiveInteger': 'int',
                 '_NegativeInteger': 'int', '_S': 'T?s',
                 'object': 'TopType', 'ReadOnlyBuffer': 'bytes',
                 'WriteableBuffer': 'bytearray+memoryview', 'ReadableBuffer': 'bytes+bytearray+memoryview'}
+OUTPUT_FILE = 'specs_shed.py'
 
 
 class IgnoredTypeError(Exception):
@@ -202,7 +203,7 @@ class ClassDefParser(ast.NodeVisitor):
         self.get_specs()
         spex = self.specs
         spaces = ' ' * indent
-        with open('specs.py', 'w') as f:
+        with open(OUTPUT_FILE, 'a') as f:
             f.write('funcspecs = {\n')
             for classname, funcdict in spex.items():
                 f.write(f'\t\'{classname}\': {{\n')
@@ -212,16 +213,56 @@ class ClassDefParser(ast.NodeVisitor):
                         f.write(f'\t\t\tr\'{single_spec}\',\n')
                     f.write('\t\t},\n')
                 f.write('\t},\n')
-            f.write('\n}')
+            f.write('\n}\n')
 
     def get_specs_dict(self):
         return self.specs
 
 
-if __name__ == "__main__":
+def op_equivalences():
+    equiv_dict = {
+        'ast.UnaryOp':
+            {
+                'ast.UAdd': '__pos__',
+                'ast.USub': '__neg__',
+                'ast.Not': '__bool__',
+                'ast.Invert': '__invert__',
+            },
+        'ast.BinOp':
+            {
+                'ast.Add': '__add__',
+                'ast.Sub': '__sub__',
+                'ast.Mult': '__mul__ ',
+                'ast.Div': '__truediv__ ',
+                'ast.FloorDiv': '__floordiv__',
+                'ast.Mod': '__mod__',
+                'ast.Pow': '__pow__',
+                'ast.LShift': '__lshift__',
+                'ast.RShift': '__rshift__',
+                'ast.BitOr': '__or__',
+                'ast.BitXor': '__xor__',
+                'ast.BitAnd': '__and__',
+                'ast.MatMult': '__matmul__',
+            }
+    }
+    with open(OUTPUT_FILE, 'a') as f:
+        f.write('equiv_dict = {\n')
+        for node, funcdict in equiv_dict.items():
+            f.write(f'\t{node}: {{\n')
+            for nodeop, funcname in funcdict.items():
+                f.write(f'\t\t{nodeop}: \'{funcname}\',\n')
+            f.write('\t},\n')
+        f.write('}\n')
+
+
+def generate_specs():
+    open(OUTPUT_FILE, 'w').write('import ast\n\n\n')
+    op_equivalences()
     pp = ClassDefParser()
     tree = ast.parse(open('test.pyi', 'r').read())
     pp.visit(tree)
-    # print(pp.get_specs())
     pp.print_specs()
-    # pprint.pprint(pp.get_specs())
+
+
+if __name__ == "__main__":
+    generate_specs()
