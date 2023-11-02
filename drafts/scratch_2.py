@@ -1,6 +1,7 @@
 import ast
 from Translator import Translator
 import astor
+from copy import deepcopy
 
 
 POSONLY_MARKER = '__po_'
@@ -22,7 +23,7 @@ spec = (r'__po_a:T?1 /\ __po_b:T?2 /\ c:T?3 /\ __va_d:T?4 /\ __ko_e:T?5 /\ __ko_
 aux = Translator.translate_as(spec)
 print(aux)
 
-va = list(aux.va)
+va = deepcopy(list(aux.va))
 callnode = tree.body[0].value
 pos_call_list = []
 keyword_call_dict = {}
@@ -37,20 +38,21 @@ print(ast.dump(tree, indent=4))
 dd = dict()
 
 
-def f(va_index):
-    if (len(pos_call_list) > 0 or len(keyword_call_dict) > 0) and va_index >= len(va):
+def f():
+    if (len(pos_call_list) > 0 or len(keyword_call_dict) > 0) and len(va) == 0:
         return False
-    if (len(pos_call_list) == 0 and len(keyword_call_dict) == 0) and va_index < len(va):
+    if (len(pos_call_list) == 0 and len(keyword_call_dict) == 0) and len(va) > 0:
         return False
-    if va_index == len(va) and len(pos_call_list) == 0 and len(keyword_call_dict) == 0:
+    if len(va) == 0 and len(pos_call_list) == 0 and len(keyword_call_dict) == 0:
         return True
-    va_var: str = va[va_index]
+    va_var: str = va.pop(0)
     if va_var.startswith(POSONLY_MARKER):
         if len(pos_call_list) == 0:
             return False
         call_entry = pos_call_list.pop(0)
         dd[va_var] = call_entry
-        f(va_index+1)
+        f()
+        # f(va_index+1)
     elif va_var.startswith(VARARG_MARKER):
         while len(pos_call_list) > 0:
             call_entry = pos_call_list.pop(0)
@@ -60,7 +62,7 @@ def f(va_index):
                 dd[va_var] = dd[va_var] + (call_entry,)
         if va_var not in dd:
             return False
-        f(va_index+1)
+        f()
     elif va_var.startswith(KEYWORDONLY_MARKER):
         if len(keyword_call_dict) == 0:
             return False
@@ -68,7 +70,7 @@ def f(va_index):
         if varname not in keyword_call_dict:
             return False
         dd[va_var] = astor.to_source(keyword_call_dict.pop(varname)).strip()
-        f(va_index+1)
+        f()
     elif va_var.startswith(KWARG_MARKER):
         if len(keyword_call_dict) == 0:
             return False
@@ -77,10 +79,10 @@ def f(va_index):
             ko_key = keyword_list.pop(0)
             call_entry = astor.to_source(keyword_call_dict.pop(ko_key)).strip()
             if va_var not in dd:
-                dd[va_var] = {aux: call_entry}
+                dd[va_var] = {ko_key: call_entry}
             else:
-                dd[va_var].update({aux: call_entry})
-        f(va_index+1)
+                dd[va_var].update({ko_key: call_entry})
+        f()
     else:
         if len(pos_call_list) > 0:
             call_entry = pos_call_list.pop(0)
@@ -89,8 +91,8 @@ def f(va_index):
         else:
             return False
         dd[va_var] = call_entry
-        f(va_index+1)
+        f()
 
 
-f(0)
+f()
 print(dd)
