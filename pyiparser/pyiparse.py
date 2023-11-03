@@ -2,6 +2,7 @@ import ast
 import builtins
 import inspect
 from copy import deepcopy
+import astor
 
 
 NAME_LITERAL = 'Literal'
@@ -75,6 +76,11 @@ class ClassDefParser(ast.NodeVisitor):
             # return cls.parse_node_type(node.left) + '+' + cls.parse_node_type(node.right)
         elif isinstance(node, ast.List):
             container = 'list'
+            type_set = get_types_from_list(node.elts)
+            contained_str = '+'.join(type_set)
+            return container + '<' + contained_str + '>'
+        elif isinstance(node, ast.Tuple):
+            container = 'tuple'
             type_set = get_types_from_list(node.elts)
             contained_str = '+'.join(type_set)
             return container + '<' + contained_str + '>'
@@ -166,10 +172,12 @@ class ClassDefParser(ast.NodeVisitor):
             for base in node.bases:
                 if isinstance(base, ast.Subscript):
                     if not past_slice:
+                        # aux = self.parse_node_type(base)
                         self_type += '<' + self.parse_node_type(base.slice) + '>'
                         past_slice = base.slice
                     else:
-                        if past_slice.id != base.slice.id:
+                        # if past_slice.id != base.slice.id:
+                        if astor.to_source(past_slice) != astor.to_source(base.slice):
                             raise RuntimeError('slice mismatch')
             for func in node.body:
                 if not isinstance(func, ast.FunctionDef):
@@ -181,8 +189,9 @@ class ClassDefParser(ast.NodeVisitor):
                 _spec_list.append(spec_tuple)
             return _spec_list
 
-        spec_list = get_spec_list()
-        add_to_spec_dict(spec_list)
+        if node.name not in ['staticmethod', 'classmethod', 'type', 'function']:
+            spec_list = get_spec_list()
+            add_to_spec_dict(spec_list)
 
     def get_specs(self):
         new_dict = dict()
@@ -260,6 +269,7 @@ def generate_specs():
     op_equivalences()
     pp = ClassDefParser()
     tree = ast.parse(open('test.pyi', 'r').read())
+    # tree = ast.parse(open('builtins.pyi', 'r').read())
     pp.visit(tree)
     pp.print_specs()
 

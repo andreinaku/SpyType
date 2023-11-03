@@ -125,14 +125,14 @@ class ExpVisit(ast.NodeVisitor):
         if len(new_as.tc) == 0:
             newctx = Context()
             newte = TypeExpression()
-            newpytype = PyType(ptype=container_type, contains=contained_varexps)
+            newpytype = PyType(ptype=container_type, values=contained_varexps)
             newte.add(newpytype)
             newctx[node_vartype] = hset()
             newctx[node_vartype].add(newte)
             new_as.tc.add(newctx)
             return new_as
         for ctx in new_as.tc:
-            newpytype = PyType(ptype=container_type, contains=contained_varexps)
+            newpytype = PyType(ptype=container_type, values=contained_varexps)
             newte = TypeExpression()
             newte.add(newpytype)
             ctx[node_vartype] = hset()

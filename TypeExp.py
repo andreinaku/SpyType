@@ -39,11 +39,11 @@ class GenericType:
         #     return False
         if not isinstance(self, PyType):
             return False
-        if not self.contains or len(self.contains) == 0:
+        if not self.values or len(self.values) == 0:
             return False
         auxte = TypeExpression()
         auxte.add(item)  # between two TEs, not a GE and TE
-        return auxte in self.contains
+        return auxte in self.values
 
     def __le__(self, item):
         if isinstance(self, VarType) and isinstance(item, VarType):
@@ -54,7 +54,7 @@ class GenericType:
             if self == item:
                 return True
             if self.ptype == item.ptype:
-                if self.contains <= item.contains:
+                if self.values <= item.values:
                     return True
                 return False
         return False
@@ -73,18 +73,18 @@ class GenericType:
             return None
         if self.ptype != other.ptype:
             return None
-        elif self.contains is None and other.contains is not None:
+        elif self.values is None and other.values is not None:
             return deepcopy(other)
-        elif self.contains is not None and other.contains is None:
+        elif self.values is not None and other.values is None:
             return deepcopy(self)
-        elif self.contains is None and other.contains is None:
+        elif self.values is None and other.values is None:
             return deepcopy(other)
-        if self.contains is not None and len(self.contains) == 0 and len(other.contains) != 0:
+        if self.values is not None and len(self.values) == 0 and len(other.values) != 0:
             return deepcopy(other)
-        elif self.contains is not None and len(self.contains) != 0 and len(other.contains) == 0:
+        elif self.values is not None and len(self.values) != 0 and len(other.values) == 0:
             return deepcopy(self)
-        elif self.contains is not None and len(self.contains) != 0 and len(other.contains) != 0:
-            inter = self.contains & other.contains
+        elif self.values is not None and len(self.values) != 0 and len(other.values) != 0:
+            inter = self.values & other.values
             if inter is None:
                 return None
             return PyType(self.ptype, inter)
@@ -93,11 +93,12 @@ class GenericType:
 
 
 class PyType(GenericType):
-    def __init__(self, ptype, contains=None):
+    def __init__(self, ptype, keys=None, values=None):
         self.ptype = deepcopy(ptype)
-        self.contains = deepcopy(contains)
-        if (ptype in container_ptypes) and (self.contains is None):
-            self.contains = TypeExpression()
+        self.keys = deepcopy(keys)
+        self.values = deepcopy(values)
+        if (ptype in container_ptypes) and (self.values is None):
+            self.values = TypeExpression()
 
     def __str__(self):
         if self.ptype == BottomType:
@@ -111,16 +112,16 @@ class PyType(GenericType):
         else:
             # retstr = str(self.ptype).split("'")[1]
             retstr = self.ptype.__name__
-        if self.contains is not None:
+        if self.values is not None:
             retstr += '<'
             # for c_type in self.contains:
             #     retstr += str(c_type) + ','
-            retstr += str(self.contains)
+            retstr += str(self.values)
             retstr += '>'
         return retstr
 
     def __key(self):
-        return self.ptype, self.contains
+        return self.ptype, self.values
 
     def __hash__(self):
         return hash(self.__key())
@@ -138,9 +139,9 @@ class PyType(GenericType):
         if ptip1.ptype != ptip2.ptype:
             return None
         new_ptip = PyType(ptip1.ptype)
-        if ptip1.contains is None and ptip2.contains is None:
+        if ptip1.values is None and ptip2.values is None:
             return new_ptip
-        new_ptip.contains = TypeExpression.glb(ptip1.contains, ptip2.contains)
+        new_ptip.values = TypeExpression.glb(ptip1.values, ptip2.values)
         return new_ptip
 
 
@@ -233,7 +234,7 @@ class TypeExpression(hset):
             if tip.ptype != ptip.ptype:
                 newte.add(tip)
                 continue
-            newtip = PyType(ptype=tip.ptype, contains=tip.contains+newcontains)
+            newtip = PyType(ptype=tip.ptype, values=tip.values + newcontains)
             newte.add(newtip)
         return TypeExpression(newte)
 
@@ -253,7 +254,7 @@ class TypeExpression(hset):
                 for ctype in newte:
                     if isinstance(ctype, PyType) and tip.ptype == ctype.ptype:
                         break
-                ctype.contains = deepcopy(ctype.contains) + deepcopy(tip.contains)
+                ctype.values = deepcopy(ctype.values) + deepcopy(tip.values)
         return TypeExpression(newte)
 
     def __and__(self, other):
@@ -286,9 +287,9 @@ class TypeExpression(hset):
             if isinstance(ptip, VarType):
                 vtypes.add(ptip)
                 continue
-            if ptip.contains is None or len(ptip.contains) == 0:
+            if ptip.values is None or len(ptip.values) == 0:
                 continue
-            contained_te = ptip.contains
+            contained_te = ptip.values
             vtypes |= contained_te.get_all_vartypes()
         return vtypes
 
@@ -303,10 +304,10 @@ class TypeExpression(hset):
                 newte.add(deepcopy(new_vtype))
                 continue
             ptip: PyType
-            if ptip.contains is None or len(ptip.contains) == 0:
+            if ptip.values is None or len(ptip.values) == 0:
                 newte.add(deepcopy(ptip))
                 continue
-            contained_te = ptip.contains
+            contained_te = ptip.values
             newptip = PyType(ptip.ptype, contained_te.vartype_replace_all(old_vtype, new_vtype))
             newte.add(newptip)
         return newte
@@ -350,9 +351,9 @@ class TypeExpression(hset):
             if isinstance(tip, VarType) and tip in repl:
                 newte = newte + repl[tip]
                 continue
-            if isinstance(tip, PyType) and tip.contains is not None:
+            if isinstance(tip, PyType) and tip.values is not None:
                 newtip = PyType(ptype=tip.ptype)
-                newtip.contains = tip.contains.replace_vartype(repl)
+                newtip.values = tip.values.replace_vartype(repl)
                 newte.add(newtip)
                 continue
             newte.add(tip)
@@ -365,7 +366,7 @@ class TypeExpression(hset):
         tip = self[0]
         if not isinstance(tip, PyType):
             return False
-        if tip.contains is None:
+        if tip.values is None:
             return False
         return True
 
@@ -386,7 +387,7 @@ class TypeExpression(hset):
         ctx = CtxReplace()
         if te1.is_single_container() and te2.is_single_container():
             if te1[0].ptype == te2[0].ptype:
-                return TypeExpression.get_spectype_repl(te1[0].contains, te2[0].contains, vi_types)
+                return TypeExpression.get_spectype_repl(te1[0].values, te2[0].values, vi_types)
         if te1.is_spectype() and not te2.is_spectype():
             specte = te1
             otherte = te2
@@ -408,16 +409,16 @@ class TypeExpression(hset):
                 if ptip == vtype:
                     return True
                 continue
-            if ptip.contains is not None and len(ptip.contains) > 0:
-                return ptip.contains.contains_vartype(vtype)
+            if ptip.values is not None and len(ptip.values) > 0:
+                return ptip.values.contains_vartype(vtype)
         return False
 
     def contains_any_vartype(self):
         for ptip in self:
             if isinstance(ptip, VarType):
                 return True
-            if ptip.contains is not None and len(ptip.contains) > 0:
-                return ptip.contains.contains_any_vartype()
+            if ptip.values is not None and len(ptip.values) > 0:
+                return ptip.values.contains_any_vartype()
         return False
 
     def old_replace_te(self, to_replace, replace_with):
@@ -434,11 +435,11 @@ class TypeExpression(hset):
             if not isinstance(t, PyType):
                 newte.add(deepcopy(t))
                 continue
-            if t.contains is None or len(t.contains) == 0:
+            if t.values is None or len(t.values) == 0:
                 newte.add(deepcopy(t))
                 continue
             newtip = PyType(ptype=t.ptype)
-            newtip.contains = t.contains.old_replace_te(to_replace, replace_with)
+            newtip.values = t.values.old_replace_te(to_replace, replace_with)
             newte.add(newtip)
         return newte
 
@@ -481,10 +482,10 @@ class TypeExpression(hset):
         for t1 in self:
             if isinstance(t1, VarType):
                 continue
-            if not t1.contains:
+            if not t1.values:
                 continue
             t2 = other.get_by_type(t1.ptype)
-            te1 = t1.contains
+            te1 = t1.values
             te2 = t2.contains
             if not te1.comparable(te2, sign2):
                 return False
@@ -520,11 +521,11 @@ class TypeExpression(hset):
         for t1 in self:
             if isinstance(t1, VarType):
                 continue
-            if not t1.contains:
+            if not t1.values:
                 continue
             t2 = other.get_by_type(t1.ptype)
-            te1 = t1.contains
-            te2 = t2.contains
+            te1 = t1.values
+            te2 = t2.values
             if not te1.comparable(te2, sign2):
                 return False
         return True
@@ -580,11 +581,11 @@ class TypeExpression(hset):
         for t1 in self:
             if isinstance(t1, VarType):
                 continue
-            if not t1.contains:
+            if not t1.values:
                 continue
             t2 = other.get_by_type(t1.ptype)
-            te1 = t1.contains
-            te2 = t2.contains
+            te1 = t1.values
+            te2 = t2.values
             if te1 != te2:
                 return False
         return True
@@ -634,7 +635,7 @@ class TypeExpression(hset):
         repl = dict()
         if te1.is_single_container() and te2.is_single_container():
             if te1[0].ptype == te2[0].ptype:
-                return TypeExpression.get_vartype_repl(te1[0].contains, te2[0].contains)
+                return TypeExpression.get_vartype_repl(te1[0].values, te2[0].values)
         if te1.is_spectype() and not te2.is_spectype():
             specte = te1
             otherte = te2
@@ -660,9 +661,9 @@ class TypeExpression(hset):
             return True
         if not isinstance(ptip, PyType):
             return False
-        if ptip.contains is None:
+        if ptip.values is None:
             return False
-        return ptip.contains.has_single_spectype()
+        return ptip.values.has_single_spectype()
 
     def has_single_vartype(self):
         if len(self) != 1:
@@ -672,23 +673,23 @@ class TypeExpression(hset):
             return True
         if not isinstance(ptip, PyType):
             return False
-        if ptip.contains is None:
+        if ptip.values is None:
             return False
-        return ptip.contains.has_single_vartype()
+        return ptip.values.has_single_vartype()
 
     def get_single_spectype(self: TypeExpression):
         ptip = self[0]
         ptip: PyType | VarType
         if isinstance(ptip, VarType) and SPECTYPE_MARKER in ptip.varexp:
             return TypeExpression({ptip})
-        return ptip.contains.get_single_spectype()
+        return ptip.values.get_single_spectype()
 
     def get_single_vartype(self: TypeExpression):
         ptip = self[0]
         ptip: PyType | VarType
         if isinstance(ptip, VarType):
             return TypeExpression({ptip})
-        return ptip.contains.get_single_vartype()
+        return ptip.values.get_single_vartype()
 
     def __contains__(self, other: TypeExpression):
         contains_flag = True
@@ -704,9 +705,9 @@ class TypeExpression(hset):
         if contains_flag:
             return True
         for tip2 in self:
-            if (isinstance(tip2, PyType) and tip2.contains is None) or isinstance(tip2, VarType):
+            if (isinstance(tip2, PyType) and tip2.values is None) or isinstance(tip2, VarType):
                 continue
-            contains_flag = tip2.contains.__contains__(other)
+            contains_flag = tip2.values.__contains__(other)
             if contains_flag:
                 return True
         return False
@@ -717,12 +718,12 @@ class TypeExpression(hset):
         new_te = TypeExpression()
         newself = deepcopy(self)
         for tip in self:
-            if (isinstance(tip, PyType) and tip.contains is None) or isinstance(tip, VarType):
+            if (isinstance(tip, PyType) and tip.values is None) or isinstance(tip, VarType):
                 continue
             aux_te = TypeExpression()
             newself = TypeExpression(newself - TypeExpression({tip}))
             new_pytype = PyType(tip.ptype)
-            new_pytype.contains = tip.contains.replace_in_te(to_replace, replace_with)
+            new_pytype.values = tip.values.replace_in_te(to_replace, replace_with)
             aux_te += TypeExpression({new_pytype})
             newself += aux_te
         if to_replace in newself:

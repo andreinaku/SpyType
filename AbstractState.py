@@ -976,7 +976,7 @@ class Context(hdict):
 
     def is_simple(self, vt: VarType, orig: VarType, t: GenericType):
         if isinstance(t, PyType):
-            if not t.contains:
+            if not t.values:
                 return True
             else:
                 return False
@@ -1003,7 +1003,7 @@ class Context(hdict):
         retset.add(newte)
         for t in not_simple:
             if isinstance(t, PyType):  # has to have contains here
-                contained_set = self.squash_te(vt, orig, t.contains)
+                contained_set = self.squash_te(vt, orig, t.values)
                 auxset = hset()
                 for contained_elem in contained_set:
                     auxte = TypeExpression()
