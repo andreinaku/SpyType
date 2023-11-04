@@ -109,6 +109,28 @@ def te_tests():
             VarType('T_c')])
     translate_test(r'int+float+str+list<set<str+float+T_a>+T_b>+T_c', Translator.translate_te, expected_translation)
 
+    expected_translation = \
+        TypeExpression([
+            PyType(dict, TypeExpression([PyType(int)]), TypeExpression([PyType(float)]))
+        ])
+    translate_test(r'dict<int, float>', Translator.translate_te, expected_translation)
+
+    expected_translation = \
+        TypeExpression([
+            PyType(dict,
+                   TypeExpression([PyType(dict,
+                                          TypeExpression([PyType(int)]),
+                                          TypeExpression([PyType(float), PyType(str)])
+                                          )
+                                   ]),
+                   TypeExpression([PyType(list,
+                                          TypeExpression([VarType('T_c')])
+                                          )
+                                   ])
+                   )
+        ])
+    translate_test(r'dict<dict<int, float+str>, list<T_c>>', Translator.translate_te, expected_translation)
+
     op_test((r'int+float', TypeExpression), (r'int+float+str', TypeExpression), func=TypeExpression.comparable,
             expected=True)
     op_test((r'int+T_b', TypeExpression), (r'int+float+str+T_a', TypeExpression), func=TypeExpression.comparable,

@@ -61,6 +61,32 @@ class Translator:
 
     @staticmethod
     def translate_type(strtype: str, start_br="<", end_br=">", sep="+"):
+
+        def get_kvlist(strtypes):
+            level = 0
+            toadd = ''
+            kvlist = []
+            for c in strtypes:
+                if c == '<':
+                    level += 1
+                    toadd += c
+                elif c == '>':
+                    level -= 1
+                    toadd += c
+                elif c == ',':
+                    if level == 0:
+                        kvlist.append(toadd)
+                        toadd = ''
+                    else:
+                        toadd += c
+                elif c == ' ':
+                    continue
+                else:
+                    toadd += c
+            if toadd != '':
+                kvlist.append(toadd)
+            return kvlist
+
         # for bottom type
         if strtype == 'bot':
             return PyType(BottomType)
@@ -85,26 +111,34 @@ class Translator:
                 raise RuntimeError('Type {} does not denote  a Python type'.format(strtype))
             return PyType(btip)
         # for containers: list[int, float, set[T_2, complex], bool] etc.
-        container_patt = r'^([a-zA-Z_][a-zA-Z0-9_]*)\<([a-zA-Z0-9\+ _\<\?`\.\>]*)\>$'
+        container_patt = r'^([a-zA-Z_][a-zA-Z0-9_]*)\<([a-zA-Z0-9\+ ,_\<\?`\.\>]*)\>$'
         # container_patt = r'^([a-zA-Z_][a-zA-Z0-9_]*)\[([a-zA-Z0-9\{} _\{}\{}]+)\]$'.format(start_br, end_br, sep)
         foundlist = re.findall(container_patt, strtype)
         if len(foundlist) != 1:
             raise RuntimeError('Type {} does not represent a valid container type'.format(strtype))
         foundtuple = foundlist[0]
+
         btip = eval(foundtuple[0])
         if type(btip) is not type:
-        # if not isinstance(type(btip), type):
             raise RuntimeError('Type {} does not eval to a type type'.format(type))
-        c_strtypes = Translator.get_types_from_list(foundtuple[1], start_br, end_br, sep)
-        # c_types = hset()
-        c_types = TypeExpression()
-        for c_strtype in c_strtypes:
-            newtip = Translator.translate_type(c_strtype, start_br, end_br, sep)
-            c_types.add(newtip)
+
+        kvlist = get_kvlist(foundtuple[1])
+        if len(kvlist) > 2:
+            raise TypeError(f'Contained types {kvlist} is not supported.')
+        # c_strtypes = Translator.get_types_from_list(foundtuple[1], start_br, end_br, sep)
+        ll = []
+        for strtip in kvlist:
+            c_strtypes = Translator.get_types_from_list(strtip, start_br, end_br, sep)
+            # c_types = hset()
+            c_types = TypeExpression()
+            for c_strtype in c_strtypes:
+                newtip = Translator.translate_type(c_strtype, start_br, end_br, sep)
+                c_types.add(newtip)
+            ll.append(c_types)
         # c_types = frozenset(c_types)
         # newtype = PyType(btip, c_types)
         # print(newtype)
-        return PyType(btip, c_types)
+        return PyType(btip, *ll)
 
     @staticmethod
     def translate_te(str_te):
