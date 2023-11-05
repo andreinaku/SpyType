@@ -12,11 +12,12 @@ DEFAULT_TYPEVAR = '_T'
 SPEC_DEFAULT_TYPEVAR = 'T?0'
 param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
 PREFIX_POSONLY, PREFIX_ARGS, PREFIX_VARARG, PREFIX_KWONLY, PREFIX_KWARG = range(5)
-TYPE_REPLACE = {'_T': 'T?0', '_PositiveInteger': 'int',
+TYPE_REPLACE = {'_T': 'T?0', '_PositiveInteger': 'int', '_KT': 'T?K', '_VT': 'T?V',
                 '_NegativeInteger': 'int', '_S': 'T?s',
                 'object': 'TopType', 'ReadOnlyBuffer': 'bytes',
                 'WriteableBuffer': 'bytearray+memoryview', 'ReadableBuffer': 'bytes+bytearray+memoryview'}
 OUTPUT_FILE = 'specs_shed.py'
+MAPPING_BASES = ['Mapping', 'MutableMapping', 'dict']
 
 
 class IgnoredTypeError(Exception):
@@ -33,15 +34,16 @@ class ClassDefParser(ast.NodeVisitor):
     def parse_node_type(cls, node: ast.expr) -> str:
 
         def get_types_from_list(_elts: list):
-            _type_set = set()
+            # todo: aici trebuie lista cu tot cu duplicate, care vor fi eliminate mai incolo
+            _type_list = []
             for _type in _elts:
                 str_type = cls.parse_node_type(_type)
                 if cls.is_ignored(str_type):
                     continue
                 if str_type == '':
                     continue
-                _type_set.add(str_type)
-            return _type_set
+                _type_list.append(str_type)
+            return _type_list
 
         if isinstance(node, ast.Name):
             open('types.txt', 'a').write(node.id + '\n')
@@ -54,14 +56,23 @@ class ClassDefParser(ast.NodeVisitor):
             return type(node.value).__name__
         elif isinstance(node, ast.Subscript):
             contained = node.slice
+            container = node.value.id
+            kvtuple = False
+            if container in MAPPING_BASES:
+                kvtuple = True
             if not isinstance(node.value, ast.Name):
                 raise TypeError(f'{type(node.value)} is not yet supported here')
-            container = node.value.id
-            open('types.txt', 'a').write(container + '\n')
+            # open('types.txt', 'a').write(container + '\n')
             contained_str = ''
             if isinstance(contained, ast.Tuple):
-                type_set = get_types_from_list(contained.elts)
-                contained_str = '+'.join(type_set)
+                type_set = get_types_from_list(contained.elts)  # list here
+                if not kvtuple:
+                    type_set = set(type_set)
+                    contained_str = '+'.join(type_set)
+                else:
+                    if len(type_set) != 2:
+                        raise TypeError(f'{type_set} types not supported for key-value pairs')
+                    contained_str = ', '.join(type_set)
             else:
                 contained_str = cls.parse_node_type(contained)
             if container == NAME_LITERAL:
@@ -71,17 +82,17 @@ class ClassDefParser(ast.NodeVisitor):
         elif isinstance(node, ast.BinOp):
             if not isinstance(node.op, ast.BitOr):
                 raise TypeError(f'{node.op} operation not supported for types')
-            type_set = get_types_from_list([node.left, node.right])
+            type_set = set(get_types_from_list([node.left, node.right]))
             return '+'.join(type_set)
             # return cls.parse_node_type(node.left) + '+' + cls.parse_node_type(node.right)
         elif isinstance(node, ast.List):
             container = 'list'
-            type_set = get_types_from_list(node.elts)
+            type_set = set(get_types_from_list(node.elts))
             contained_str = '+'.join(type_set)
             return container + '<' + contained_str + '>'
         elif isinstance(node, ast.Tuple):
             container = 'tuple'
-            type_set = get_types_from_list(node.elts)
+            type_set = set(get_types_from_list(node.elts))
             contained_str = '+'.join(type_set)
             return container + '<' + contained_str + '>'
         else:
@@ -173,7 +184,13 @@ class ClassDefParser(ast.NodeVisitor):
                 if isinstance(base, ast.Subscript):
                     if not past_slice:
                         # aux = self.parse_node_type(base)
-                        self_type += '<' + self.parse_node_type(base.slice) + '>'
+                        kvtuple = False
+                        if base.value.id in MAPPING_BASES:
+                            kvtuple = True
+                        parsed_type = self.parse_node_type(base)
+                        parsed_slice = '<' + parsed_type.split('<', maxsplit=1)[1]
+                        # self_type += '<' + self.parse_node_type(base.slice, True, kvtuple) + '>'
+                        self_type += parsed_slice
                         past_slice = base.slice
                     else:
                         # if past_slice.id != base.slice.id:
@@ -268,7 +285,7 @@ def generate_specs():
     open(OUTPUT_FILE, 'w').write('import ast\n\n\n')
     op_equivalences()
     pp = ClassDefParser()
-    tree = ast.parse(open('test.pyi', 'r').read())
+    tree = ast.parse(open('test_dict.pyi', 'r').read())
     # tree = ast.parse(open('builtins.pyi', 'r').read())
     pp.visit(tree)
     pp.print_specs()
