@@ -99,6 +99,9 @@ class PyType(GenericType):
         self.values = deepcopy(values)
         if (ptype in container_ptypes) and (self.keys is None):
             self.keys = TypeExpression()
+        if (ptype in mapping_types) and (self.keys is None) and (self.values is None):
+            self.keys = TypeExpression()
+            self.values = TypeExpression()
 
     def __str__(self):
         if self.ptype == BottomType:
@@ -308,10 +311,14 @@ class TypeExpression(hset):
                 continue
             ptip: PyType
             if ptip.keys is None or len(ptip.keys) == 0:
-                newte.add(deepcopy(ptip))
-                continue
-            contained_te = ptip.keys
-            newptip = PyType(ptip.ptype, contained_te.vartype_replace_all(old_vtype, new_vtype))
+                new_keys = None
+            else:
+                new_keys = ptip.keys.vartype_replace_all(old_vtype, new_vtype)
+            if ptip.values is None or len(ptip.values) == 0:
+                new_values = None
+            else:
+                new_values = ptip.values.vartype_replace_all(old_vtype, new_vtype)
+            newptip = PyType(ptip.ptype, new_keys, new_values)
             newte.add(newptip)
         return newte
 

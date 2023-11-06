@@ -7,6 +7,7 @@ import string
 
 id_index = 0
 container_ptypes = [list, set, tuple]
+mapping_types = [dict]
 SPECTYPE_MARKER = '?'
 BOTTOM = 'T_bot'
 OUTMARKER = '__out_'
