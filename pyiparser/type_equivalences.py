@@ -48,7 +48,7 @@ builtin_types = ['int', 'float', 'complex', 'iterator', 'list', 'tuple', 'range'
                  'memoryview', 'set', 'frozenset', 'dict', 'NoneType', 'object']
 
 
-def get_dict():
+def get_equivalences_dict():
     equiv_dict = dict()
     for name, obj in inspect.getmembers(builtins):
         if not inspect.isclass(obj):
@@ -71,5 +71,5 @@ def get_dict():
 
 
 if __name__ == '__main__':
-    aux = get_dict()
+    aux = get_equivalences_dict()
     print(aux)

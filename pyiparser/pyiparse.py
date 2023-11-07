@@ -4,6 +4,8 @@ import inspect
 from copy import deepcopy
 import astor
 import logging
+from type_equivalences import *
+
 
 BUILTIN_CATEGORY = 'builtins'
 NAME_LITERAL = 'Literal'
@@ -294,7 +296,7 @@ class ClassDefParser(ast.NodeVisitor):
         return self.specs
 
 
-def op_equivalences():
+def write_op_equivalences():
     equiv_dict = {
         'ast.UnaryOp':
             {
@@ -321,23 +323,32 @@ def op_equivalences():
             }
     }
     with open(OUTPUT_FILE, 'a') as f:
-        f.write('equiv_dict = {\n')
+        f.write('op_equiv = {\n')
         for node, funcdict in equiv_dict.items():
             f.write(f'\t{node}: {{\n')
             for nodeop, funcname in funcdict.items():
                 f.write(f'\t\t{nodeop}: \'{funcname}\',\n')
             f.write('\t},\n')
-        f.write('}\n')
+        f.write('}\n\n\n')
+
+
+def write_type_equivalences():
+    equiv = get_equivalences_dict()
+    with open(OUTPUT_FILE, 'a') as f:
+        f.write('type_equiv = {\n')
+        for node, typelist in equiv.items():
+            sum_string = '+'.join(typelist)
+            f.write(f'\t{node.__name__}: \'{sum_string}\',\n')
+        f.write('}\n\n\n')
 
 
 def generate_specs():
-    def print_specs(spex, indent=2):
-        # self.get_specs()
-        # spex = self.specs
+
+    def print_specs(_spex, indent=2):
         spaces = ' ' * indent
         with open(OUTPUT_FILE, 'a') as f:
             f.write('funcspecs = {\n')
-            for classname, funcdict in spex.items():
+            for classname, funcdict in _spex.items():
                 f.write(f'\t\'{classname}\': {{\n')
                 for funcname, spec_set in funcdict.items():
                     f.write(f'\t\t\'{funcname}\': {{\n')
@@ -347,8 +358,9 @@ def generate_specs():
                 f.write('\t},\n')
             f.write('\n}\n')
 
-    open(OUTPUT_FILE, 'w').write('import ast\n\n\n')
-    op_equivalences()
+    open(OUTPUT_FILE, 'w').write('import ast\nfrom type_equivalences import *\n\n\n')
+    write_op_equivalences()
+    write_type_equivalences()
     # class specs
     pp = ClassDefParser()
     tree = ast.parse(open('test.pyi', 'r').read())
@@ -370,10 +382,10 @@ def generate_specs():
             continue
         abs_state = spec[1] + ' ^ ' + spec[2]
         if spec[0] not in builtin_spex:
-            builtin_spex[spec[0]] = {spec[1]}
+            builtin_spex[spec[0]] = {abs_state}
         else:
-            builtin_spex[spec[0]].add(spec[1])
-    pass
+            builtin_spex[spec[0]].add(abs_state)
+    print_specs(spex)
 
 
 if __name__ == "__main__":

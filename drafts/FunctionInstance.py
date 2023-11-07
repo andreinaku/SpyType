@@ -38,9 +38,6 @@ class FunctionInstance:
         self.arg_list.remove(RETURN_VARNAME)
         self._param_link()
 
-    def _get_spec(self, spec_name):
-
-
     def _param_link(self):
         if (len(self.pos_call_list) > 0 or len(self.keyword_call_dict) > 0) and len(self.arg_list) == 0:
             raise ArgumentMismatchError('Too many arguments provided')
