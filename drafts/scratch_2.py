@@ -3,6 +3,7 @@ from Translator import Translator
 import astor
 from copy import deepcopy
 from AbstractState import AbsState, VarAssign, TypeConstraint, VarType, TypeExpression, PyType, Context, hset
+from pyiparser import specs_shed as ss
 
 
 POSONLY_MARKER = '__po_'
@@ -17,11 +18,15 @@ class ArgumentMismatchError(Exception):
     pass
 
 
+class SpecNotFoundError(Exception):
+    pass
+
+
 class FunctionInstance:
     def __init__(self, call_node: ast.Call, current_state: AbsState, spec_state: AbsState):
         self.arglink = dict()
-        self.current_state = current_state
-        self.spec_state = spec_state
+        self.current_state = deepcopy(current_state)
+        self.spec_state = deepcopy(spec_state)
         self.pos_call_list = []
         self.keyword_call_dict = {}
         self.call_node = call_node
@@ -32,6 +37,9 @@ class FunctionInstance:
         self.arg_list = deepcopy(list(self.spec_state.va))
         self.arg_list.remove(RETURN_VARNAME)
         self._param_link()
+
+    def _get_spec(self, spec_name):
+
 
     def _param_link(self):
         if (len(self.pos_call_list) > 0 or len(self.keyword_call_dict) > 0) and len(self.arg_list) == 0:
@@ -91,7 +99,6 @@ class FunctionInstance:
             self._param_link()
 
     def get_param_link(self):
-        # self._param_link()
         return self.arglink
 
     def instantiate_function(self):
@@ -102,7 +109,6 @@ class FunctionInstance:
         repl = dict()
         for spec_var, state_var in self.arglink.items():
             if isinstance(state_var, str):
-                # variable argument types are not kept in the VA
                 new_as.va[state_var] = self.spec_state.va[spec_var]
                 repl[self.spec_state.va[spec_var]] = self.current_state.va[state_var]
             elif isinstance(state_var, tuple):
@@ -110,6 +116,7 @@ class FunctionInstance:
                 spec_vartype = self.spec_state.va[spec_var]
                 new_pytype = PyType(tuple)
                 for sv in state_var:
+                    new_as.va[sv] = self.current_state.va[sv]
                     new_pytype.keys.add(self.current_state.va[sv])
                 new_te.add(new_pytype)
                 var_entries.append((spec_vartype, hset({new_te})))
@@ -119,6 +126,7 @@ class FunctionInstance:
                 new_pytype = PyType(dict)
                 new_pytype.keys.add(PyType(str))
                 for k, sv in state_var.items():
+                    new_as.va[sv] = self.current_state.va[sv]
                     new_pytype.values.add(self.current_state.va[sv])
                 new_te.add(new_pytype)
                 var_entries.append((spec_vartype, hset({new_te})))
@@ -143,7 +151,12 @@ foo(h,i,j,k,l,m,n,e=o,f=p,w=q,x=r,y=s,z=t)
     # def foo(a, b, /, c, *d, e, f, **g):
     spec = (r'__po_a:T?1 /\ __po_b:T?2 /\ c:T?3 /\ __va_d:T?4 /\ __ko_e:T?5 /\ __ko_f:T?6 /\ __kw_g:T?7 /\ return:T?r ^ '
             r'(T?1:int /\ T?2:int /\ T?3:int /\ T?4:TopType /\ T?5:int /\ T?6:int /\ T?7:TopType /\ T?r:NoneType)')
+    expected = (r'h:T_h /\ i:T_i /\ j:T_j /\ k:T_k /\ l:T_l /\ m:T_m /\ n:T_n /\ '
+                r'o:T_o /\ p:T_p /\ q:T_q /\ r:T_r /\ s:T_s /\ t:T_t /\ return:T?r ^ '
+                r'(T_h:int /\ T_i:int /\ T_j:int /\ T_o:int /\ T_p:int /\ T?4:TopType /\ T?4:tuple<T_k+T_l+T_m+T_N> /\ '
+                r'T?7:TopType /\ T?7:dict<str, T_q+T_r+T_s+T_t> /\ T?r:NoneType)')
     aux = Translator.translate_as(spec)
+    aux2 = Translator.translate_as(expected)
     str_state = (r'h:T_h /\ i:T_i /\ j:T_j /\ k:T_k /\ l:T_l /\ m:T_m /\ n:T_n /\ '
                  r'o:T_o /\ p:T_p /\ q:T_q /\ r:T_r /\ s:T_s /\ t:T_t ^ '
                  r'(T_h:int /\ T_i:float /\ T_j:int /\ T_k:float /\ T_l:int /\ T_m:float /\ T_n:int /\ '
@@ -152,4 +165,5 @@ foo(h,i,j,k,l,m,n,e=o,f=p,w=q,x=r,y=s,z=t)
     # print(aux)
     f = FunctionInstance(tree.body[0].value, current_as, aux)
     print(f.get_param_link())
-    f.instantiate_function()
+    aux3 = f.instantiate_function()
+    print(aux2 == aux3)

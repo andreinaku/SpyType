@@ -3,8 +3,9 @@ import builtins
 import inspect
 from copy import deepcopy
 import astor
+import logging
 
-
+BUILTIN_CATEGORY = 'builtins'
 NAME_LITERAL = 'Literal'
 RET_SELF = 'Self'
 ignore_list = ['slice', 'GenericAlias', 'Callable']
@@ -24,6 +25,32 @@ class IgnoredTypeError(Exception):
     pass
 
 
+def get_logger(
+        LOG_FORMAT='%(levelname)-4s %(message)s',
+        LOG_NAME='',
+        LOG_FILE_INFO='parser.log',
+        LOG_FILE_ERROR='parser.err'):
+    log = logging.getLogger(LOG_NAME)
+    log_formatter = logging.Formatter(LOG_FORMAT)
+
+    file_handler_info = logging.FileHandler(LOG_FILE_INFO, mode='w')
+    file_handler_info.setFormatter(log_formatter)
+    file_handler_info.setLevel(logging.INFO)
+    log.addHandler(file_handler_info)
+
+    file_handler_error = logging.FileHandler(LOG_FILE_ERROR, mode='w')
+    file_handler_error.setFormatter(log_formatter)
+    file_handler_error.setLevel(logging.ERROR)
+    log.addHandler(file_handler_error)
+
+    log.setLevel(logging.INFO)
+
+    return log
+
+
+mylogger = get_logger()
+
+
 class ClassDefParser(ast.NodeVisitor):
 
     def __init__(self):
@@ -34,7 +61,6 @@ class ClassDefParser(ast.NodeVisitor):
     def parse_node_type(cls, node: ast.expr) -> str:
 
         def get_types_from_list(_elts: list):
-            # todo: aici trebuie lista cu tot cu duplicate, care vor fi eliminate mai incolo
             _type_list = []
             for _type in _elts:
                 str_type = cls.parse_node_type(_type)
@@ -49,19 +75,28 @@ class ClassDefParser(ast.NodeVisitor):
             open('types.txt', 'a').write(node.id + '\n')
             return_id = TYPE_REPLACE[node.id] if node.id in TYPE_REPLACE else node.id
             if cls.is_ignored(return_id):
-                return ''
+                ss = f'ignored type (for now) for {node.id}'
+                mylogger.warning(ss)
+                raise TypeError(ss)
+                # return ''
             return return_id
         elif isinstance(node, ast.Constant):
             open('types.txt', 'a').write(type(node.value).__name__ + '\n')
             return type(node.value).__name__
         elif isinstance(node, ast.Subscript):
             contained = node.slice
+            if not isinstance(node.value, ast.Name):
+                ss = f'{type(node.value)} is not yet supported'
+                mylogger.warning(ss)
+                raise TypeError(ss)
             container = node.value.id
             kvtuple = False
             if container in MAPPING_BASES:
                 kvtuple = True
             if not isinstance(node.value, ast.Name):
-                raise TypeError(f'{type(node.value)} is not yet supported here')
+                ss = f'{type(node.value)} is not yet supported here'
+                mylogger.warning(ss)
+                raise TypeError(ss)
             # open('types.txt', 'a').write(container + '\n')
             contained_str = ''
             if isinstance(contained, ast.Tuple):
@@ -71,7 +106,9 @@ class ClassDefParser(ast.NodeVisitor):
                     contained_str = '+'.join(type_set)
                 else:
                     if len(type_set) != 2:
-                        raise TypeError(f'{type_set} types not supported for key-value pairs')
+                        ss = f'{type_set} types not supported for key-value pairs'
+                        mylogger.warning(ss)
+                        raise TypeError(ss)
                     contained_str = ', '.join(type_set)
             else:
                 contained_str = cls.parse_node_type(contained)
@@ -81,7 +118,9 @@ class ClassDefParser(ast.NodeVisitor):
                 return container + '<' + contained_str + '>'
         elif isinstance(node, ast.BinOp):
             if not isinstance(node.op, ast.BitOr):
-                raise TypeError(f'{node.op} operation not supported for types')
+                ss = f'{node.op} operation not supported for types {node.left} and {node.right}'
+                mylogger.warning(ss)
+                raise TypeError(ss)
             type_set = set(get_types_from_list([node.left, node.right]))
             return '+'.join(type_set)
             # return cls.parse_node_type(node.left) + '+' + cls.parse_node_type(node.right)
@@ -96,7 +135,9 @@ class ClassDefParser(ast.NodeVisitor):
             contained_str = '+'.join(type_set)
             return container + '<' + contained_str + '>'
         else:
-            raise TypeError(f'{type(node)} is not supported')
+            ss = f'{type(node)} is not yet supported here'
+            mylogger.warning(ss)
+            raise TypeError(ss)
 
     @staticmethod
     def is_ignored(_type: str):
@@ -108,21 +149,20 @@ class ClassDefParser(ast.NodeVisitor):
     @classmethod
     def parse_FunctionDef(cls, node: ast.FunctionDef, selftype: str) -> tuple[str, str, str]:
 
-        def get_parameter_specs(param: ast.arg, param_nr: int, prefix: str=None) -> tuple[str, str]:
-            # todo: tratat def __rpow__(self, __value: int, __mod: int | None = None) -> Any: ...
-            # todo: tratat def __class_getitem__(cls, __item: Any) -> GenericAlias: ...
+        def get_parameter_specs(param: ast.arg, param_nr: int, prefix: str = None) -> tuple[str, str]:
             tname = f'T?{param_nr}:'
             pname = f'{param.arg}:{tname[:-1]}'
             param_nr += 1
             if param.arg in ['self', 'cls'] and param.annotation is None:
                 tname += f'{selftype}'
             else:
-                # todo: aici putem avea si ast.Constant, de ex __mod: None
-                # todo: aici putem avea si ast.BinOp, de ex __mod: int | None
                 parsed_type = cls.parse_node_type(param.annotation)
                 if parsed_type == '':
-                    raise IgnoredTypeError('ignored type (for now)')
-                tname += cls.parse_node_type(param.annotation)
+                    ss = f'ignored type (for now) for {astor.to_source(param.annotation).strip()}'
+                    mylogger.warning(ss)
+                    raise TypeError(ss)
+                # tname += cls.parse_node_type(param.annotation)
+                tname += parsed_type
             return pname, tname
 
         def get_abs_state():
@@ -135,7 +175,7 @@ class ClassDefParser(ast.NodeVisitor):
             ta = ''
             tc = '('
             for i in range(0, len(param_lists)):
-            # for parameters in param_lists:
+                # for parameters in param_lists:
                 parameters = param_lists[i]
                 prefix = param_prefix[i]
                 if len(parameters) == 0:
@@ -149,8 +189,10 @@ class ClassDefParser(ast.NodeVisitor):
                     tc += tname + r' /\ '
             # rtype = get_returntype()
             rtype = cls.parse_node_type(node.returns)
-            if rtype == 'Any' or cls.is_ignored(rtype):
-                raise IgnoredTypeError('return type ignored (for now)')
+            if rtype == 'Any' or rtype == '' or cls.is_ignored(rtype):
+                ss = f'ignored type (for now) for {node.name}'
+                mylogger.warning(ss)
+                raise TypeError(ss)
             if rtype == RET_SELF:
                 rtype = selftype
             tname = 'T?r:'
@@ -188,6 +230,10 @@ class ClassDefParser(ast.NodeVisitor):
                         if base.value.id in MAPPING_BASES:
                             kvtuple = True
                         parsed_type = self.parse_node_type(base)
+                        if parsed_type == '':
+                            ss = f'Type for node {base} not supported'
+                            mylogger.error(ss)
+                            raise TypeError(ss)
                         parsed_slice = '<' + parsed_type.split('<', maxsplit=1)[1]
                         # self_type += '<' + self.parse_node_type(base.slice, True, kvtuple) + '>'
                         self_type += parsed_slice
@@ -195,13 +241,16 @@ class ClassDefParser(ast.NodeVisitor):
                     else:
                         # if past_slice.id != base.slice.id:
                         if astor.to_source(past_slice) != astor.to_source(base.slice):
-                            raise RuntimeError('slice mismatch')
+                            ss = f'Inconsistent slice for {node.name}'
+                            mylogger.error(ss)
+                            raise RuntimeError(ss)
             for func in node.body:
                 if not isinstance(func, ast.FunctionDef):
                     continue
                 try:
                     spec_tuple = self.parse_FunctionDef(func, self_type)
-                except IgnoredTypeError:
+                except TypeError:
+                    mylogger.warning(f'Could not translate specs for {node.name}::{func.name}\n')
                     continue
                 _spec_list.append(spec_tuple)
             return _spec_list
@@ -282,13 +331,49 @@ def op_equivalences():
 
 
 def generate_specs():
+    def print_specs(spex, indent=2):
+        # self.get_specs()
+        # spex = self.specs
+        spaces = ' ' * indent
+        with open(OUTPUT_FILE, 'a') as f:
+            f.write('funcspecs = {\n')
+            for classname, funcdict in spex.items():
+                f.write(f'\t\'{classname}\': {{\n')
+                for funcname, spec_set in funcdict.items():
+                    f.write(f'\t\t\'{funcname}\': {{\n')
+                    for single_spec in spec_set:
+                        f.write(f'\t\t\tr\'{single_spec}\',\n')
+                    f.write('\t\t},\n')
+                f.write('\t},\n')
+            f.write('\n}\n')
+
     open(OUTPUT_FILE, 'w').write('import ast\n\n\n')
     op_equivalences()
+    # class specs
     pp = ClassDefParser()
-    tree = ast.parse(open('test_dict.pyi', 'r').read())
+    tree = ast.parse(open('test.pyi', 'r').read())
     # tree = ast.parse(open('builtins.pyi', 'r').read())
     pp.visit(tree)
-    pp.print_specs()
+    pp.get_specs()
+    spex = pp.specs
+    # pp.print_specs()
+    # function specs
+    spex[BUILTIN_CATEGORY] = dict()
+    builtin_spex = spex[BUILTIN_CATEGORY]
+    for node in tree.body:
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        try:
+            spec = pp.parse_FunctionDef(node, '')
+        except TypeError:
+            mylogger.warning(f'Could not translate specs for {BUILTIN_CATEGORY}::{node.name}\n')
+            continue
+        abs_state = spec[1] + ' ^ ' + spec[2]
+        if spec[0] not in builtin_spex:
+            builtin_spex[spec[0]] = {spec[1]}
+        else:
+            builtin_spex[spec[0]].add(spec[1])
+    pass
 
 
 if __name__ == "__main__":
