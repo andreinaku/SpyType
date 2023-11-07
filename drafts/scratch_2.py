@@ -10,6 +10,7 @@ VARARG_MARKER = '__va_'
 KEYWORDONLY_MARKER = '__ko_'
 KWARG_MARKER = '__kw_'
 MARKERS = [POSONLY_MARKER, VARARG_MARKER, KEYWORDONLY_MARKER, KWARG_MARKER]
+RETURN_VARNAME = 'return'
 
 
 class ArgumentMismatchError(Exception):
@@ -29,6 +30,7 @@ class FunctionInstance:
         for node in self.call_node.keywords:
             self.keyword_call_dict[node.arg] = node.value
         self.arg_list = deepcopy(list(self.spec_state.va))
+        self.arg_list.remove(RETURN_VARNAME)
         self._param_link()
 
     def _param_link(self):
@@ -92,7 +94,7 @@ class FunctionInstance:
         # self._param_link()
         return self.arglink
 
-    def get_vartype_link(self):
+    def instantiate_function(self):
         new_as = AbsState()
         new_as.va = VarAssign()
         new_as.tc = TypeConstraint()
@@ -120,28 +122,27 @@ class FunctionInstance:
                     new_pytype.values.add(self.current_state.va[sv])
                 new_te.add(new_pytype)
                 var_entries.append((spec_vartype, hset({new_te})))
+            else:
+                raise RuntimeError(f'Unexpected type of {state_var}: {type(state_var)}')
         new_as.tc = deepcopy(self.spec_state.tc)
         for ctx in new_as.tc:
             for var_entry in var_entries:
                 if var_entry[0] not in ctx:
                     raise RuntimeError(f'No variable entry in specs for {var_entry[0]}')
                 ctx[var_entry[0]] |= var_entry[1]
-        aux = new_as.vartype_replace_by_dict(repl)
-        pass
+        new_as = new_as.vartype_replace_by_dict(repl)
+        new_as.va[RETURN_VARNAME] = self.spec_state.va[RETURN_VARNAME]
+        return new_as
 
 
 if __name__ == '__main__':
-    # tree = ast.parse('''
-    # foo(1,2,3,4,5,6,7,e=8,f=9,x=10,y=11,z=12,k=13)
-    # ''')
-    # foo(1,2,3,4,5,6,7,x=8,k=9,f=10,y=11,z=12,e=13)
     tree = ast.parse('''
 foo(h,i,j,k,l,m,n,e=o,f=p,w=q,x=r,y=s,z=t)
 ''')
 
     # def foo(a, b, /, c, *d, e, f, **g):
-    spec = (r'__po_a:T?1 /\ __po_b:T?2 /\ c:T?3 /\ __va_d:T?4 /\ __ko_e:T?5 /\ __ko_f:T?6 /\ __kw_g:T?7 ^ '
-            r'(T?1:int /\ T?2:int /\ T?3:int /\ T?4:TopType /\ T?5:int /\ T?6:int /\ T?7:TopType)')
+    spec = (r'__po_a:T?1 /\ __po_b:T?2 /\ c:T?3 /\ __va_d:T?4 /\ __ko_e:T?5 /\ __ko_f:T?6 /\ __kw_g:T?7 /\ return:T?r ^ '
+            r'(T?1:int /\ T?2:int /\ T?3:int /\ T?4:TopType /\ T?5:int /\ T?6:int /\ T?7:TopType /\ T?r:NoneType)')
     aux = Translator.translate_as(spec)
     str_state = (r'h:T_h /\ i:T_i /\ j:T_j /\ k:T_k /\ l:T_l /\ m:T_m /\ n:T_n /\ '
                  r'o:T_o /\ p:T_p /\ q:T_q /\ r:T_r /\ s:T_s /\ t:T_t ^ '
@@ -151,4 +152,4 @@ foo(h,i,j,k,l,m,n,e=o,f=p,w=q,x=r,y=s,z=t)
     # print(aux)
     f = FunctionInstance(tree.body[0].value, current_as, aux)
     print(f.get_param_link())
-    f.get_vartype_link()
+    f.instantiate_function()
