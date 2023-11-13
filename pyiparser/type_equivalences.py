@@ -29,6 +29,66 @@ class SupportsInt:
 
 class SupportsTrunc:
     pass
+
+
+class SupportsFloat:
+    pass
+
+
+class SupportsBytes:
+    pass
+
+
+class SupportsSynchronousAnext:
+    pass
+
+
+class GetItemIterable:
+    pass
+
+
+class SupportsSomeKindOfPow:
+    pass
+
+
+class Reversible:
+    pass
+
+
+class SupportsLen:
+    pass
+
+
+class SupportsLenAndGetItem:
+    pass
+
+
+class SupportsRound:
+    pass
+
+
+class SupportsAbs:
+    pass
+
+
+class SupportsDivMod:
+    pass
+
+
+class SupportsRDivMod:
+    pass
+
+
+class SupportsNext:
+    pass
+
+
+class SupportsWrite:
+    pass
+
+
+class SupportsRead:
+    pass
 #
 #
 # class NoneType:
@@ -41,7 +101,22 @@ rules = {
     ('__lt__', '__gt__'): SupportsRichComparison,
     ('__lt__', '__gt__'): SupportsRichComparisonT,
     ('__int__',): SupportsInt,
+    ('__float__',): SupportsFloat,
     ('__trunc__',): SupportsTrunc,
+    ('__bytes__',): SupportsBytes,
+    ('__anext__',): SupportsSynchronousAnext,
+    ('__getitem__',): GetItemIterable,
+    ('__pow__',): SupportsSomeKindOfPow,
+    ('__reversed__', '__iter__'): Reversible,
+    ('__len__',): SupportsLen,
+    ('__len__', '__getitem__'): SupportsLenAndGetItem,
+    ('__round__',): SupportsRound,
+    ('__abs__',): SupportsAbs,
+    ('__divmod__',): SupportsDivMod,
+    ('__rdivmod__',): SupportsRDivMod,
+    ('__next__',): SupportsNext,
+    ('write',): SupportsWrite,
+    ('read',): SupportsRead,
 }
 # builtin types according to the Python Library Reference: https://docs.python.org/3.11/library/stdtypes.html
 builtin_types = ['int', 'float', 'complex', 'iterator', 'list', 'tuple', 'range', 'str', 'bytes', 'bytearray',

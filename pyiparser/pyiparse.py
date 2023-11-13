@@ -5,20 +5,40 @@ from copy import deepcopy
 import astor
 import logging
 from type_equivalences import *
+import math
+import json
 
 
 BUILTIN_CATEGORY = 'builtins'
 NAME_LITERAL = 'Literal'
-RET_SELF = 'Self'
-ignore_list = ['slice', 'GenericAlias', 'Callable']
+BIG_SELF = 'Self'
+SMALL_SELF = 'self'
+SMALL_CLS = 'cls'
+ignore_list = ['slice', 'GenericAlias', 'Callable', 'ellipsis', 'TracebackType', '_SupportsWriteAndFlush', 'CodeType',
+               '_ClassInfo', '_Opener']
+IGNORED_CLASSES = ['object', 'staticmethod', 'classmethod', 'ellipsis', '_FormatMapMapping',
+                   '_TranslateTable', 'function', '_PathLike', '_SupportsSynchronousAnext',
+                   '_GetItemIterable', '_SupportsWriteAndFlush', 'SupportsSomeKindOfPow',
+                   '_SupportsPow2', '_SupportsPow3NoneOnly', '_SupportsPow3', '_SupportsRound1', '_SupportsRound2',
+                   'BaseExceptionGroup', 'ExceptionGroup', '_SupportsSumWithNoDefaultGiven']
 DEFAULT_TYPEVAR = '_T'
 SPEC_DEFAULT_TYPEVAR = 'T?0'
 param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
 PREFIX_POSONLY, PREFIX_ARGS, PREFIX_VARARG, PREFIX_KWONLY, PREFIX_KWARG = range(5)
-TYPE_REPLACE = {'_T': 'T?0', '_PositiveInteger': 'int', '_KT': 'T?K', '_VT': 'T?V',
+TYPE_REPLACE = {'_T': 'T?0', '_PositiveInteger': 'int', '_KT': 'T?K', '_VT': 'T?V', '_T_co': 'T?co',
                 '_NegativeInteger': 'int', '_S': 'T?s',
-                'object': 'TopType', 'ReadOnlyBuffer': 'bytes',
-                'WriteableBuffer': 'bytearray+memoryview', 'ReadableBuffer': 'bytes+bytearray+memoryview'}
+                'object': 'TopType', 'ReadOnlyBuffer': 'bytes', 'Any': 'TopType',
+                'WriteableBuffer': 'bytearray+memoryview', 'ReadableBuffer': 'bytes+bytearray+memoryview',
+                '_TranslateTable': 'dict<int, str+int>', '_FormatMapMapping': 'dict<str, int>', 'LiteralString': 'str',
+                'SupportsKeysAndGetItem': 'dict', 'AbstractSet': 'set', '_PathLike': 'str+bytes',
+                '_GetItemIterable': 'GetItemIterable',
+                '_SupportsPow2': 'SupportsSomeKindOfPow', '_SupportsPow3NoneOnly': 'SupportsSomeKindOfPow',
+                '_SupportsPow3': 'SupportsSomeKindOfPow', '_SupportsRound1': 'SupportsRound',
+                '_SupportsRound2': 'SupportsRound', '_T_contra': 'T?contra', 'SupportsIter': 'Iterable',
+                '_SupportsNextT': 'SupportsNext', 'Sized': 'SupportsLen', 'FileDescriptorOrPath': 'str',
+                '_SupportsSumNoDefaultT': 'int'}
+# 0 - first typevar, 1 - second typevar, -1 - tuple<first, second>
+DICT_SPECIFIC_TYPES = {'dict_keys': 0, 'dict_values': 1, 'dict_items': -1}
 OUTPUT_FILE = 'specs_shed.py'
 MAPPING_BASES = ['Mapping', 'MutableMapping', 'dict']
 
@@ -53,11 +73,28 @@ def get_logger(
 mylogger = get_logger()
 
 
+class CountClassFuncs(ast.NodeVisitor):
+    def __init__(self):
+        self.func_count = 0
+        self.func_list = []
+
+    def visit_FunctionDef(self, node):
+        self.func_count += 1
+        self.func_list.append(astor.to_source(node).strip())
+
+    def get_func_count(self):
+        return self.func_count
+
+
 class ClassDefParser(ast.NodeVisitor):
 
     def __init__(self):
         self.spec_dict = dict()
         self.specs = dict()
+        self.total_funcdefs = 0
+        self.parsed_funcdefs = 0
+        self.class_stats = dict()
+        self.current_class = None
 
     @classmethod
     def parse_node_type(cls, node: ast.expr) -> str:
@@ -77,7 +114,7 @@ class ClassDefParser(ast.NodeVisitor):
             open('types.txt', 'a').write(node.id + '\n')
             return_id = TYPE_REPLACE[node.id] if node.id in TYPE_REPLACE else node.id
             if cls.is_ignored(return_id):
-                ss = f'ignored type (for now) for {node.id}'
+                ss = f'ignored type (for now) <<{return_id}>> for {node.id}'
                 mylogger.warning(ss)
                 raise TypeError(ss)
                 # return ''
@@ -91,9 +128,14 @@ class ClassDefParser(ast.NodeVisitor):
                 ss = f'{type(node.value)} is not yet supported'
                 mylogger.warning(ss)
                 raise TypeError(ss)
-            container = node.value.id
+            # container = node.value.id
+            container = TYPE_REPLACE[node.value.id] if node.value.id in TYPE_REPLACE else node.value.id
+            if container in ignore_list:
+                ss = f'ignored type (for now) <<{container}>> for {astor.to_source(node.value).strip()}'
+                mylogger.warning(ss)
+                raise TypeError(ss)
             kvtuple = False
-            if container in MAPPING_BASES:
+            if container in MAPPING_BASES or container in DICT_SPECIFIC_TYPES:
                 kvtuple = True
             if not isinstance(node.value, ast.Name):
                 ss = f'{type(node.value)} is not yet supported here'
@@ -111,13 +153,24 @@ class ClassDefParser(ast.NodeVisitor):
                         ss = f'{type_set} types not supported for key-value pairs'
                         mylogger.warning(ss)
                         raise TypeError(ss)
-                    contained_str = ', '.join(type_set)
+                    if container in DICT_SPECIFIC_TYPES:
+                        if DICT_SPECIFIC_TYPES[container] == 0:
+                            contained_str = type_set[0]
+                        elif DICT_SPECIFIC_TYPES[container] == 1:
+                            contained_str = type_set[1]
+                        else:
+                            contained_str = f'tuple<{type_set[0]}+{type_set[1]}>'
+                    else:
+                        contained_str = ', '.join(type_set)
             else:
                 contained_str = cls.parse_node_type(contained)
             if container == NAME_LITERAL:
                 return contained_str
             else:
-                return container + '<' + contained_str + '>'
+                if container in DICT_SPECIFIC_TYPES:
+                    return 'list' + '<' + contained_str + '>'
+                else:
+                    return container + '<' + contained_str + '>'
         elif isinstance(node, ast.BinOp):
             if not isinstance(node.op, ast.BitOr):
                 ss = f'{node.op} operation not supported for types {node.left} and {node.right}'
@@ -148,19 +201,18 @@ class ClassDefParser(ast.NodeVisitor):
                 return True
         return False
 
-    @classmethod
-    def parse_FunctionDef(cls, node: ast.FunctionDef, selftype: str) -> tuple[str, str, str]:
+    def parse_FunctionDef(self, node: ast.FunctionDef, selftype: str) -> tuple[str, str, str]:
 
         def get_parameter_specs(param: ast.arg, param_nr: int, prefix: str = None) -> tuple[str, str]:
             tname = f'T?{param_nr}:'
             pname = f'{param.arg}:{tname[:-1]}'
             param_nr += 1
-            if param.arg in ['self', 'cls'] and param.annotation is None:
+            if param.arg in [SMALL_SELF, SMALL_CLS] and param.annotation is None:
                 tname += f'{selftype}'
             else:
-                parsed_type = cls.parse_node_type(param.annotation)
+                parsed_type = self.parse_node_type(param.annotation)
                 if parsed_type == '':
-                    ss = f'ignored type (for now) for {astor.to_source(param.annotation).strip()}'
+                    ss = f'ignored type (for now) <<{param.annotation}>> for {astor.to_source(param.annotation).strip()}'
                     mylogger.warning(ss)
                     raise TypeError(ss)
                 # tname += cls.parse_node_type(param.annotation)
@@ -190,12 +242,12 @@ class ClassDefParser(ast.NodeVisitor):
                     ta += prefix + pname + r' /\ '
                     tc += tname + r' /\ '
             # rtype = get_returntype()
-            rtype = cls.parse_node_type(node.returns)
-            if rtype == 'Any' or rtype == '' or cls.is_ignored(rtype):
-                ss = f'ignored type (for now) for {node.name}'
+            rtype = self.parse_node_type(node.returns).replace(BIG_SELF, selftype)
+            if rtype == 'Any' or rtype == '' or self.is_ignored(rtype):
+                ss = f'ignored return type (for now) <<{rtype}>> for {node.name}'
                 mylogger.warning(ss)
                 raise TypeError(ss)
-            if rtype == RET_SELF:
+            if rtype == BIG_SELF:
                 rtype = selftype
             tname = 'T?r:'
             pname = f'return:{tname[:-1]}'
@@ -205,6 +257,8 @@ class ClassDefParser(ast.NodeVisitor):
             return ta, tc
 
         _ta, _tc = get_abs_state()
+        self.parsed_funcdefs += 1
+        self.class_stats[self.current_class]['translated'] += 1
         return node.name, _ta[:-4], _tc[:-4] + ')'
         # return funcname + ')'
 
@@ -244,22 +298,50 @@ class ClassDefParser(ast.NodeVisitor):
                         # if past_slice.id != base.slice.id:
                         if astor.to_source(past_slice) != astor.to_source(base.slice):
                             ss = f'Inconsistent slice for {node.name}'
-                            mylogger.error(ss)
-                            raise RuntimeError(ss)
+                            mylogger.warning(ss)
+                            raise TypeError(ss)
             for func in node.body:
                 if not isinstance(func, ast.FunctionDef):
                     continue
                 try:
                     spec_tuple = self.parse_FunctionDef(func, self_type)
-                except TypeError:
+                except TypeError as te:
+                    self.class_stats[self.current_class]['not_translated_specs'].append((astor.to_source(func).strip(),
+                                                                                         str(te)))
                     mylogger.warning(f'Could not translate specs for {node.name}::{func.name}\n')
                     continue
                 _spec_list.append(spec_tuple)
             return _spec_list
 
-        if node.name not in ['staticmethod', 'classmethod', 'type', 'function']:
+        ccf = CountClassFuncs()
+        ccf.visit(node)
+        self.current_class = node.name
+        self.class_stats[self.current_class] = dict()
+        self.class_stats[self.current_class]['total'] = ccf.get_func_count()
+        self.class_stats[self.current_class]['translated'] = 0
+        self.class_stats[self.current_class]['not_translated_specs'] = []
+        self.total_funcdefs += self.class_stats[self.current_class]['total']
+        if self.current_class in IGNORED_CLASSES:
+            mylogger.warning(f'Class {node.name} ignored for now\n')
+            return
+        try:
             spec_list = get_spec_list()
-            add_to_spec_dict(spec_list)
+        except TypeError as te:
+            mylogger.warning(f'Could not translate specs for class {node.name}\n')
+            return
+        add_to_spec_dict(spec_list)
+
+    def get_parsed_funcs(self):
+        return self.parsed_funcdefs, self.total_funcdefs
+
+    def get_class_stats(self):
+        return self.class_stats
+
+    def increase_total_funcdefs(self):
+        self.total_funcdefs += 1
+
+    def increase_parsed_funcdefs(self):
+        self.parsed_funcdefs += 1
 
     def get_specs(self):
         new_dict = dict()
@@ -276,21 +358,21 @@ class ClassDefParser(ast.NodeVisitor):
         self.specs = deepcopy(new_dict)
         # return new_dict
 
-    def print_specs(self, indent=2):
-        self.get_specs()
-        spex = self.specs
-        spaces = ' ' * indent
-        with open(OUTPUT_FILE, 'a') as f:
-            f.write('funcspecs = {\n')
-            for classname, funcdict in spex.items():
-                f.write(f'\t\'{classname}\': {{\n')
-                for funcname, spec_set in funcdict.items():
-                    f.write(f'\t\t\'{funcname}\': {{\n')
-                    for single_spec in spec_set:
-                        f.write(f'\t\t\tr\'{single_spec}\',\n')
-                    f.write('\t\t},\n')
-                f.write('\t},\n')
-            f.write('\n}\n')
+    # def print_specs(self, indent=2):
+    #     self.get_specs()
+    #     spex = self.specs
+    #     spaces = ' ' * indent
+    #     with open(OUTPUT_FILE, 'a') as f:
+    #         f.write('funcspecs = {\n')
+    #         for classname, funcdict in spex.items():
+    #             f.write(f'\t\'{classname}\': {{\n')
+    #             for funcname, spec_set in funcdict.items():
+    #                 f.write(f'\t\t\'{funcname}\': {{\n')
+    #                 for single_spec in spec_set:
+    #                     f.write(f'\t\t\tr\'{single_spec}\',\n')
+    #                 f.write('\t\t},\n')
+    #             f.write('\t},\n')
+    #         f.write('\n}\n')
 
     def get_specs_dict(self):
         return self.specs
@@ -342,7 +424,7 @@ def write_type_equivalences():
         f.write('}\n\n\n')
 
 
-def generate_specs():
+def generate_specs(stub_file):
 
     def print_specs(_spex, indent=2):
         spaces = ' ' * indent
@@ -363,8 +445,7 @@ def generate_specs():
     write_type_equivalences()
     # class specs
     pp = ClassDefParser()
-    tree = ast.parse(open('test.pyi', 'r').read())
-    # tree = ast.parse(open('builtins.pyi', 'r').read())
+    tree = ast.parse(open(stub_file, 'r').read())
     pp.visit(tree)
     pp.get_specs()
     spex = pp.specs
@@ -372,21 +453,47 @@ def generate_specs():
     # function specs
     spex[BUILTIN_CATEGORY] = dict()
     builtin_spex = spex[BUILTIN_CATEGORY]
+    cstats = pp.get_class_stats()
+    cstats['builtins'] = dict()
+    cstats['builtins']['total'] = 0
+    cstats['builtins']['translated'] = 0
+    cstats['builtins']['not_translated_specs'] = []
+    # aux1, aux2 = pp.get_parsed_funcs()
     for node in tree.body:
         if not isinstance(node, ast.FunctionDef):
             continue
+        # aux2 += 1
+        cstats['builtins']['total'] += 1
         try:
             spec = pp.parse_FunctionDef(node, '')
-        except TypeError:
+        except TypeError as te:
             mylogger.warning(f'Could not translate specs for {BUILTIN_CATEGORY}::{node.name}\n')
+            cstats['builtins']['not_translated_specs'].append((astor.to_source(node).strip(),
+                                                                str(te)))
             continue
+        cstats['builtins']['translated'] += 1
         abs_state = spec[1] + ' ^ ' + spec[2]
         if spec[0] not in builtin_spex:
             builtin_spex[spec[0]] = {abs_state}
         else:
             builtin_spex[spec[0]].add(abs_state)
     print_specs(spex)
+    translated = 0
+    total = 0
+    for classname, statdict in cstats.items():
+        try:
+            translated += statdict['translated']
+        except KeyError:
+            pass
+        total += statdict['total']
+    ss = json.dumps(cstats, indent=4)
+    mylogger.info(f'Class stats: {ss}')
+    with open('stats.json', 'w') as f:
+        json.dump(cstats, f, indent=4)
+    mylogger.info(f'Translated function specs: {translated}/{total}'
+                  f' ~ {math.floor(translated/total * 100)}%\n'
+                  f'Not translated function specs: {total - translated}\n')
 
 
 if __name__ == "__main__":
-    generate_specs()
+    generate_specs('builtins.pyi')

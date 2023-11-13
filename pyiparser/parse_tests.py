@@ -3,6 +3,7 @@ import ast
 from pyiparser import pyiparse
 from pyiparser.pyiparse import ClassDefParser
 from Translator import Translator
+import astor
 
 
 logging.basicConfig(level=logging.INFO, filename='info.log', filemode='w', format='%(message)s')
@@ -264,7 +265,12 @@ def translate_test():
         selftype = _in[0]
         shed_spec = _in[1]
         funcdef_node = ast.parse(shed_spec).body[0]  # parse returns an ast.Module node
-        spec_tuple = ClassDefParser.parse_FunctionDef(funcdef_node, selftype)
+        cdf = ClassDefParser()
+        try:
+            spec_tuple = cdf.parse_FunctionDef(funcdef_node, selftype)
+        except TypeError:
+            print(f'Error parsing {astor.to_source(funcdef_node)}')
+            continue
         abs_state = spec_tuple[1] + ' ^ ' + spec_tuple[2]
         aux = Translator.translate_as(abs_state)  # check that no exceptions raised while translating
         aux2 = Translator.translate_as(_expected)
@@ -274,11 +280,25 @@ def translate_test():
                 raise RuntimeError(f'Incorrect translation. Expected {_expected} and got {abs_state}')
 
 
+def spec_translate_test():
+    from specs_shed import funcspecs
+    for classname, funcdict in funcspecs.items():
+        for funcname, specset in funcdict.items():
+            for spec in specset:
+                try:
+                    aux = Translator.translate_as(spec)
+                except Exception as e:
+                    print(f'Error translating {classname}::{funcname} with spec {spec}')
+                    raise e
+
+
 def aux_test():
     # func_str = r'def __new__(cls, __x: str | ReadableBuffer | SupportsInt | SupportsIndex | SupportsTrunc = ...) -> Self: ...'
     func_str = r'def __divmod__(self, __value: int) -> tuple[int, int]: ...'
+    func_str = r''
     func_node = ast.parse(func_str).body[0]
-    spec_tuple = ClassDefParser.parse_FunctionDef(func_node, 'list<T?0>')
+    cdf = ClassDefParser()
+    spec_tuple = cdf.parse_FunctionDef(func_node, 'list<T?0>')
     abs_state = spec_tuple[1] + ' ^ ' + spec_tuple[2]
     aux = Translator.translate_as(abs_state)
     pass
@@ -286,4 +306,5 @@ def aux_test():
 
 if __name__ == "__main__":
     # aux_test()
-    translate_test()
+    # translate_test()
+    spec_translate_test()
