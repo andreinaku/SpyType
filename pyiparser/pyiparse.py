@@ -7,6 +7,7 @@ import logging
 from type_equivalences import *
 import math
 import json
+from Translator import Translator, AbsState, hdict, hset
 
 
 BUILTIN_CATEGORY = 'builtins'
@@ -14,13 +15,15 @@ NAME_LITERAL = 'Literal'
 BIG_SELF = 'Self'
 SMALL_SELF = 'self'
 SMALL_CLS = 'cls'
+RETURN_VARNAME = 'return'
 ignore_list = ['slice', 'GenericAlias', 'Callable', 'ellipsis', 'TracebackType', '_SupportsWriteAndFlush', 'CodeType',
-               '_ClassInfo', '_Opener']
+               '_ClassInfo', '_Opener', 'type', 'super']
 IGNORED_CLASSES = ['object', 'staticmethod', 'classmethod', 'ellipsis', '_FormatMapMapping',
                    '_TranslateTable', 'function', '_PathLike', '_SupportsSynchronousAnext',
                    '_GetItemIterable', '_SupportsWriteAndFlush', 'SupportsSomeKindOfPow',
                    '_SupportsPow2', '_SupportsPow3NoneOnly', '_SupportsPow3', '_SupportsRound1', '_SupportsRound2',
-                   'BaseExceptionGroup', 'ExceptionGroup', '_SupportsSumWithNoDefaultGiven']
+                   'BaseExceptionGroup', 'ExceptionGroup', '_SupportsSumWithNoDefaultGiven', 'type', 'super',
+                   'memoryview']
 DEFAULT_TYPEVAR = '_T'
 SPEC_DEFAULT_TYPEVAR = 'T?0'
 param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
@@ -243,7 +246,7 @@ class ClassDefParser(ast.NodeVisitor):
                     tc += tname + r' /\ '
             # rtype = get_returntype()
             rtype = self.parse_node_type(node.returns).replace(BIG_SELF, selftype)
-            if rtype == 'Any' or rtype == '' or self.is_ignored(rtype):
+            if rtype == 'Any' or rtype == '' or self.is_ignored(rtype) or rtype == 'TopType':
                 ss = f'ignored return type (for now) <<{rtype}>> for {node.name}'
                 mylogger.warning(ss)
                 raise TypeError(ss)
@@ -426,12 +429,72 @@ def write_type_equivalences():
 
 def generate_specs(stub_file):
 
-    def print_specs(_spex, indent=2):
-        spaces = ' ' * indent
+    def get_united_specs(_spex):
+        united_dict = hdict()
+        for _classname, funcdict in _spex.items():
+            for funcname, spec_set in funcdict.items():
+                for single_spec in spec_set:
+                    new_form = transform_to_new_format(Translator.translate_as(single_spec))
+                    if funcname in united_dict:
+                        united_dict[funcname] |= new_form
+                    else:
+                        united_dict[funcname] = new_form
+        return united_dict
+
+    def print_united_specs(_spex):
+        united = get_united_specs(_spex)
+        with open(OUTPUT_FILE, 'a') as f:
+            f.write('unitedspecs = {\n')
+            for funcname, spec_set in united.items():
+                f.write(f'\t\'{funcname}\': {{\n')
+                for dict_tuple in spec_set:
+                    writestr = '\t\t\tr\'(('
+                    param_dict = dict_tuple[0]
+                    ret_dict = dict_tuple[1]
+                    no_params = (len(param_dict) == 0)
+                    for k, v in param_dict.items():
+                        writestr += rf'{k}: {v} /\ '
+                    if no_params:
+                        writestr += ') -> '
+                    else:
+                        writestr = writestr[:-4] + r') -> '
+                    writestr += f'({RETURN_VARNAME}: {ret_dict[RETURN_VARNAME]}))\',\n'
+                    f.write(writestr)
+                f.write('\t},\n')
+            f.write('\n}\n')
+
+    def print_new_format(_spex):
+        with open(OUTPUT_FILE, 'a') as f:
+            f.write('newspecs = {\n')
+            for _classname, funcdict in _spex.items():
+                f.write(f'\t\'{_classname}\': {{\n')
+                for funcname, spec_set in funcdict.items():
+                    f.write(f'\t\t\'{funcname}\': {{\n')
+                    for single_spec in spec_set:
+                        new_form = transform_to_new_format(Translator.translate_as(single_spec))
+                        for dict_tuple in new_form:
+                            writestr = '\t\t\tr\'(('
+                            param_dict = dict_tuple[0]
+                            ret_dict = dict_tuple[1]
+                            no_params = (len(param_dict) == 0)
+                            for k, v in param_dict.items():  # vezi ca e set
+                                writestr += rf'{k}: {v} /\ '
+                            # writestr = writestr[:-4] + r') \/ ('
+                            if no_params:
+                                writestr += ') -> '
+                            else:
+                                writestr = writestr[:-4] + r') -> '
+                            writestr += f'({RETURN_VARNAME}: {ret_dict[RETURN_VARNAME]}))\',\n'
+                            f.write(writestr)
+                    f.write('\t\t},\n')
+                f.write('\t},\n')
+            f.write('\n}\n')
+
+    def print_old_format(_spex):
         with open(OUTPUT_FILE, 'a') as f:
             f.write('funcspecs = {\n')
-            for classname, funcdict in _spex.items():
-                f.write(f'\t\'{classname}\': {{\n')
+            for _classname, funcdict in _spex.items():
+                f.write(f'\t\'{_classname}\': {{\n')
                 for funcname, spec_set in funcdict.items():
                     f.write(f'\t\t\'{funcname}\': {{\n')
                     for single_spec in spec_set:
@@ -439,6 +502,31 @@ def generate_specs(stub_file):
                     f.write('\t\t},\n')
                 f.write('\t},\n')
             f.write('\n}\n')
+
+    def print_specs(_spex):
+        # spaces = ' ' * indent
+        print_old_format(_spex)
+        print_new_format(_spex)
+        print_united_specs(_spex)
+
+    def transform_to_new_format(abstate: AbsState):
+        newset = hset()
+        _va = abstate.va
+        _tc = abstate.tc
+        for ctx in _tc:
+            paramdict = hdict()
+            retdict = hdict()
+            for vt, te_set in ctx.items():
+                if len(te_set) > 1:
+                    raise RuntimeError('More than one type expression for the same variable')
+                te = list(te_set)[0]
+                for varname, ta_vt in _va.items():
+                    if ta_vt == vt and varname != RETURN_VARNAME:
+                        paramdict[varname] = te
+                    elif ta_vt == vt and varname == RETURN_VARNAME:
+                        retdict[varname] = te
+            newset.add((paramdict, retdict))
+        return newset
 
     open(OUTPUT_FILE, 'w').write('import ast\nfrom type_equivalences import *\n\n\n')
     write_op_equivalences()
@@ -473,6 +561,7 @@ def generate_specs(stub_file):
             continue
         cstats['builtins']['translated'] += 1
         abs_state = spec[1] + ' ^ ' + spec[2]
+
         if spec[0] not in builtin_spex:
             builtin_spex[spec[0]] = {abs_state}
         else:
