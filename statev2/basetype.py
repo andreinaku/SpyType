@@ -743,8 +743,8 @@ class Assignment(hdict):
 class Relation():
     def __init__(self, relop: RelOp, bt_left: Basetype, bt_right: Basetype):
         self.relop = relop
-        self.bt_left = bt_left
-        self.bt_right = bt_right
+        self.bt_left = deepcopy(bt_left)
+        self.bt_right = deepcopy(bt_right)
 
     def __str__(self):
         if self.relop == RelOp.LEQ:
@@ -753,13 +753,13 @@ class Relation():
             relstr = '=='
         else:
             raise RuntimeError('Unsupported relation op')
-        return f'{self.bt_left} {relstr} {self.bt_right}'
+        return f'({self.bt_left} {relstr} {self.bt_right})'
 
     def __repr__(self):
         return self.__str__()
 
 
-class Constraint(hset):
+class Constraints(hset):
     def __str__(self):
         if len(self) == 0:
             return ''
@@ -776,28 +776,29 @@ class Constraint(hset):
 
 
 class State:
-    def __init__(self, assignment: Assignment, constraints: set[Constraint]):
-        self.assignment = assignment
+    def __init__(self, assignment: Assignment, constraints: Constraints):
+        self.assignment = deepcopy(assignment)
         self.constraints = deepcopy(constraints)
 
     def __str__(self):
-        retstr = f'({self.assignment}) ^ ('
-        if not len(self.constraints):
-            retstr += ')'
-            return retstr
-        for constr in self.constraints:
-            retstr += f'({constr}) \\/ '
-        retstr = retstr[:-4]
-        retstr += ')'
+        retstr = f'({self.assignment}) ^ ({self.constraints})'
         return retstr
+        # if not len(self.constraints):
+        #     retstr += ')'
+        #     return retstr
+        # for constr in self.constraints:
+        #     retstr += f'({constr}) \\/ '
+        # retstr = retstr[:-4]
+        # retstr += ')'
+        # return retstr
 
 
 if __name__ == "__main__":
     bt1 = Basetype({PyType(int), PyType(list, keys=Basetype({PyType(str)})), VarType('T_a')})
     bt2 = Basetype({PyType(int), PyType(float)})
     ass1 = Assignment({'a': bt1, 'b': bt2})
-    constr1 = Constraint()
-    constr1.add(Relation(RelOp.LEQ, Basetype({VarType('T_a')}), Basetype({PyType(int), VarType('T_b')})))
+    constr1 = Constraints()
+    constr1.add(Relation(RelOp.LEQ, Basetype({VarType('T_a'), PyType(int)}), Basetype({PyType(int), VarType('T_b')})))
     constr1.add(Relation(RelOp.EQ, Basetype({VarType('T_b')}), Basetype({PyType(float)})))
-    st1 = State(ass1, {constr1})
+    st1 = State(ass1, constr1)
     print(st1)
