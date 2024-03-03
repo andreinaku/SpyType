@@ -96,7 +96,7 @@ class TranslatorTestCases(unittest.TestCase):
         expected_result.add(orconstr)
         self.assertEqual(result, expected_result)
 
-    def test_translate_state(self):
+    def test_translate_state_1(self):
         asgn = Assignment()
         asgn['a'] = Basetype({VarType('T_a')})
         asgn['b'] = Basetype({VarType('T_b')})
@@ -128,4 +128,12 @@ class TranslatorTestCases(unittest.TestCase):
             r'((T_a <= int \/ T_a <= float) /\ (T_b <= int+T_c) /\ (T_c == float \/ T_c == int)))'
         )
         result = Translator.translate_state(str_state)
+        self.assertEqual(result, expected_result)
+
+    def test_translate_state_2(self):
+        result = Translator.translate_state(r'(a:int /\ b:float)')
+        asgn = Assignment()
+        asgn['a'] = Basetype({PyType(int)})
+        asgn['b'] = Basetype({PyType(float)})
+        expected_result = State(assignment=asgn)
         self.assertEqual(result, expected_result)

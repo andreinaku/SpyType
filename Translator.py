@@ -217,10 +217,19 @@ class Translator:
     @staticmethod
     def translate_state(str_state: str):
         # (assignment ^ constraints)
+        delimiter = ' ^ '
         to_translate = Translator._elim_paren(str_state)
-        (str_assignment, str_constraints) = to_translate.split(' ^ ')
+        str_assignment = None
+        str_constraints = None
+        if delimiter not in to_translate:
+            str_assignment = to_translate
+        else:
+            (str_assignment, str_constraints) = to_translate.split(' ^ ')
         asgn = Translator.translate_assignment(str_assignment)
-        constr = Translator.translate_and_constraints(str_constraints)
+        if str_constraints is not None:
+            constr = Translator.translate_and_constraints(str_constraints)
+        else:
+            constr = None
         st = State(asgn, constr)
         return st
 

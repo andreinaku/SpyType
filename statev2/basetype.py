@@ -639,12 +639,21 @@ class OrConstraints(hset):
 
 
 class State:
-    def __init__(self, assignment: Assignment, constraints: AndConstraints):
-        self.assignment = deepcopy(assignment)
-        self.constraints = deepcopy(constraints)
+    def __init__(self, assignment: Assignment = None, constraints: AndConstraints = None):
+        if assignment is None:
+            self.assignment = Assignment()
+        else:
+            self.assignment = deepcopy(assignment)
+        if constraints is None:
+            self.constraints = AndConstraints()
+        else:
+            self.constraints = deepcopy(constraints)
 
     def __str__(self):
-        retstr = f'({self.assignment}) ^ ({self.constraints})'
+        if self.constraints is None:
+            retstr = f'({self.assignment})'
+        else:
+            retstr = f'({self.assignment}) ^ ({self.constraints})'
         return retstr
 
     def __hash__(self):
@@ -652,3 +661,20 @@ class State:
 
     def __eq__(self, other: State):
         return hash(self) == hash(other)
+
+
+def apply_spec(state: State, spec: State, testmode=False) -> State:
+    new_state = State()
+    for expr in spec.assignment:
+        if testmode is False:
+            new_basetype = Basetype({VarType(f'T_{int(time.time())}')})
+        else:
+            new_basetype = Basetype({VarType(f'T_{expr}`')})
+        new_state.assignment[expr] = new_basetype
+        rel1 = Relation(RelOp.LEQ, new_basetype, deepcopy(state.assignment[expr]))
+        rel2 = Relation(RelOp.LEQ, new_basetype, deepcopy(spec.assignment[expr]))
+        orconstr = OrConstraints()
+        orconstr.add(rel1)
+        orconstr.add(rel2)
+        new_state.constraints.add(orconstr)
+    return new_state
