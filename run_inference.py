@@ -95,7 +95,7 @@ def get_variable_names(node):
 def run_infer(filepath, funcname):
     # get the function CFG based on the function name
     cfg = get_cfg(filepath, makepng=False)
-    func_cfg = get_func_cfg(cfg, funcname, True)
+    func_cfg = get_func_cfg(cfg, funcname, False)
     # construct the initial abstract state
     init_as = AbsState()
     newva = VarAssign()

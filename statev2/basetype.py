@@ -1,175 +1,14 @@
 from __future__ import annotations
 from utils import *
 from enum import Enum
+import time
+from copy import deepcopy
+from TypeExp import *
 
 
 class RelOp(Enum):
-    LEQ = 1,
-    EQ = 2
-
-
-class GenericType:
-    def __contains__(self, item):
-        if item <= self:
-            return True
-        # if not isinstance(self, PyType) or not isinstance(item, PyType):
-        #     return False
-        if not isinstance(self, PyType):
-            return False
-        if not self.keys or len(self.keys) == 0:
-            return False
-        auxte = Basetype()
-        auxte.add(item)  # between two TEs, not a GE and TE
-        return auxte in self.keys
-
-    def __le__(self, item):
-        if isinstance(self, VarType) and isinstance(item, VarType):
-            if self == item:
-                return True
-            return False
-        if isinstance(self, PyType) and isinstance(item, PyType):
-            if self == item:
-                return True
-            if self.ptype == item.ptype:
-                if self.keys <= item.keys:
-                    return True
-                return False
-        return False
-
-    def __and__(self, other):
-        if self == other:
-            return deepcopy(self)
-        if isinstance(self, VarType) and isinstance(other, VarType):
-            vexp = 'T_{}'.format(id_generator())
-            return VarType(vexp)
-        if isinstance(self, VarType):
-            return deepcopy(other)
-        if isinstance(other, VarType):
-            return deepcopy(self)
-        if not isinstance(self, PyType) or not isinstance(other, PyType):
-            return None
-        if self.ptype != other.ptype:
-            return None
-        elif self.keys is None and other.keys is not None:
-            return deepcopy(other)
-        elif self.keys is not None and other.keys is None:
-            return deepcopy(self)
-        elif self.keys is None and other.keys is None:
-            return deepcopy(other)
-        if self.keys is not None and len(self.keys) == 0 and len(other.keys) != 0:
-            return deepcopy(other)
-        elif self.keys is not None and len(self.keys) != 0 and len(other.keys) == 0:
-            return deepcopy(self)
-        elif self.keys is not None and len(self.keys) != 0 and len(other.keys) != 0:
-            inter = self.keys & other.keys
-            if inter is None:
-                return None
-            return PyType(self.ptype, inter)
-        else:
-            raise RuntimeError('Intersection case not treated: {} & {}'.format(self, other))
-
-
-class PyType(GenericType):
-    def __init__(self, ptype, keys=None, values=None):
-        self.ptype = deepcopy(ptype)
-        self.keys = deepcopy(keys)
-        self.values = deepcopy(values)
-        if (ptype in container_ptypes) and (self.keys is None):
-            self.keys = Basetype()
-        if (ptype in mapping_types) and (self.keys is None) and (self.values is None):
-            self.keys = Basetype()
-            self.values = Basetype()
-
-    def __str__(self):
-        if self.ptype == BottomType:
-            retstr = 'bot'
-        elif self.ptype == TopType:
-            retstr = 'top'
-        elif self.ptype == ErrorType:
-            retstr = 'err'
-        elif isinstance(self.ptype, VarType):
-            retstr = self.ptype.varexp
-        else:
-            # retstr = str(self.ptype).split("'")[1]
-            retstr = self.ptype.__name__
-        if self.keys is not None:
-            retstr += '<'
-            # for c_type in self.contains:
-            #     retstr += str(c_type) + ','
-            retstr += str(self.keys)
-            if self.values is not None:
-                retstr += ', '
-                retstr += str(self.values)
-            retstr += '>'
-        return retstr
-
-    def __key(self):
-        return self.ptype, self.keys, self.values
-
-    def __hash__(self):
-        return hash(self.__key())
-
-    def __eq__(self, other):
-        return hash(self) == hash(other)
-
-    def __repr__(self):
-        return self.__str__()
-
-    @staticmethod
-    def glb(ptip1, ptip2):
-        ptip1: PyType
-        ptip2: PyType
-        if ptip1.ptype != ptip2.ptype:
-            return None
-        new_ptip = PyType(ptip1.ptype)
-        if ptip1.keys is None and ptip2.keys is None:
-            return new_ptip
-        new_ptip.keys = Basetype.glb(ptip1.keys, ptip2.keys)
-        return new_ptip
-
-
-class VarType(GenericType):
-    def __init__(self, varexp: str):
-        self.varexp = varexp
-
-    def __str__(self):
-        return self.varexp
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __key(self):
-        return self.varexp
-
-    def __hash__(self):
-        return hash(self.__key())
-
-    def __eq__(self, other):
-        return hash(self) == hash(other)
-
-    def is_dependency_of_bulk(self, deps, bulkset):
-        bulkset: hset[VarType]
-        for entry in bulkset:
-            if self.is_dependency_of(deps, entry):
-                return True
-        return False
-
-    def is_dependency_of(self, deps, v, visited=None) -> bool:
-        if visited is None:
-            visited = []
-        if self == v:
-            return True
-        deps: hdict[VarType, hset[VarType]]
-        v: VarType
-        if v not in deps:
-            return False
-        if self in deps[v]:
-            return True
-        visited.append(self)
-        for next_var in deps[v]:
-            if next_var not in visited:
-                return self.is_dependency_of(deps, next_var, visited)
-        return False
+    LEQ = '<='
+    EQ = '=='
 
 
 class Basetype(hset):
@@ -740,7 +579,7 @@ class Assignment(hdict):
         return self.__str__()
 
 
-class Relation():
+class Relation:
     def __init__(self, relop: RelOp, bt_left: Basetype, bt_right: Basetype):
         self.relop = relop
         self.bt_left = deepcopy(bt_left)
@@ -758,8 +597,32 @@ class Relation():
     def __repr__(self):
         return self.__str__()
 
+    def __eq__(self, other: Relation):
+        if self.relop.value == other.relop.value and self.bt_left == other.bt_left and self.bt_right == other.bt_right:
+            return True
+        return False
 
-class Constraints(hset):
+    def __hash__(self):
+        return hash((self.bt_left, self.relop.value, self.bt_right))
+
+
+class AndConstraints(hset):
+    def __str__(self):
+        if len(self) == 0:
+            return ''
+        retstr = ''
+        if not len(self):
+            return retstr
+        for orcons in self:
+            retstr += f'({orcons}) /\\ '
+        retstr = retstr[:-4]
+        return retstr
+
+    def __repr__(self):
+        return self.__str__()
+
+
+class OrConstraints(hset):
     def __str__(self):
         if len(self) == 0:
             return ''
@@ -767,7 +630,7 @@ class Constraints(hset):
         if not len(self):
             return retstr
         for rel in self:
-            retstr += f'{rel} /\\ '
+            retstr += f'{rel} \\/ '
         retstr = retstr[:-4]
         return retstr
 
@@ -776,29 +639,16 @@ class Constraints(hset):
 
 
 class State:
-    def __init__(self, assignment: Assignment, constraints: Constraints):
+    def __init__(self, assignment: Assignment, constraints: AndConstraints):
         self.assignment = deepcopy(assignment)
         self.constraints = deepcopy(constraints)
 
     def __str__(self):
         retstr = f'({self.assignment}) ^ ({self.constraints})'
         return retstr
-        # if not len(self.constraints):
-        #     retstr += ')'
-        #     return retstr
-        # for constr in self.constraints:
-        #     retstr += f'({constr}) \\/ '
-        # retstr = retstr[:-4]
-        # retstr += ')'
-        # return retstr
 
+    def __hash__(self):
+        return hash((self.assignment, self.constraints))
 
-if __name__ == "__main__":
-    bt1 = Basetype({PyType(int), PyType(list, keys=Basetype({PyType(str)})), VarType('T_a')})
-    bt2 = Basetype({PyType(int), PyType(float)})
-    ass1 = Assignment({'a': bt1, 'b': bt2})
-    constr1 = Constraints()
-    constr1.add(Relation(RelOp.LEQ, Basetype({VarType('T_a'), PyType(int)}), Basetype({PyType(int), VarType('T_b')})))
-    constr1.add(Relation(RelOp.EQ, Basetype({VarType('T_b')}), Basetype({PyType(float)})))
-    st1 = State(ass1, constr1)
-    print(st1)
+    def __eq__(self, other: State):
+        return hash(self) == hash(other)

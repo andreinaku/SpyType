@@ -1,6 +1,7 @@
 from __future__ import annotations
 from AbstractState import *
 import re
+from statev2.basetype import Basetype, Assignment, AndConstraints, Relation, RelOp, State, OrConstraints
 from pyiparser import type_equivalences
 from pyiparser.type_equivalences import *
 
@@ -10,7 +11,7 @@ NONE_TYPE = 'NoneType'
 
 class Translator:
     @staticmethod
-    def _elim_paren(foo):
+    def _elim_paren(foo: str) -> str:
         if foo.startswith('(') and foo.endswith(')'):
             return foo[1:-1]
         return foo
@@ -150,6 +151,78 @@ class Translator:
             te_typelist.append(Translator.translate_type(cte_type, "<", ">", "+"))
         new_te = TypeExpression(te_typelist)
         return new_te
+
+    @staticmethod
+    def translate_basetype(str_basetype):
+        str_basetype = elim_paren(str_basetype)
+        str_bt_split = Translator.get_types_from_list(str_basetype, "<", ">", "+")
+        bt_typelist = []
+        for cte_type in str_bt_split:
+            bt_typelist.append(Translator.translate_type(cte_type, "<", ">", "+"))
+        new_te = Basetype(bt_typelist)
+        return new_te
+
+    @staticmethod
+    def translate_assignment(str_assignment: str):
+        # (a:bt_a /\ b:bt_b /\ ...)
+        assig = Assignment()
+        to_translate = Translator._elim_paren(str_assignment)
+        str_entries = to_translate.split(r' /\ ')
+        for str_entry in str_entries:
+            expr, str_basetype = str_entry.split(':')
+            assig[expr] = Translator.translate_basetype(str_basetype)
+        return assig
+
+    @staticmethod
+    def translate_relation(str_relation: str):
+        # (bt_1 <= bt_2)
+        # (bt_1 == bt_2)
+        # to_translate = Translator._elim_paren(str_relation)
+        to_translate = str_relation
+        found = False
+        op = None
+        for op in RelOp:
+            if op.value in to_translate:
+                found = True
+                break
+        if not found:
+            raise RuntimeError(f'Operation for {to_translate} not supported')
+        str_operands = to_translate.split(f' {op.value} ')
+        bt_left = Translator.translate_basetype(str_operands[0])
+        bt_right = Translator.translate_basetype(str_operands[1])
+        return Relation(op, bt_left, bt_right)
+
+    @staticmethod
+    def translate_or_constraints(str_constraints: str):
+        # ((bt_1 <= bt 2) /\ (bt_3 == bt_4))
+        or_constr = OrConstraints()
+        to_translate = Translator._elim_paren(str_constraints)
+        str_entries = to_translate.split(r' \/ ')
+        for str_relation in str_entries:
+            rel = Translator.translate_relation(str_relation)
+            or_constr.add(rel)
+        return or_constr
+
+    @staticmethod
+    def translate_and_constraints(str_constraints: str):
+        # ((bt_1 <= bt 2) /\ (bt_3 == bt_4))
+        and_constr = AndConstraints()
+        to_translate = Translator._elim_paren(str_constraints)
+        str_entries = to_translate.split(r' /\ ')
+        for str_or_constr in str_entries:
+            or_constr = Translator.translate_or_constraints(str_or_constr)
+            and_constr.add(or_constr)
+        return and_constr
+
+    @staticmethod
+    def translate_state(str_state: str):
+        # (assignment ^ constraints)
+        to_translate = Translator._elim_paren(str_state)
+        (str_assignment, str_constraints) = to_translate.split(' ^ ')
+        asgn = Translator.translate_assignment(str_assignment)
+        constr = Translator.translate_and_constraints(str_constraints)
+        st = State(asgn, constr)
+        return st
 
     @staticmethod
     def translate_va(str_va):
