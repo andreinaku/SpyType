@@ -592,7 +592,7 @@ class Relation:
             relstr = '=='
         else:
             raise RuntimeError('Unsupported relation op')
-        return f'({self.bt_left} {relstr} {self.bt_right})'
+        return f'{self.bt_left} {relstr} {self.bt_right}'
 
     def __repr__(self):
         return self.__str__()
@@ -664,7 +664,10 @@ class State:
 
 
 def apply_spec(state: State, spec: State, testmode=False) -> State:
+    # todo: remove cases where bt <= bt
+    # todo: remove cases where bt1 <= bt2 already exists in another OrConstraint
     new_state = State()
+    new_state.constraints = deepcopy(state.constraints)
     for expr in spec.assignment:
         if testmode is False:
             new_basetype = Basetype({VarType(f'T_{int(time.time())}')})
