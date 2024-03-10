@@ -250,8 +250,8 @@ class Translator:
         delimiter = r' -> '
         to_translate = Translator._elim_paren(str_spec)
         (str_in, str_out) = to_translate.split(delimiter)
-        funcspec._in = Translator.translate_state(str_in)
-        funcspec._out = Translator.translate_state(str_out)
+        funcspec.in_state = Translator.translate_state(str_in)
+        funcspec.out_state = Translator.translate_state(str_out)
         return funcspec
 
     @staticmethod

@@ -45,3 +45,9 @@ class SpecTestCases(unittest.TestCase):
         )
         result = set_apply_spec(stateset, specset, testmode=True)
         self.assertEqual(result, expected_result)
+
+    def test_spec_to_state_1(self):
+        spec = Translator.translate_func_spec(r'((a:int /\ b:int) -> ((a+b):int))')
+        result = spec_to_state(spec)
+        expected_result = Translator.translate_state(r'(a:int /\ b:int /\ (a+b):int)')
+        self.assertEqual(result, expected_result)

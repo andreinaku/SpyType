@@ -28,5 +28,12 @@ def set_apply_spec(state_set: StateSet, spec_set: StateSet, testmode=False) -> S
     return new_set
 
 
+def spec_to_state(spec: FuncSpec) -> State:
+    ret_state = deepcopy(spec.in_state)
+    for expr in spec.out_state.assignment:
+        ret_state.assignment[expr] = deepcopy(spec.out_state.assignment[expr])
+    return ret_state
+
+
 def find_spec(expr: str) -> StateSet:
     pass

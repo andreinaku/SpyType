@@ -694,22 +694,22 @@ class StateSet(hset):
 class FuncSpec:
     def __init__(self, _in: State = None, _out: State = None):
         if not _in:
-            self._in = State()
+            self.in_state = State()
         else:
-            self._in = deepcopy(_in)
+            self.in_state = deepcopy(_in)
         if not _out:
-            self._out = State()
+            self.out_state = State()
         else:
-            self._out = deepcopy(_out)
+            self.out_state = deepcopy(_out)
 
     def __str__(self):
-        return f'({self._in}) -> ({self._out})'
+        return f'({self.in_state}) -> ({self.out_state})'
 
     def __repr__(self):
         return self.__str__()
 
     def __hash__(self):
-        return hash((self._in, self._out))
+        return hash((self.in_state, self.out_state))
 
     def __eq__(self, other: FuncSpec):
         return hash(self) == hash(other)
