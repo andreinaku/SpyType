@@ -1,4 +1,4 @@
-from basetype import *
+from statev2.basetype import *
 
 
 def state_apply_spec(state: State, spec: State, testmode=False) -> State:

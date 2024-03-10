@@ -153,3 +153,12 @@ class TranslatorTestCases(unittest.TestCase):
         state.assignment['b'] = Basetype({PyType(float)})
         expected_result.add(deepcopy(state))
         self.assertEqual(result, expected_result)
+
+    def test_translate_state_set_2(self):
+        result = Translator.translate_state_set(r'((a:int /\ b:float))')
+        expected_result = StateSet()
+        state = State()
+        state.assignment['a'] = Basetype({PyType(int)})
+        state.assignment['b'] = Basetype({PyType(float)})
+        expected_result.add(state)
+        self.assertEqual(result, expected_result)
