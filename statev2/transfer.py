@@ -26,3 +26,7 @@ def set_apply_spec(state_set: StateSet, spec_set: StateSet, testmode=False) -> S
             new_state = state_apply_spec(state, spec, testmode)
             new_set.add(new_state)
     return new_set
+
+
+def find_spec(expr: str) -> StateSet:
+    pass

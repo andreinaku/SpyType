@@ -1,6 +1,6 @@
 import unittest
 from Translator import Translator
-from statev2.basetype import Basetype, Assignment, RelOp, Relation, AndConstraints, OrConstraints, State, StateSet
+from statev2.basetype import Basetype, Assignment, RelOp, Relation, AndConstraints, OrConstraints, State, StateSet, FuncSpec
 from TypeExp import *
 
 
@@ -161,4 +161,12 @@ class TranslatorTestCases(unittest.TestCase):
         state.assignment['a'] = Basetype({PyType(int)})
         state.assignment['b'] = Basetype({PyType(float)})
         expected_result.add(state)
+        self.assertEqual(result, expected_result)
+
+    def test_translate_spec_1(self):
+        result = Translator.translate_func_spec(r'((a:int /\ b:int) -> (return:int))')
+        expected_result = FuncSpec()
+        expected_result._in.assignment['a'] = Basetype({PyType(int)})
+        expected_result._in.assignment['b'] = Basetype({PyType(int)})
+        expected_result._out.assignment['return'] = Basetype({PyType(int)})
         self.assertEqual(result, expected_result)

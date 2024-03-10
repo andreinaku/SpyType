@@ -689,3 +689,27 @@ class StateSet(hset):
 
     def __repr__(self):
         return self.__str__()
+
+
+class FuncSpec:
+    def __init__(self, _in: State = None, _out: State = None):
+        if not _in:
+            self._in = State()
+        else:
+            self._in = deepcopy(_in)
+        if not _out:
+            self._out = State()
+        else:
+            self._out = deepcopy(_out)
+
+    def __str__(self):
+        return f'({self._in}) -> ({self._out})'
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __hash__(self):
+        return hash((self._in, self._out))
+
+    def __eq__(self, other: FuncSpec):
+        return hash(self) == hash(other)

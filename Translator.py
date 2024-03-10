@@ -1,7 +1,7 @@
 from __future__ import annotations
 from AbstractState import *
 import re
-from statev2.basetype import Basetype, Assignment, AndConstraints, Relation, RelOp, State, OrConstraints, StateSet
+from statev2.basetype import Basetype, Assignment, AndConstraints, Relation, RelOp, State, OrConstraints, StateSet, FuncSpec
 from pyiparser import type_equivalences
 from pyiparser.type_equivalences import *
 
@@ -243,6 +243,16 @@ class Translator:
             state = Translator.translate_state(str_state)
             state_set.add(state)
         return state_set
+
+    @staticmethod
+    def translate_func_spec(str_spec: str) -> FuncSpec:
+        funcspec = FuncSpec()
+        delimiter = r' -> '
+        to_translate = Translator._elim_paren(str_spec)
+        (str_in, str_out) = to_translate.split(delimiter)
+        funcspec._in = Translator.translate_state(str_in)
+        funcspec._out = Translator.translate_state(str_out)
+        return funcspec
 
     @staticmethod
     def translate_va(str_va):
