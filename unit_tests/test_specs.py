@@ -3,7 +3,7 @@ from Translator import *
 from statev2 import *
 
 
-class BasetypeTestCases(unittest.TestCase):
+class SpecTestCases(unittest.TestCase):
     def test_apply_spec_1(self):
         state = Translator.translate_state(r'(a:int+float /\ b:int+float)')
         spec = Translator.translate_state(r'(a:float /\ b:int)')
@@ -14,6 +14,9 @@ class BasetypeTestCases(unittest.TestCase):
         )
         result = state_apply_spec(state, spec, testmode=True)
         self.assertEqual(result, expected_result)
+
+    def test_apply_spec_set_1(self):
+        pass
 
     def skip_test_apply_spec_2(self):
         state = Translator.translate_state(r'(a:int+float /\ b:int+float)')

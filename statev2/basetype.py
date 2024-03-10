@@ -6,9 +6,19 @@ from copy import deepcopy
 from TypeExp import *
 
 
+ID_NUMBER = 1
+
+
 class RelOp(Enum):
     LEQ = '<='
     EQ = '=='
+
+
+def generate_id():
+    global ID_NUMBER
+    retstr = f'T_{ID_NUMBER}'
+    ID_NUMBER = ID_NUMBER + 1
+    return retstr
 
 
 class Basetype(hset):
@@ -603,6 +613,7 @@ class Relation:
         return False
 
     def __hash__(self):
+        # return -1
         return hash((self.bt_left, self.relop.value, self.bt_right))
 
 
@@ -613,8 +624,8 @@ class AndConstraints(hset):
         retstr = ''
         if not len(self):
             return retstr
-        for orcons in self:
-            retstr += f'({orcons}) /\\ '
+        for rel in self:
+            retstr += f'({rel}) /\\ '
         retstr = retstr[:-4]
         return retstr
 
@@ -656,6 +667,9 @@ class State:
             retstr = f'({self.assignment}) ^ ({self.constraints})'
         return retstr
 
+    def __repr__(self):
+        return self.__str__()
+
     def __hash__(self):
         return hash((self.assignment, self.constraints))
 
@@ -663,21 +677,15 @@ class State:
         return hash(self) == hash(other)
 
 
-def apply_spec(state: State, spec: State, testmode=False) -> State:
-    # todo: remove cases where bt <= bt
-    # todo: remove cases where bt1 <= bt2 already exists in another OrConstraint
-    new_state = State()
-    new_state.constraints = deepcopy(state.constraints)
-    for expr in spec.assignment:
-        if testmode is False:
-            new_basetype = Basetype({VarType(f'T_{int(time.time())}')})
-        else:
-            new_basetype = Basetype({VarType(f'T_{expr}`')})
-        new_state.assignment[expr] = new_basetype
-        rel1 = Relation(RelOp.LEQ, new_basetype, deepcopy(state.assignment[expr]))
-        rel2 = Relation(RelOp.LEQ, new_basetype, deepcopy(spec.assignment[expr]))
-        orconstr = OrConstraints()
-        orconstr.add(rel1)
-        orconstr.add(rel2)
-        new_state.constraints.add(orconstr)
-    return new_state
+class StateSet(hset):
+    def __str__(self):
+        if len(self) == 0:
+            return '()'
+        retstr = ''
+        for state in self:
+            retstr += rf'{state} \/ '
+        retstr = retstr[0:-4]
+        return retstr
+
+    def __repr__(self):
+        return self.__str__()

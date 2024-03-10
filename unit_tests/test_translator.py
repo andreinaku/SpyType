@@ -1,6 +1,6 @@
 import unittest
 from Translator import Translator
-from statev2.basetype import Basetype, Assignment, RelOp, Relation, AndConstraints, OrConstraints, State
+from statev2.basetype import Basetype, Assignment, RelOp, Relation, AndConstraints, OrConstraints, State, StateSet
 from TypeExp import *
 
 
@@ -27,105 +27,52 @@ class TranslatorTestCases(unittest.TestCase):
         expected_result = Relation(RelOp.EQ, Basetype({VarType('T_a')}), Basetype({PyType(int)}))
         self.assertEqual(result, expected_result)
 
-    def test_translate_or_constr_1(self):
-        result = Translator.translate_or_constraints(
-            r'(T_a+int <= T_a+float \/ T_a <= str+complex \/ T_a == str)'
-        )
-        expected_result = OrConstraints()
-        expected_result.add(
-            Relation(
-                RelOp.LEQ,
-                Basetype({VarType('T_a'), PyType(int)}),
-                Basetype({VarType('T_a'), PyType(float)})
-            )
-        )
-        expected_result.add(
-            Relation(
-                RelOp.LEQ,
-                Basetype({VarType('T_a')}),
-                Basetype({PyType(str), PyType(complex)})
-            )
-        )
-        expected_result.add(
-            Relation(
-                RelOp.EQ,
-                Basetype({'T_a'}),
-                Basetype({PyType(str)})
-            )
+    def test_translate_relop_3(self):
+        result = Translator.translate_relation(r'T_b` <= int+float')
+        expected_result = Relation(
+            RelOp.LEQ,
+            Basetype({VarType('T_b`')}),
+            Basetype({PyType(int), PyType(float)})
         )
         self.assertEqual(result, expected_result)
 
     def test_translate_and_constr_1(self):
         result = Translator.translate_and_constraints(r'((T_a <= int) /\ (T_b == int+T_c+list<T_1>))')
         expected_result = AndConstraints()
-        orconstr = OrConstraints()
-        orconstr.add(Relation(RelOp.LEQ, Basetype({VarType('T_a')}), Basetype({PyType(int)})))
-        expected_result.add(orconstr)
-        orconstr = OrConstraints()
-        orconstr.add(
+        expected_result.add(Relation(RelOp.LEQ, Basetype({VarType('T_a')}), Basetype({PyType(int)})))
+        expected_result.add(
             Relation(RelOp.EQ,
                      Basetype({VarType('T_b')}),
                      Basetype({PyType(int), VarType('T_c'), PyType(list, Basetype({VarType('T_1')}))})
                      )
         )
-        expected_result.add(orconstr)
-        self.assertEqual(result, expected_result)
-
-    def test_translate_and_constr_2(self):
-        result = Translator.translate_and_constraints(
-            r'((T_a <= int \/ T_a <= int+float) /\ (T_b == int+T_c+list<T_1> \/ T_b <= int))'
-        )
-        expected_result = AndConstraints()
-        orconstr = OrConstraints()
-        orconstr.add(Relation(RelOp.LEQ, Basetype({VarType('T_a')}), Basetype({PyType(int)})))
-        orconstr.add(Relation(RelOp.LEQ, Basetype({VarType('T_a')}), Basetype({PyType(int), PyType(float)})))
-        expected_result.add(orconstr)
-        orconstr = OrConstraints()
-        orconstr.add(
-            Relation(RelOp.EQ,
-                     Basetype({VarType('T_b')}),
-                     Basetype({PyType(int), VarType('T_c'), PyType(list, Basetype({VarType('T_1')}))})
-                     )
-        )
-        orconstr.add(
-            Relation(RelOp.LEQ,
-                     Basetype({VarType('T_b')}),
-                     Basetype({PyType(int)})
-                     )
-        )
-        expected_result.add(orconstr)
         self.assertEqual(result, expected_result)
 
     def test_translate_state_1(self):
         asgn = Assignment()
         asgn['a'] = Basetype({VarType('T_a')})
         asgn['b'] = Basetype({VarType('T_b')})
-        orcons1 = OrConstraints()
-        orcons1.add(
+        and_constr = AndConstraints()
+        and_constr.add(
             Relation(RelOp.LEQ, Basetype({VarType('T_a')}), Basetype({PyType(int)}))
         )
-        orcons1.add(
+        and_constr.add(
             Relation(RelOp.LEQ, Basetype({VarType('T_a')}), Basetype({PyType(float)}))
         )
-        orcons2 = OrConstraints()
-        orcons2.add(
+        and_constr.add(
             Relation(RelOp.LEQ, Basetype({VarType('T_b')}), Basetype({PyType(int), VarType('T_c')}))
         )
-        orcons3 = OrConstraints()
-        orcons3.add(
+        and_constr.add(
             Relation(RelOp.EQ, Basetype({VarType('T_c')}), Basetype({PyType(float)}))
         )
-        orcons3.add(
+        and_constr.add(
             Relation(RelOp.EQ, Basetype({VarType('T_c')}), Basetype({PyType(int)}))
         )
-        andcons1 = AndConstraints()
-        andcons1.add(orcons1)
-        andcons1.add(orcons2)
-        andcons1.add(orcons3)
-        expected_result = State(asgn, andcons1)
+        expected_result = State(asgn, and_constr)
         str_state = (
             r'((a:T_a /\ b:T_b) ^ '
-            r'((T_a <= int \/ T_a <= float) /\ (T_b <= int+T_c) /\ (T_c == float \/ T_c == int)))'
+            r'((T_a <= int) /\ (T_a <= float) /\ (T_b <= int+T_c) /\ (T_c == float) /\ (T_c == int))'
+            r')'
         )
         result = Translator.translate_state(str_state)
         self.assertEqual(result, expected_result)
@@ -136,4 +83,73 @@ class TranslatorTestCases(unittest.TestCase):
         asgn['a'] = Basetype({PyType(int)})
         asgn['b'] = Basetype({PyType(float)})
         expected_result = State(assignment=asgn)
+        self.assertEqual(result, expected_result)
+
+    def test_translate_state_3(self):
+        result = Translator.translate_state(
+            r'((a:T_a` /\ b:T_b`) ^ '
+            r'((T_a` <= int+float) /\ (T_a` <= float) /\ (T_b` <= int+float) /\ (T_b` <= int))'
+            r')'
+        )
+        expected_result = State()
+        expected_result.assignment['a'] = Basetype({VarType('T_a`')})
+        expected_result.assignment['b'] = Basetype({VarType('T_b`')})
+        expected_result.constraints.add(
+            Relation(
+                RelOp.LEQ,
+                Basetype({VarType('T_a`')}),
+                Basetype({PyType(int), PyType(float)})
+            )
+        )
+        expected_result.constraints.add(
+            Relation(
+                RelOp.LEQ,
+                Basetype({VarType('T_a`')}),
+                Basetype({PyType(float)})
+            )
+        )
+        expected_result.constraints.add(
+            Relation(
+                RelOp.LEQ,
+                Basetype({VarType('T_b`')}),
+                Basetype({PyType(int), PyType(float)})
+            )
+        )
+        expected_result.constraints.add(
+            Relation(
+                RelOp.LEQ,
+                Basetype({VarType('T_b`')}),
+                Basetype({PyType(int)})
+            )
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_translate_state_set_1(self):
+        result = Translator.translate_state_set(
+            r'((a:T_a+float /\ b:T_b+int) ^ (T_b <= float /\ T_a <= str+complex)) \/ '
+            r'((a:str /\ b:float))'
+        )
+        expected_result = StateSet()
+        state = State()
+        state.assignment['a'] = Basetype({VarType('T_a'), PyType(float)})
+        state.assignment['b'] = Basetype({VarType('T_b'), PyType(int)})
+        state.constraints.add(
+            Relation(
+                RelOp.LEQ,
+                Basetype({VarType('T_b')}),
+                Basetype({PyType(float)})
+            )
+        )
+        state.constraints.add(
+            Relation(
+                RelOp.LEQ,
+                Basetype({VarType('T_a')}),
+                Basetype({PyType(str), PyType(complex)})
+            )
+        )
+        expected_result.add(deepcopy(state))
+        state = State()
+        state.assignment['a'] = Basetype({PyType(str)})
+        state.assignment['b'] = Basetype({PyType(float)})
+        expected_result.add(deepcopy(state))
         self.assertEqual(result, expected_result)

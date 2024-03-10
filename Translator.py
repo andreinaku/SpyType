@@ -1,7 +1,7 @@
 from __future__ import annotations
 from AbstractState import *
 import re
-from statev2.basetype import Basetype, Assignment, AndConstraints, Relation, RelOp, State, OrConstraints
+from statev2.basetype import Basetype, Assignment, AndConstraints, Relation, RelOp, State, OrConstraints, StateSet
 from pyiparser import type_equivalences
 from pyiparser.type_equivalences import *
 
@@ -153,7 +153,7 @@ class Translator:
         return new_te
 
     @staticmethod
-    def translate_basetype(str_basetype):
+    def translate_basetype(str_basetype) -> Basetype:
         str_basetype = elim_paren(str_basetype)
         str_bt_split = Translator.get_types_from_list(str_basetype, "<", ">", "+")
         bt_typelist = []
@@ -163,7 +163,7 @@ class Translator:
         return new_te
 
     @staticmethod
-    def translate_assignment(str_assignment: str):
+    def translate_assignment(str_assignment: str) -> Assignment:
         # (a:bt_a /\ b:bt_b /\ ...)
         assig = Assignment()
         to_translate = Translator._elim_paren(str_assignment)
@@ -174,11 +174,11 @@ class Translator:
         return assig
 
     @staticmethod
-    def translate_relation(str_relation: str):
+    def translate_relation(str_relation: str) -> Relation:
         # (bt_1 <= bt_2)
         # (bt_1 == bt_2)
-        # to_translate = Translator._elim_paren(str_relation)
-        to_translate = str_relation
+        to_translate = Translator._elim_paren(str_relation)
+        # to_translate = str_relation
         found = False
         op = None
         for op in RelOp:
@@ -193,7 +193,7 @@ class Translator:
         return Relation(op, bt_left, bt_right)
 
     @staticmethod
-    def translate_or_constraints(str_constraints: str):
+    def translate_or_constraints(str_constraints: str) -> OrConstraints:
         # ((bt_1 <= bt 2) /\ (bt_3 == bt_4))
         or_constr = OrConstraints()
         to_translate = Translator._elim_paren(str_constraints)
@@ -204,18 +204,18 @@ class Translator:
         return or_constr
 
     @staticmethod
-    def translate_and_constraints(str_constraints: str):
+    def translate_and_constraints(str_constraints: str) -> AndConstraints:
         # ((bt_1 <= bt 2) /\ (bt_3 == bt_4))
         and_constr = AndConstraints()
         to_translate = Translator._elim_paren(str_constraints)
         str_entries = to_translate.split(r' /\ ')
-        for str_or_constr in str_entries:
-            or_constr = Translator.translate_or_constraints(str_or_constr)
-            and_constr.add(or_constr)
+        for str_relation in str_entries:
+            rel = Translator.translate_relation(str_relation)
+            and_constr.add(rel)
         return and_constr
 
     @staticmethod
-    def translate_state(str_state: str):
+    def translate_state(str_state: str) -> State:
         # (assignment ^ constraints)
         delimiter = ' ^ '
         to_translate = Translator._elim_paren(str_state)
@@ -224,7 +224,7 @@ class Translator:
         if delimiter not in to_translate:
             str_assignment = to_translate
         else:
-            (str_assignment, str_constraints) = to_translate.split(' ^ ')
+            (str_assignment, str_constraints) = to_translate.split(delimiter)
         asgn = Translator.translate_assignment(str_assignment)
         if str_constraints is not None:
             constr = Translator.translate_and_constraints(str_constraints)
@@ -232,6 +232,17 @@ class Translator:
             constr = None
         st = State(asgn, constr)
         return st
+
+    @staticmethod
+    def translate_state_set(str_set: str) -> StateSet:
+        delimiter = r' \/ '
+        to_translate = str_set
+        str_states = to_translate.split(delimiter)
+        state_set = StateSet()
+        for str_state in str_states:
+            state = Translator.translate_state(str_state)
+            state_set.add(state)
+        return state_set
 
     @staticmethod
     def translate_va(str_va):
