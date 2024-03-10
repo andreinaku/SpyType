@@ -164,9 +164,9 @@ class TranslatorTestCases(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_translate_spec_1(self):
-        result = Translator.translate_func_spec(r'((a:int /\ b:int) -> (return:int))')
+        result = Translator.translate_func_spec(r'((a:int /\ b:int) -> ((a+b):int))')
         expected_result = FuncSpec()
         expected_result._in.assignment['a'] = Basetype({PyType(int)})
         expected_result._in.assignment['b'] = Basetype({PyType(int)})
-        expected_result._out.assignment['return'] = Basetype({PyType(int)})
+        expected_result._out.assignment['(a+b)'] = Basetype({PyType(int)})
         self.assertEqual(result, expected_result)
