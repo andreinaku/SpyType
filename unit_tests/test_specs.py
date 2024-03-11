@@ -51,3 +51,60 @@ class SpecTestCases(unittest.TestCase):
         result = spec_to_state(spec)
         expected_result = Translator.translate_state(r'(a:int /\ b:int /\ (a+b):int)')
         self.assertEqual(result, expected_result)
+
+    def test_find_specs_1(self):
+        expr = 'a + b'
+        binop_node = ast.parse(expr).body[0].value
+        result = find_spec_from_binop(binop_node)
+        expected_result = unitedspecs['__add__']
+        self.assertEqual(result, expected_result)
+
+    def test_get_specset_from_binop_1(self):
+        expr = 'a / b'
+        binop_node = ast.parse(expr).body[0].value
+        result = get_specset_from_binop(binop_node)
+        expected_result = hset(
+            {
+                Translator.translate_func_spec(r'((self:complex /\ __value:complex) -> (return:complex))'),
+                Translator.translate_func_spec(r'((self:float /\ __value:float) -> (return:float))'),
+                Translator.translate_func_spec(r'((self:int /\ __value:int) -> (return:float))')
+            }
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_substitute_binop_state_arguments_1(self):
+        expr = 'a / b'
+        binop_node = ast.parse(expr).body[0].value
+        state = Translator.translate_state(r'(a:int+float /\ b:int+float)')
+        result = substitute_binop_state_arguments(state, binop_node)
+        expected_result = hset(
+            {
+                Translator.translate_func_spec(r'((a:complex /\ b:complex) -> ((a / b):complex))'),
+                Translator.translate_func_spec(r'((a:float /\ b:float) -> ((a / b):float))'),
+                Translator.translate_func_spec(r'((a:int /\ b:int) -> ((a / b):float))')
+            }
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_set_apply_binop_spec_1(self):
+        expr = 'a / b'
+        binop_node = ast.parse(expr).body[0].value
+        state_set = Translator.translate_state_set(r'(a:T_a /\ b:T_b)')
+        result = set_apply_binop_spec(state_set, binop_node, testmode=True)
+        expected_result = StateSet(
+            {
+                Translator.translate_state(
+                    r'((a:T_a` /\ b:T_b` /\ (a / b):complex) ^ '
+                    r'(T_a` <= T_a /\ T_a` <= complex /\ T_b` <= T_b /\ T_b` <= complex))'
+                ),
+                Translator.translate_state(
+                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
+                    r'(T_a` <= T_a /\ T_a` <= float /\ T_b` <= T_b /\ T_b` <= float))'
+                ),
+                Translator.translate_state(
+                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
+                    r'(T_a` <= T_a /\ T_a` <= int /\ T_b` <= T_b /\ T_b` <= int))'
+                )
+            }
+        )
+        self.assertEqual(result, expected_result)

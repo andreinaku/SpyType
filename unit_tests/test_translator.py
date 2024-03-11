@@ -163,6 +163,30 @@ class TranslatorTestCases(unittest.TestCase):
         expected_result.add(state)
         self.assertEqual(result, expected_result)
 
+    def test_translate_state_set_3(self):
+        result = Translator.translate_state_set(
+            r'((self:complex /\ __value:complex /\ return:complex)) \/ '
+            r'((self:float /\ __value:float /\ return:float)) \/ '
+            r'((self:int /\ __value:int /\ return:float))'
+        )
+        expected_result = StateSet()
+        state = State()
+        state.assignment['self'] = Basetype({PyType(complex)})
+        state.assignment['__value'] = Basetype({PyType(complex)})
+        state.assignment['return'] = Basetype({PyType(complex)})
+        expected_result.add(deepcopy(state))
+        state = State()
+        state.assignment['self'] = Basetype({PyType(float)})
+        state.assignment['__value'] = Basetype({PyType(float)})
+        state.assignment['return'] = Basetype({PyType(float)})
+        expected_result.add(deepcopy(state))
+        state = State()
+        state.assignment['self'] = Basetype({PyType(int)})
+        state.assignment['__value'] = Basetype({PyType(int)})
+        state.assignment['return'] = Basetype({PyType(float)})
+        expected_result.add(deepcopy(state))
+        self.assertEqual(result, expected_result)
+
     def test_translate_spec_1(self):
         result = Translator.translate_func_spec(r'((a:int /\ b:int) -> ((a+b):int))')
         expected_result = FuncSpec()
