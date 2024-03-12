@@ -82,3 +82,12 @@ def set_apply_binop_spec(state_set: StateSet, binop_node: ast.BinOp, testmode: b
                 new_state.assignment[expr] = deepcopy(bt)
             new_set.add(deepcopy(new_state))
     return new_set
+
+
+class TransferFunc(ast.NodeVisitor):
+    def __init__(self, _state_set: StateSet, _testmode=False):
+        self.state_set = deepcopy(_state_set)
+        self.testmode = _testmode
+
+    def visit_BinOp(self, node: ast.BinOp):
+        self.state_set = set_apply_binop_spec(self.state_set, node, self.testmode)

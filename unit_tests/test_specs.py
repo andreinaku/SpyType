@@ -171,3 +171,30 @@ class SpecTestCases(unittest.TestCase):
             }
         )
         self.assertEqual(result, expected_result)
+
+    def test_visit_BinOp_1(self):
+        expr = 'a / b'
+        state_set = Translator.translate_state_set(
+            r'(a:str /\ b:str)'
+        )
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, True)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet(
+            {
+                Translator.translate_state(
+                    r'((a:T_a` /\ b:T_b` /\ (a / b):complex) ^ '
+                    r'(T_a` <= str /\ T_a` <= complex /\ T_b` <= str /\ T_b` <= complex))'
+                ),
+                Translator.translate_state(
+                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
+                    r'(T_a` <= str /\ T_a` <= float /\ T_b` <= str /\ T_b` <= float))'
+                ),
+                Translator.translate_state(
+                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
+                    r'(T_a` <= str /\ T_a` <= int /\ T_b` <= str /\ T_b` <= int))'
+                )
+            }
+        )
+        self.assertEqual(result, expected_result)
