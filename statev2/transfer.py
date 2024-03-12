@@ -80,5 +80,5 @@ def set_apply_binop_spec(state_set: StateSet, binop_node: ast.BinOp, testmode: b
             new_state = state_apply_spec(state, spec.in_state, testmode)
             for expr, bt in spec.out_state.assignment.items():
                 new_state.assignment[expr] = deepcopy(bt)
-            new_set.add(new_state)
+            new_set.add(deepcopy(new_state))
     return new_set
