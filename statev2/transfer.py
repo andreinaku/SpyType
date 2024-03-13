@@ -7,12 +7,16 @@ from Translator import Translator
 
 def state_apply_spec(state: State, spec: State, testmode=False) -> State:
     new_state = State()
+    new_state.gen_id = state.gen_id
     new_state.constraints = deepcopy(state.constraints)
     for expr in spec.assignment:
         if testmode is False:
-            new_basetype = Basetype({VarType(generate_id())})
+            new_basetype = Basetype({VarType(generate_id(new_state))})
         else:
-            new_basetype = Basetype({VarType(f'T_{expr}`')})
+            new_varname = f'T_{expr}`'
+            new_basetype = Basetype({VarType(new_varname)})
+            if new_basetype == spec.assignment[expr]:
+                new_basetype = Basetype({VarType(new_varname + '`')})
         new_state.assignment[expr] = new_basetype
         rel1 = Relation(RelOp.LEQ, new_basetype, deepcopy(state.assignment[expr]))
         rel2 = Relation(RelOp.LEQ, new_basetype, deepcopy(spec.assignment[expr]))
@@ -20,6 +24,9 @@ def state_apply_spec(state: State, spec: State, testmode=False) -> State:
         andconstr.add(rel1)
         andconstr.add(rel2)
         new_state.constraints |= deepcopy(andconstr)
+    for expr in state.assignment:
+        if expr not in new_state.assignment:
+            new_state.assignment[expr] = deepcopy(state.assignment[expr])
     return new_state
 
 
@@ -89,5 +96,15 @@ class TransferFunc(ast.NodeVisitor):
         self.state_set = deepcopy(_state_set)
         self.testmode = _testmode
 
+    def visit_Constant(self, node: ast.Constant):
+        new_set = StateSet()
+        for state in self.state_set:
+            new_state = deepcopy(state)
+            new_state.assignment[astor.to_source(node).strip()] = Basetype({PyType(type(node.value))})
+            new_set.add(new_state)
+        self.state_set = deepcopy(new_set)
+
     def visit_BinOp(self, node: ast.BinOp):
+        self.visit(node.left)
+        self.visit(node.right)
         self.state_set = set_apply_binop_spec(self.state_set, node, self.testmode)

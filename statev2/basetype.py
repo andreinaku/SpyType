@@ -14,10 +14,16 @@ class RelOp(Enum):
     EQ = '=='
 
 
-def generate_id():
-    global ID_NUMBER
-    retstr = f'T_{ID_NUMBER}'
-    ID_NUMBER = ID_NUMBER + 1
+# def generate_id():
+#     global ID_NUMBER
+#     retstr = f'T_{ID_NUMBER}'
+#     ID_NUMBER = ID_NUMBER + 1
+#     return retstr
+
+
+def generate_id(state):
+    retstr = f'T_{state.gen_id}'
+    state.gen_id = state.gen_id + 1
     return retstr
 
 
@@ -651,6 +657,7 @@ class OrConstraints(hset):
 
 class State:
     def __init__(self, assignment: Assignment = None, constraints: AndConstraints = None):
+        self.gen_id = 1
         if assignment is None:
             self.assignment = Assignment()
         else:

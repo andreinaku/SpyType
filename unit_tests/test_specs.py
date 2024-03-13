@@ -198,3 +198,51 @@ class SpecTestCases(unittest.TestCase):
             }
         )
         self.assertEqual(result, expected_result)
+
+    def test_visit_BinOp_2(self):
+        expr = '(a >> b) / c'
+        state_set = Translator.translate_state_set(
+            r'(a:T_a /\ b:T_b /\ c:T_c)'
+        )
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, False)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet(
+            {
+                Translator.translate_state(
+                    r'((a:T_1 /\ b:T_2 /\ c:T_4 /\ (a >> b):T_3 /\ ((a >> b) / c):float) ^ '
+                    r'(T_1 <= T_a /\ T_1 <= int /\ T_2 <= T_b /\ T_2 <= int /\ T_4 <= int /\ T_3 <= int /\ T_4 <= T_c))'
+                ),
+                Translator.translate_state(
+                    r'((a:T_1 /\ b:T_2 /\ c:T_4 /\ (a >> b):T_3 /\ ((a >> b) / c):float) ^ '
+                    r'(T_1 <= T_a /\ T_1 <= int /\ T_2 <= T_b /\ T_2 <= int /\ T_4 <= float /\ T_3 <= int /\ T_3 <= float /\ T_4 <= T_c))'
+                ),
+                Translator.translate_state(
+                    r'((a:T_1 /\ b:T_2 /\ c:T_4 /\ (a >> b):T_3 /\ ((a >> b) / c):complex) ^ '
+                    r'(T_1 <= T_a /\ T_1 <= int /\ T_2 <= T_b /\ T_2 <= int /\ T_4 <= complex /\ T_3 <= int /\ T_3 <= complex /\ T_4 <= T_c))'
+                ),
+            }
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_visit_Constant_1(self):
+        expr = '3'
+        state_set = Translator.translate_state_set(
+            r'(a:T_a /\ b:T_b) \/ (a:int /\ b:int)'
+        )
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, True)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet(
+            {
+                Translator.translate_state(
+                    r'(a:T_a /\ b:T_b /\ (3):int)'
+                ),
+                Translator.translate_state(
+                    r'(a:int /\ b:int /\ (3):int)'
+                )
+            }
+        )
+        self.assertEqual(result, expected_result)

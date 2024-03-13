@@ -1,5 +1,5 @@
 import ast
 import astpretty
 
-expr = '(a * 3) + b'
+expr = '3'
 astpretty.pprint(ast.parse(expr))
