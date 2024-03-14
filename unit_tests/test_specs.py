@@ -9,8 +9,8 @@ class SpecTestCases(unittest.TestCase):
         state = Translator.translate_state(r'((a:int+float /\ b:int+float))')
         spec = Translator.translate_state(r'(a:float /\ b:int)')
         expected_result = Translator.translate_state(
-            r'((a:T_a` /\ b:T_b`) ^ '
-            r'((T_a` <= int+float) /\ (T_a` <= float) /\ (T_b` <= int+float) /\ (T_b` <= int))'
+            r'((a:Ta` /\ b:Tb`) ^ '
+            r'((Ta` <= int+float) /\ (Ta` <= float) /\ (Tb` <= int+float) /\ (Tb` <= int))'
             r')'
         )
         result = state_apply_spec(state, spec, testmode=True)
@@ -18,30 +18,30 @@ class SpecTestCases(unittest.TestCase):
 
     def test_apply_spec_set_1(self):
         stateset = Translator.translate_state_set(
-            r'((a:T_a /\ b:T_b))'
+            r'((a:Ta /\ b:Tb))'
         )
         specset = Translator.translate_state_set(
             r'((a:int /\ b:int)) \/ ((a:float /\ b:float))'
         )
         expected_result = Translator.translate_state_set(
-            r'((a:T_a` /\ b:T_b`) ^ (T_a` <= T_a /\ T_a` <= int /\ T_b` <= T_b /\ T_b` <= int)) \/ '
-            r'((a:T_a` /\ b:T_b`) ^ (T_a` <= T_a /\ T_a` <= float /\ T_b` <= T_b /\ T_b` <= float))'
+            r'((a:Ta` /\ b:Tb`) ^ (Ta` <= Ta /\ Ta` <= int /\ Tb` <= Tb /\ Tb` <= int)) \/ '
+            r'((a:Ta` /\ b:Tb`) ^ (Ta` <= Ta /\ Ta` <= float /\ Tb` <= Tb /\ Tb` <= float))'
         )
         result = set_apply_spec(stateset, specset, testmode=True)
         self.assertEqual(result, expected_result)
 
     def test_apply_spec_set_2(self):
         stateset = Translator.translate_state_set(
-            r'((a:T_a /\ b:T_b) ^ (T_a <= int+float /\ T_b <= str))'
+            r'((a:Ta /\ b:Tb) ^ (Ta <= int+float /\ Tb <= str))'
         )
         specset = Translator.translate_state_set(
             r'((a:int /\ b:int)) \/ ((a:float /\ b:float))'
         )
         expected_result = Translator.translate_state_set(
-            r'((a:T_a` /\ b:T_b`) ^ '
-            r'(T_a` <= T_a /\ T_a` <= int /\ T_b` <= T_b /\ T_b` <= int /\ T_a <= int+float /\ T_b <= str)) \/ '
-            r'((a:T_a` /\ b:T_b`) ^ '
-            r'(T_a <= int+float /\ T_b <= str /\ T_a` <= T_a /\ T_a` <= float /\ T_b` <= T_b /\ T_b` <= float))'
+            r'((a:Ta` /\ b:Tb`) ^ '
+            r'(Ta` <= Ta /\ Ta` <= int /\ Tb` <= Tb /\ Tb` <= int /\ Ta <= int+float /\ Tb <= str)) \/ '
+            r'((a:Ta` /\ b:Tb`) ^ '
+            r'(Ta <= int+float /\ Tb <= str /\ Ta` <= Ta /\ Ta` <= float /\ Tb` <= Tb /\ Tb` <= float))'
         )
         result = set_apply_spec(stateset, specset, testmode=True)
         self.assertEqual(result, expected_result)
@@ -89,21 +89,21 @@ class SpecTestCases(unittest.TestCase):
     def test_set_apply_binop_spec_1(self):
         expr = 'a / b'
         binop_node = ast.parse(expr).body[0].value
-        state_set = Translator.translate_state_set(r'(a:T_a /\ b:T_b)')
+        state_set = Translator.translate_state_set(r'(a:Ta /\ b:Tb)')
         result = set_apply_binop_spec(state_set, binop_node, testmode=True)
         expected_result = StateSet(
             {
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):complex) ^ '
-                    r'(T_a` <= T_a /\ T_a` <= complex /\ T_b` <= T_b /\ T_b` <= complex))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):complex) ^ '
+                    r'(Ta` <= Ta /\ Ta` <= complex /\ Tb` <= Tb /\ Tb` <= complex))'
                 ),
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
-                    r'(T_a` <= T_a /\ T_a` <= float /\ T_b` <= T_b /\ T_b` <= float))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
+                    r'(Ta` <= Ta /\ Ta` <= float /\ Tb` <= Tb /\ Tb` <= float))'
                 ),
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
-                    r'(T_a` <= T_a /\ T_a` <= int /\ T_b` <= T_b /\ T_b` <= int))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
+                    r'(Ta` <= Ta /\ Ta` <= int /\ Tb` <= Tb /\ Tb` <= int))'
                 )
             }
         )
@@ -113,35 +113,35 @@ class SpecTestCases(unittest.TestCase):
         expr = 'a / b'
         binop_node = ast.parse(expr).body[0].value
         state_set = Translator.translate_state_set(
-            r'((a:T_a /\ b:T_b) ^ (T_a <= int+float /\ T_b <= int+float)) \/ '
+            r'((a:Ta /\ b:Tb) ^ (Ta <= int+float /\ Tb <= int+float)) \/ '
             r'(a:str /\ b:str)'
         )
         result = set_apply_binop_spec(state_set, binop_node, testmode=True)
         expected_result = StateSet(
             {
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):complex) ^ '
-                    r'(T_a <= int+float /\ T_b <= int+float /\ T_a` <= T_a /\ T_a` <= complex /\ T_b` <= T_b /\ T_b` <= complex))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):complex) ^ '
+                    r'(Ta <= int+float /\ Tb <= int+float /\ Ta` <= Ta /\ Ta` <= complex /\ Tb` <= Tb /\ Tb` <= complex))'
                 ),
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
-                    r'(T_a <= int+float /\ T_b <= int+float /\ T_a` <= T_a /\ T_a` <= float /\ T_b` <= T_b /\ T_b` <= float))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
+                    r'(Ta <= int+float /\ Tb <= int+float /\ Ta` <= Ta /\ Ta` <= float /\ Tb` <= Tb /\ Tb` <= float))'
                 ),
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
-                    r'(T_a <= int+float /\ T_b <= int+float /\ T_a` <= T_a /\ T_a` <= int /\ T_b` <= T_b /\ T_b` <= int))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
+                    r'(Ta <= int+float /\ Tb <= int+float /\ Ta` <= Ta /\ Ta` <= int /\ Tb` <= Tb /\ Tb` <= int))'
                 ),
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):complex) ^ '
-                    r'(T_a` <= str /\ T_a` <= complex /\ T_b` <= str /\ T_b` <= complex))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):complex) ^ '
+                    r'(Ta` <= str /\ Ta` <= complex /\ Tb` <= str /\ Tb` <= complex))'
                 ),
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
-                    r'(T_a` <= str /\ T_a` <= float /\ T_b` <= str /\ T_b` <= float))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
+                    r'(Ta` <= str /\ Ta` <= float /\ Tb` <= str /\ Tb` <= float))'
                 ),
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
-                    r'(T_a` <= str /\ T_a` <= int /\ T_b` <= str /\ T_b` <= int))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
+                    r'(Ta` <= str /\ Ta` <= int /\ Tb` <= str /\ Tb` <= int))'
                 )
             }
         )
@@ -157,16 +157,16 @@ class SpecTestCases(unittest.TestCase):
         expected_result = StateSet(
             {
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):complex) ^ '
-                    r'(T_a` <= str /\ T_a` <= complex /\ T_b` <= str /\ T_b` <= complex))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):complex) ^ '
+                    r'(Ta` <= str /\ Ta` <= complex /\ Tb` <= str /\ Tb` <= complex))'
                 ),
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
-                    r'(T_a` <= str /\ T_a` <= float /\ T_b` <= str /\ T_b` <= float))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
+                    r'(Ta` <= str /\ Ta` <= float /\ Tb` <= str /\ Tb` <= float))'
                 ),
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
-                    r'(T_a` <= str /\ T_a` <= int /\ T_b` <= str /\ T_b` <= int))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
+                    r'(Ta` <= str /\ Ta` <= int /\ Tb` <= str /\ Tb` <= int))'
                 )
             }
         )
@@ -184,16 +184,16 @@ class SpecTestCases(unittest.TestCase):
         expected_result = StateSet(
             {
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):complex) ^ '
-                    r'(T_a` <= str /\ T_a` <= complex /\ T_b` <= str /\ T_b` <= complex))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):complex) ^ '
+                    r'(Ta` <= str /\ Ta` <= complex /\ Tb` <= str /\ Tb` <= complex))'
                 ),
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
-                    r'(T_a` <= str /\ T_a` <= float /\ T_b` <= str /\ T_b` <= float))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
+                    r'(Ta` <= str /\ Ta` <= float /\ Tb` <= str /\ Tb` <= float))'
                 ),
                 Translator.translate_state(
-                    r'((a:T_a` /\ b:T_b` /\ (a / b):float) ^ '
-                    r'(T_a` <= str /\ T_a` <= int /\ T_b` <= str /\ T_b` <= int))'
+                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
+                    r'(Ta` <= str /\ Ta` <= int /\ Tb` <= str /\ Tb` <= int))'
                 )
             }
         )
@@ -202,7 +202,7 @@ class SpecTestCases(unittest.TestCase):
     def test_visit_BinOp_2(self):
         expr = '(a >> b) / c'
         state_set = Translator.translate_state_set(
-            r'(a:T_a /\ b:T_b /\ c:T_c)'
+            r'(a:Ta /\ b:Tb /\ c:Tc)'
         )
         node = ast.parse(expr)
         tf = TransferFunc(state_set, False)
@@ -211,16 +211,16 @@ class SpecTestCases(unittest.TestCase):
         expected_result = StateSet(
             {
                 Translator.translate_state(
-                    r'((a:T_1 /\ b:T_2 /\ c:T_4 /\ (a >> b):T_3 /\ ((a >> b) / c):float) ^ '
-                    r'(T_1 <= T_a /\ T_1 <= int /\ T_2 <= T_b /\ T_2 <= int /\ T_4 <= int /\ T_3 <= int /\ T_4 <= T_c))'
+                    r'((a:T1 /\ b:T2 /\ c:T4 /\ (a >> b):T3 /\ ((a >> b) / c):float) ^ '
+                    r'(T1 <= Ta /\ T1 <= int /\ T2 <= Tb /\ T2 <= int /\ T4 <= int /\ T3 <= int /\ T4 <= Tc))'
                 ),
                 Translator.translate_state(
-                    r'((a:T_1 /\ b:T_2 /\ c:T_4 /\ (a >> b):T_3 /\ ((a >> b) / c):float) ^ '
-                    r'(T_1 <= T_a /\ T_1 <= int /\ T_2 <= T_b /\ T_2 <= int /\ T_4 <= float /\ T_3 <= int /\ T_3 <= float /\ T_4 <= T_c))'
+                    r'((a:T1 /\ b:T2 /\ c:T4 /\ (a >> b):T3 /\ ((a >> b) / c):float) ^ '
+                    r'(T1 <= Ta /\ T1 <= int /\ T2 <= Tb /\ T2 <= int /\ T4 <= float /\ T3 <= int /\ T3 <= float /\ T4 <= Tc))'
                 ),
                 Translator.translate_state(
-                    r'((a:T_1 /\ b:T_2 /\ c:T_4 /\ (a >> b):T_3 /\ ((a >> b) / c):complex) ^ '
-                    r'(T_1 <= T_a /\ T_1 <= int /\ T_2 <= T_b /\ T_2 <= int /\ T_4 <= complex /\ T_3 <= int /\ T_3 <= complex /\ T_4 <= T_c))'
+                    r'((a:T1 /\ b:T2 /\ c:T4 /\ (a >> b):T3 /\ ((a >> b) / c):complex) ^ '
+                    r'(T1 <= Ta /\ T1 <= int /\ T2 <= Tb /\ T2 <= int /\ T4 <= complex /\ T3 <= int /\ T3 <= complex /\ T4 <= Tc))'
                 ),
             }
         )
@@ -229,7 +229,7 @@ class SpecTestCases(unittest.TestCase):
     def test_visit_Constant_1(self):
         expr = '3'
         state_set = Translator.translate_state_set(
-            r'(a:T_a /\ b:T_b) \/ (a:int /\ b:int)'
+            r'(a:Ta /\ b:Tb) \/ (a:int /\ b:int)'
         )
         node = ast.parse(expr)
         tf = TransferFunc(state_set, True)
@@ -238,7 +238,7 @@ class SpecTestCases(unittest.TestCase):
         expected_result = StateSet(
             {
                 Translator.translate_state(
-                    r'(a:T_a /\ b:T_b /\ (3):int)'
+                    r'(a:Ta /\ b:Tb /\ (3):int)'
                 ),
                 Translator.translate_state(
                     r'(a:int /\ b:int /\ (3):int)'
