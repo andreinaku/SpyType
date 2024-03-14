@@ -166,3 +166,5 @@ pyiparser/specs.txt
 pyiparser/types.txt
 types.txt
 .DS_Store
+pyiparser/stats.json
+pyiparser/parser.err

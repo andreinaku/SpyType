@@ -278,11 +278,12 @@ class ClassDefParser(ast.NodeVisitor):
                     class_dict[k][ta] += rf' \/ {tc}'
 
         def get_spec_list():
+            special_sequences = ['str', 'bytes', 'bytearray']
             self_type = node.name
             _spec_list = []
             past_slice = None
             for base in node.bases:
-                if isinstance(base, ast.Subscript):
+                if isinstance(base, ast.Subscript) and self_type not in special_sequences:
                     if not past_slice:
                         # aux = self.parse_node_type(base)
                         kvtuple = False
@@ -443,7 +444,8 @@ def generate_specs(stub_file):
 
     def print_united_specs(_spex):
         united = get_united_specs(_spex)
-        with open(OUTPUT_FILE, 'a') as f:
+        # with open(OUTPUT_FILE, 'a') as f:
+        with open('united_specs.py', 'w') as f:
             f.write('unitedspecs = {\n')
             for funcname, spec_set in united.items():
                 f.write(f'\t\'{funcname}\': {{\n')
@@ -453,12 +455,12 @@ def generate_specs(stub_file):
                     ret_dict = dict_tuple[1]
                     no_params = (len(param_dict) == 0)
                     for k, v in param_dict.items():
-                        writestr += rf'{k}: {v} /\ '
+                        writestr += rf'{k}:{v} /\ '
                     if no_params:
                         writestr += ') -> '
                     else:
                         writestr = writestr[:-4] + r') -> '
-                    writestr += f'({RETURN_VARNAME}: {ret_dict[RETURN_VARNAME]}))\',\n'
+                    writestr += f'({RETURN_VARNAME}:{ret_dict[RETURN_VARNAME]}))\',\n'
                     f.write(writestr)
                 f.write('\t},\n')
             f.write('\n}\n')
