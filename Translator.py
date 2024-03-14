@@ -95,7 +95,8 @@ class Translator:
             return PyType(ErrorType)
         # for vartypes
         if strtype.startswith('T') and strtype != 'TopType':
-            vartype_patt = r'^T[_\?][a-zA-Z0-9_`\.]+$'
+            # vartype_patt = r'^T[_\?][a-zA-Z0-9_`\.]+$'
+            vartype_patt = r'^T[\?a-zA-Z0-9_`\.]+$'
             if re.match(vartype_patt, strtype):
                 # return PyType(VarType(strtype))
                 return VarType(strtype)
@@ -157,18 +158,20 @@ class Translator:
         str_basetype = elim_paren(str_basetype)
         str_bt_split = Translator.get_types_from_list(str_basetype, "<", ">", "+")
         bt_typelist = []
-        for cte_type in str_bt_split:
+        for _cte_type in str_bt_split:
+            cte_type = _cte_type.strip()
             bt_typelist.append(Translator.translate_type(cte_type, "<", ">", "+"))
-        new_te = Basetype(bt_typelist)
-        return new_te
+        new_bt = Basetype(bt_typelist)
+        return new_bt
 
     @staticmethod
     def translate_assignment(str_assignment: str) -> Assignment:
         # (a:bt_a /\ b:bt_b /\ ...)
         assig = Assignment()
         to_translate = Translator._elim_paren(str_assignment)
-        str_entries = to_translate.split(r' /\ ')
-        for str_entry in str_entries:
+        str_entries = to_translate.split('/\\')
+        for _str_entry in str_entries:
+            str_entry = _str_entry.strip()
             expr, str_basetype = str_entry.split(':')
             assig[expr] = Translator.translate_basetype(str_basetype)
         return assig
@@ -177,7 +180,7 @@ class Translator:
     def translate_relation(str_relation: str) -> Relation:
         # (bt_1 <= bt_2)
         # (bt_1 == bt_2)
-        to_translate = Translator._elim_paren(str_relation)
+        to_translate = Translator._elim_paren(str_relation.strip())
         # to_translate = str_relation
         found = False
         op = None
@@ -187,9 +190,9 @@ class Translator:
                 break
         if not found:
             raise RuntimeError(f'Operation for {to_translate} not supported')
-        str_operands = to_translate.split(f' {op.value} ')
-        bt_left = Translator.translate_basetype(str_operands[0])
-        bt_right = Translator.translate_basetype(str_operands[1])
+        str_operands = to_translate.split(f'{op.value}')
+        bt_left = Translator.translate_basetype(str_operands[0].strip())
+        bt_right = Translator.translate_basetype(str_operands[1].strip())
         return Relation(op, bt_left, bt_right)
 
     @staticmethod
@@ -197,8 +200,9 @@ class Translator:
         # ((bt_1 <= bt 2) /\ (bt_3 == bt_4))
         or_constr = OrConstraints()
         to_translate = Translator._elim_paren(str_constraints)
-        str_entries = to_translate.split(r' \/ ')
-        for str_relation in str_entries:
+        str_entries = to_translate.split('\\/')
+        for _str_relation in str_entries:
+            str_relation = _str_relation.strip()
             rel = Translator.translate_relation(str_relation)
             or_constr.add(rel)
         return or_constr
@@ -208,8 +212,9 @@ class Translator:
         # ((bt_1 <= bt 2) /\ (bt_3 == bt_4))
         and_constr = AndConstraints()
         to_translate = Translator._elim_paren(str_constraints)
-        str_entries = to_translate.split(r' /\ ')
-        for str_relation in str_entries:
+        str_entries = to_translate.split('/\\')
+        for _str_relation in str_entries:
+            str_relation = _str_relation.strip()
             rel = Translator.translate_relation(str_relation)
             and_constr.add(rel)
         return and_constr
@@ -217,14 +222,15 @@ class Translator:
     @staticmethod
     def translate_state(str_state: str) -> State:
         # (assignment ^ constraints)
-        delimiter = ' ^ '
+        delimiter = '^'
         to_translate = Translator._elim_paren(str_state)
         str_assignment = None
         str_constraints = None
         if delimiter not in to_translate:
-            str_assignment = to_translate
+            str_assignment = to_translate.strip()
         else:
             (str_assignment, str_constraints) = to_translate.split(delimiter)
+            (str_assignment, str_constraints) = (str_assignment.strip(), str_constraints.strip())
         asgn = Translator.translate_assignment(str_assignment)
         if str_constraints is not None:
             constr = Translator.translate_and_constraints(str_constraints)
@@ -235,11 +241,12 @@ class Translator:
 
     @staticmethod
     def translate_state_set(str_set: str) -> StateSet:
-        delimiter = r' \/ '
+        delimiter = '\\/'
         to_translate = str_set
         str_states = to_translate.split(delimiter)
         state_set = StateSet()
-        for str_state in str_states:
+        for _str_state in str_states:
+            str_state = _str_state.strip()
             state = Translator.translate_state(str_state)
             state_set.add(state)
         return state_set
@@ -247,9 +254,11 @@ class Translator:
     @staticmethod
     def translate_func_spec(str_spec: str) -> FuncSpec:
         funcspec = FuncSpec()
-        delimiter = r' -> '
+        delimiter = r'->'
         to_translate = Translator._elim_paren(str_spec)
         (str_in, str_out) = to_translate.split(delimiter)
+        str_in = str_in.strip()
+        str_out = str_out.strip()
         funcspec.in_state = Translator.translate_state(str_in)
         funcspec.out_state = Translator.translate_state(str_out)
         return funcspec
@@ -257,8 +266,9 @@ class Translator:
     @staticmethod
     def translate_va(str_va):
         va = VarAssign()
-        str_entries = str_va.split(r' /\ ')
-        for str_entry in str_entries:
+        str_entries = str_va.split('/\\')
+        for _str_entry in str_entries:
+            str_entry = _str_entry.strip()
             varname, str_vtype = str_entry.split(':')
             if varname in va:
                 raise RuntimeError('Multiple values for the same VarAssign key {}'.format(varname))
@@ -268,8 +278,9 @@ class Translator:
     @staticmethod
     def translate_ctx(str_ctx):
         ctx = Context()
-        str_entries = str_ctx.split(r' /\ ')
-        for str_entry in str_entries:
+        str_entries = str_ctx.split('/\\')
+        for _str_entry in str_entries:
+            str_entry = _str_entry.strip()
             str_vartype, str_te = str_entry.split(':')
             vt = Translator.translate_type(str_vartype)
             te = Translator.translate_te(str_te)
@@ -285,10 +296,10 @@ class Translator:
         tc = TypeConstraint()
         if str_tc == '' or str_tc == '()':
             return tc
-        str_elems = str_tc.split(r' \/ ')
-        for str_elem in str_elems:
-            str_elem = elim_paren(str_elem)
-            tdict = Translator.translate_ctx(str_elem)
+        str_elems = str_tc.split(r'\/')
+        for _str_elem in str_elems:
+            str_elem = elim_paren(_str_elem.strip())
+            tdict = Translator.translate_ctx(str_elem.strip())
             tc.add(tdict)
         return tc
 
@@ -298,7 +309,7 @@ class Translator:
         if r'^' not in str_as:
             (str_va, str_tc) = (str_as, '')
         else:
-            (str_va, str_tc) = str_as.split(r' ^ ')
-        va = Translator.translate_va(str_va)
-        tc = Translator.translate_tc(str_tc)
+            (str_va, str_tc) = str_as.split(r'^')
+        va = Translator.translate_va(str_va.strip())
+        tc = Translator.translate_tc(str_tc.strip())
         return AbsState(va, tc)

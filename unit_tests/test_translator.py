@@ -5,9 +5,20 @@ from TypeExp import *
 
 
 class TranslatorTestCases(unittest.TestCase):
-    def test_translate_basetype(self):
-        result = Translator.translate_basetype('int+float+list<T_a>')
+    def test_translate_basetype_1(self):
+        result = Translator.translate_basetype('int + float + list< T_a >')
         expected_result = Basetype({PyType(int), PyType(float), PyType(list, Basetype({VarType('T_a')}))})
+        self.assertEqual(result, expected_result)
+
+    def test_translate_basetype_2(self):
+        result = Translator.translate_basetype('list< int + set< T1 > + list< T2 > >')
+        expected_result = Basetype({
+            PyType(
+                list, Basetype({
+                    PyType(int), PyType(set, Basetype({VarType('T1')})), PyType(list, Basetype({VarType('T2')}))
+                })
+            )
+        })
         self.assertEqual(result, expected_result)
 
     def test_translate_assignment(self):

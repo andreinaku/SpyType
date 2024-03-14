@@ -13,7 +13,7 @@ def state_apply_spec(state: State, spec: State, testmode=False) -> State:
         if testmode is False:
             new_basetype = Basetype({VarType(generate_id(new_state))})
         else:
-            new_varname = f'T_{expr}`'
+            new_varname = f'T{expr}`'
             new_basetype = Basetype({VarType(new_varname)})
             if new_basetype == spec.assignment[expr]:
                 new_basetype = Basetype({VarType(new_varname + '`')})

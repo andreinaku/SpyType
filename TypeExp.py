@@ -116,14 +116,14 @@ class PyType(GenericType):
             # retstr = str(self.ptype).split("'")[1]
             retstr = self.ptype.__name__
         if self.keys is not None:
-            retstr += '<'
+            retstr += '< '
             # for c_type in self.contains:
             #     retstr += str(c_type) + ','
             retstr += str(self.keys)
             if self.values is not None:
                 retstr += ', '
                 retstr += str(self.values)
-            retstr += '>'
+            retstr += ' >'
         return retstr
 
     def __key(self):

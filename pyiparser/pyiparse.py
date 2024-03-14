@@ -171,9 +171,9 @@ class ClassDefParser(ast.NodeVisitor):
                 return contained_str
             else:
                 if container in DICT_SPECIFIC_TYPES:
-                    return 'list' + '<' + contained_str + '>'
+                    return 'list' + '< ' + contained_str + ' >'
                 else:
-                    return container + '<' + contained_str + '>'
+                    return container + '< ' + contained_str + ' >'
         elif isinstance(node, ast.BinOp):
             if not isinstance(node.op, ast.BitOr):
                 ss = f'{node.op} operation not supported for types {node.left} and {node.right}'
@@ -186,12 +186,12 @@ class ClassDefParser(ast.NodeVisitor):
             container = 'list'
             type_set = set(get_types_from_list(node.elts))
             contained_str = '+'.join(type_set)
-            return container + '<' + contained_str + '>'
+            return container + '< ' + contained_str + ' >'
         elif isinstance(node, ast.Tuple):
             container = 'tuple'
             type_set = set(get_types_from_list(node.elts))
             contained_str = '+'.join(type_set)
-            return container + '<' + contained_str + '>'
+            return container + '< ' + contained_str + ' >'
         else:
             ss = f'{type(node)} is not yet supported here'
             mylogger.warning(ss)
@@ -294,7 +294,7 @@ class ClassDefParser(ast.NodeVisitor):
                             ss = f'Type for node {base} not supported'
                             mylogger.error(ss)
                             raise TypeError(ss)
-                        parsed_slice = '<' + parsed_type.split('<', maxsplit=1)[1]
+                        parsed_slice = '< ' + parsed_type.split('<', maxsplit=1)[1].strip()
                         # self_type += '<' + self.parse_node_type(base.slice, True, kvtuple) + '>'
                         self_type += parsed_slice
                         past_slice = base.slice

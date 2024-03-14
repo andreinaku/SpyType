@@ -168,3 +168,6 @@ types.txt
 .DS_Store
 pyiparser/stats.json
 pyiparser/parser.err
+pyiparser/specs_shed.py
+pyiparser/united_specs.py
+*.txt

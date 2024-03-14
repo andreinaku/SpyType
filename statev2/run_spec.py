@@ -47,6 +47,6 @@ if __name__ == "__main__":
     start_set = r'(a:int+float /\ b:int+float+str)'
     simple_expr = ['a+b', 'a/b', 'a>>b', 'a*b', 'a-b']
     expr_1 = ['(a+b)/c']
-    # output_expressions(simple_expr, start_set)
+    output_expressions(simple_expr, start_set)
     start_set = r'(a:int+float /\ b:int+float+str /\ c:str)'
-    output_expressions(expr_1, start_set)
+    # output_expressions(expr_1, start_set)

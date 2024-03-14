@@ -22,7 +22,7 @@ class RelOp(Enum):
 
 
 def generate_id(state):
-    retstr = f'T_{state.gen_id}'
+    retstr = f'T{state.gen_id}'
     state.gen_id = state.gen_id + 1
     return retstr
 
@@ -31,8 +31,8 @@ class Basetype(hset):
     def __str__(self):
         retstr = ''
         for elem in self.__iter__():
-            retstr += str(elem) + '+'
-        retstr = retstr[:-1]
+            retstr += str(elem) + ' + '
+        retstr = retstr[:-3]
         return retstr
 
     def __repr__(self):
