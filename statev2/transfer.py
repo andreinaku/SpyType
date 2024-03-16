@@ -1,8 +1,6 @@
-import ast
-import astor
 from statev2.basetype import *
 from statev2.specs import unitedspecs, op_equiv
-from Translator import Translator
+from statev2.Translator import Translator
 
 
 def state_apply_spec(state: State, spec: State, testmode=False) -> State:

@@ -1,6 +1,4 @@
 import unittest
-from Translator import *
-from statev2.basetype import *
 from statev2.transfer import *
 
 

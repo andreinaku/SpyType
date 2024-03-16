@@ -1,7 +1,5 @@
 import unittest
-from Translator import Translator
-from statev2.basetype import Basetype, Assignment, RelOp, Relation, AndConstraints, OrConstraints, State, StateSet, FuncSpec
-from TypeExp import *
+from statev2.Translator import *
 
 
 class TranslatorTestCases(unittest.TestCase):

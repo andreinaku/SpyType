@@ -171,3 +171,5 @@ pyiparser/parser.err
 pyiparser/specs_shed.py
 pyiparser/united_specs.py
 *.txt
+*.err
+*.out
