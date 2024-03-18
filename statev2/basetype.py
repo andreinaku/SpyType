@@ -114,6 +114,9 @@ class Assignment(hdict):
     def __repr__(self):
         return self.__str__()
 
+    def __hash__(self):
+        return super().__hash__()
+
 
 class Relation:
     def __init__(self, relop: RelOp, bt_left: Basetype, bt_right: Basetype):
@@ -158,6 +161,9 @@ class AndConstraints(hset):
     def __repr__(self):
         return self.__str__()
 
+    def __hash__(self):
+        return super().__hash__()
+
 
 class OrConstraints(hset):
     def __str__(self):
@@ -173,6 +179,9 @@ class OrConstraints(hset):
 
     def __repr__(self):
         return self.__str__()
+
+    def __hash__(self):
+        return super().__hash__()
 
 
 class State:
@@ -198,7 +207,7 @@ class State:
         return self.__str__()
 
     def __hash__(self):
-        return hash((self.assignment, self.constraints))
+        return hash((hash(self.assignment), hash(self.constraints)))
 
     def __eq__(self, other: State):
         return hash(self) == hash(other)
@@ -216,6 +225,9 @@ class StateSet(hset):
 
     def __repr__(self):
         return self.__str__()
+
+    def __hash__(self):
+        return super().__hash__()
 
 
 class FuncSpec:
@@ -236,7 +248,7 @@ class FuncSpec:
         return self.__str__()
 
     def __hash__(self):
-        return hash((self.in_state, self.out_state))
+        return hash((hash(self.in_state), hash(self.out_state)))
 
     def __eq__(self, other: FuncSpec):
         return hash(self) == hash(other)

@@ -15,3 +15,11 @@ with open('ast.out', 'w') as f:
     f.write(astpretty.pformat(ast.parse('list[int, float]')))
     f.write('\n-----------------\n')
     f.write(astpretty.pformat(ast.parse('class int(sometype[anothertype[_T]]): ...')))
+    f.write('\n-----------------\n')
+    aux = '''
+class int:
+    def __add__(self, other: int) -> int: ...
+    '''
+    tree = ast.parse(aux)
+    f.write(astpretty.pformat(tree))
+    f.write('\n-----------------\n')

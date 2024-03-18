@@ -3,7 +3,20 @@ import astor
 import logging
 from statev2.basetype import *
 
+from typing_extensions import (
+    Concatenate,
+    Literal,
+    LiteralString,
+    ParamSpec,
+    Self,
+    SupportsIndex,
+    TypeAlias,
+    TypeGuard,
+    TypeVarTuple,
+    final,
+)
 
+MAX_VARTYPE_LEN = 4
 BUILTIN_CATEGORY = 'builtins'
 NAME_LITERAL = 'Literal'
 BIG_SELF = 'Self'
@@ -19,19 +32,19 @@ IGNORED_CLASSES = ['object', 'staticmethod', 'classmethod', 'ellipsis', '_Format
                    'BaseExceptionGroup', 'ExceptionGroup', '_SupportsSumWithNoDefaultGiven', 'type', 'super',
                    'memoryview']
 DEFAULT_TYPEVAR = '_T'
-SPEC_DEFAULT_TYPEVAR = 'T?0'
-param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
+SPEC_DEFAULT_TYPEVAR = 'Ts0'
+# param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
 PREFIX_POSONLY, PREFIX_ARGS, PREFIX_VARARG, PREFIX_KWONLY, PREFIX_KWARG = range(5)
-TYPE_REPLACE = {'_T': 'T?0', '_PositiveInteger': 'int', '_KT': 'T?K', '_VT': 'T?V', '_T_co': 'T?co',
-                '_NegativeInteger': 'int', '_S': 'T?s',
+TYPE_REPLACE = {'_T': 'Ts0', '_PositiveInteger': 'int', '_KT': 'TsK', '_VT': 'TsV', '_T_co': 'Tsco',
+                '_NegativeInteger': 'int', '_S': 'Tss', '_P': 'Tsp', '_R_co': 'Tsrco',
                 'object': 'TopType', 'ReadOnlyBuffer': 'bytes', 'Any': 'TopType',
-                'WriteableBuffer': 'bytearray+memoryview', 'ReadableBuffer': 'bytes+bytearray+memoryview',
-                '_TranslateTable': 'dict<int, str+int>', '_FormatMapMapping': 'dict<str, int>', 'LiteralString': 'str',
-                'SupportsKeysAndGetItem': 'dict', 'AbstractSet': 'set', '_PathLike': 'str+bytes',
+                'WriteableBuffer': 'bytearray | memoryview', 'ReadableBuffer': 'bytes | bytearray | memoryview',
+                '_TranslateTable': 'dict[int, str | int]', '_FormatMapMapping': 'dict[str, int]', 'LiteralString': 'str',
+                'SupportsKeysAndGetItem': 'dict', 'AbstractSet': 'set', '_PathLike': 'str | bytes',
                 '_GetItemIterable': 'GetItemIterable',
                 '_SupportsPow2': 'SupportsSomeKindOfPow', '_SupportsPow3NoneOnly': 'SupportsSomeKindOfPow',
                 '_SupportsPow3': 'SupportsSomeKindOfPow', '_SupportsRound1': 'SupportsRound',
-                '_SupportsRound2': 'SupportsRound', '_T_contra': 'T?contra', 'SupportsIter': 'Iterable',
+                '_SupportsRound2': 'SupportsRound', '_T_contra': 'Tscontra', 'SupportsIter': 'Iterable',
                 '_SupportsNextT': 'SupportsNext', 'Sized': 'SupportsLen', 'FileDescriptorOrPath': 'str',
                 '_SupportsSumNoDefaultT': 'int'}
 # 0 - first typevar, 1 - second typevar, -1 - tuple<first, second>
@@ -90,203 +103,14 @@ def is_ignored(_type: str, ignore_list):
     return False
 
 
-def parse_node_type(node: ast.expr) -> Basetype:
-    if isinstance(node, ast.Name):
-        # int, list, float, _T, ...
-        new_name = TYPE_REPLACE[node.id] if node.id in TYPE_REPLACE else node.id
-        if new_name.startswith('T'):
-            ptip = VarType(new_name)
+class TypeReplacer(ast.NodeTransformer):
+    def visit_Name(self, node):
+        if node.id in TYPE_REPLACE:
+            new_id = TYPE_REPLACE[node.id]
+            new_node = ast.parse(new_id).body[0].value
         else:
-            ptip = PyType(eval(new_name))
-        bt = Basetype({ptip})
-        return bt
-    elif isinstance(node, ast.Constant):
-        # 3, 5.6, 'a', ...
-        bt = Basetype({PyType(type(node.value))})
-        return bt
-    elif isinstance(node, ast.Subscript):
-        # list[int], dict[int, float], list[int | float], ...
-        if not isinstance(node.value, ast.Name):
-            ss = f'{type(node.value)} is not yet supported'
-            mylogger.warning(ss)
-            raise TypeError(ss)
-        container = TYPE_REPLACE[node.value.id] if node.value.id in TYPE_REPLACE else node.value.id
-        if container in ignore_list:
-            ss = f'ignored type (for now) <<{container}>> for {astor.to_source(node.value).strip()}'
-            mylogger.warning(ss)
-            raise TypeError(ss)
-        contained = node.slice
-        kvtuple = False
-        if container in MAPPING_BASES or container in DICT_SPECIFIC_TYPES:
-            kvtuple = True
-        if not isinstance(node.value, ast.Name):
-            ss = f'{type(node.value)} is not yet supported here'
-            mylogger.warning(ss)
-            raise TypeError(ss)
-        contained_str = ''
-        container_ptip = PyType(eval(container))
-        if isinstance(contained, ast.Name) or isinstance(contained, ast.BinOp):
-            if kvtuple:
-                ss = f'Type {astor.to_source(node)} is not compatible with key-value pairs'
-                mylogger.warning(ss)
-                raise TypeError(ss)
-            container_ptip.keys = parse_node_type(contained)
-            return Basetype({container_ptip})
-        elif isinstance(contained, ast.Tuple):
-            if not kvtuple:
-                contained_bt = Basetype()
-                for elem in contained.elts:
-                    contained_bt |= parse_node_type(elem)
-                container_ptip.keys = deepcopy(contained_bt)
-            else:
-                if len(contained.elts) != 2:
-                    ss = f'{astor.to_source(node)} type not supported for key-value pairs'
-                    mylogger.warning(ss)
-                    raise TypeError(ss)
-                container_ptip.keys = parse_node_type(contained.elts[0])
-                container_ptip.values = parse_node_type(contained.elts[1])
-            return Basetype({container_ptip})
-        else:
-            ss = f'Slice for {astor.to_source(node)} is not yet supported'
-            mylogger.warning(ss)
-            raise TypeError(ss)
-    elif isinstance(node, ast.BinOp):
-        # int | float, complex | list[int], ...
-        if not isinstance(node.op, ast.BitOr):
-            ss = f'{node.op} operation not supported for types {node.left} and {node.right}'
-            mylogger.warning(ss)
-            raise TypeError(ss)
-        bt = Basetype()
-        bt |= parse_node_type(node.left)
-        bt |= parse_node_type(node.right)
-        return bt
-    else:
-        ss = f'{type(node)} is not yet supported here'
-        mylogger.warning(ss)
-        raise TypeError(ss)
-
-
-def old_parse_node_type(node: ast.expr) -> str:
-
-    def get_types_from_list(_elts: list):
-        _type_list = []
-        for _type in _elts:
-            str_type = parse_node_type(_type)
-            # if is_ignored(str_type):
-            #     continue
-            if str_type == '':
-                continue
-            _type_list.append(str_type)
-        return _type_list
-
-    if isinstance(node, ast.Name):
-        open('types.txt', 'a').write(node.id + '\n')
-        return_id = TYPE_REPLACE[node.id] if node.id in TYPE_REPLACE else node.id
-        # if cls.is_ignored(return_id):
-        #     ss = f'ignored type (for now) <<{return_id}>> for {node.id}'
-        #     mylogger.warning(ss)
-        #     raise TypeError(ss)
-        #     # return ''
-        return return_id
-    elif isinstance(node, ast.Constant):
-        open('types.txt', 'a').write(type(node.value).__name__ + '\n')
-        return type(node.value).__name__
-    elif isinstance(node, ast.Subscript):
-        contained = node.slice
-        if not isinstance(node.value, ast.Name):
-            ss = f'{type(node.value)} is not yet supported'
-            mylogger.warning(ss)
-            raise TypeError(ss)
-        # container = node.value.id
-        container = TYPE_REPLACE[node.value.id] if node.value.id in TYPE_REPLACE else node.value.id
-        if container in ignore_list:
-            ss = f'ignored type (for now) <<{container}>> for {astor.to_source(node.value).strip()}'
-            mylogger.warning(ss)
-            raise TypeError(ss)
-        kvtuple = False
-        if container in MAPPING_BASES or container in DICT_SPECIFIC_TYPES:
-            kvtuple = True
-        if not isinstance(node.value, ast.Name):
-            ss = f'{type(node.value)} is not yet supported here'
-            mylogger.warning(ss)
-            raise TypeError(ss)
-        # open('types.txt', 'a').write(container + '\n')
-        contained_str = ''
-        if isinstance(contained, ast.Tuple):
-            type_set = get_types_from_list(contained.elts)  # list here
-            if not kvtuple:
-                type_set = set(type_set)
-                contained_str = '+'.join(type_set)
-            else:
-                if len(type_set) != 2:
-                    ss = f'{type_set} types not supported for key-value pairs'
-                    mylogger.warning(ss)
-                    raise TypeError(ss)
-                if container in DICT_SPECIFIC_TYPES:
-                    if DICT_SPECIFIC_TYPES[container] == 0:
-                        contained_str = type_set[0]
-                    elif DICT_SPECIFIC_TYPES[container] == 1:
-                        contained_str = type_set[1]
-                    else:
-                        contained_str = f'tuple<{type_set[0]}+{type_set[1]}>'
-                else:
-                    contained_str = ', '.join(type_set)
-        else:
-            contained_str = parse_node_type(contained)
-        if container == NAME_LITERAL:
-            return contained_str
-        else:
-            if container in DICT_SPECIFIC_TYPES:
-                return 'list' + '< ' + contained_str + ' >'
-            else:
-                return container + '< ' + contained_str + ' >'
-    elif isinstance(node, ast.BinOp):
-        if not isinstance(node.op, ast.BitOr):
-            ss = f'{node.op} operation not supported for types {node.left} and {node.right}'
-            mylogger.warning(ss)
-            raise TypeError(ss)
-        type_set = set(get_types_from_list([node.left, node.right]))
-        return '+'.join(type_set)
-        # return cls.parse_node_type(node.left) + '+' + cls.parse_node_type(node.right)
-    elif isinstance(node, ast.List):
-        container = 'list'
-        type_set = set(get_types_from_list(node.elts))
-        contained_str = '+'.join(type_set)
-        return container + '< ' + contained_str + ' >'
-    elif isinstance(node, ast.Tuple):
-        container = 'tuple'
-        type_set = set(get_types_from_list(node.elts))
-        contained_str = '+'.join(type_set)
-        return container + '< ' + contained_str + ' >'
-    else:
-        ss = f'{type(node)} is not yet supported here'
-        mylogger.warning(ss)
-        raise TypeError(ss)
-
-
-def get_basetype_from_classdef(node: ast.ClassDef):
-    self_type = node.name
-    past_slice = None
-    ptip = PyType(eval(self_type))
-    mapping_bases = ['Mapping', 'MutableMapping', 'dict']
-    for base in node.bases:
-        if isinstance(base, ast.Subscript):
-            if not past_slice:
-                parsed_type = self.parse_node_type(base)
-                if parsed_type == '':
-                    ss = f'Type for node {base} not supported'
-                    mylogger.error(ss)
-                    raise TypeError(ss)
-                parsed_slice = '< ' + parsed_type.split('<', maxsplit=1)[1].strip()
-                # self_type += '<' + self.parse_node_type(base.slice, True, kvtuple) + '>'
-                self_type += parsed_slice
-                past_slice = base.slice
-            else:
-                # if past_slice.id != base.slice.id:
-                if astor.to_source(past_slice) != astor.to_source(base.slice):
-                    ss = f'Inconsistent slice for {node.name}'
-                    mylogger.warning(ss)
-                    raise TypeError(ss)
+            new_node = deepcopy(node)
+        return new_node
 
 
 class ClassdefToBasetypes(ast.NodeVisitor):
@@ -298,31 +122,119 @@ class ClassdefToBasetypes(ast.NodeVisitor):
         self.parsed_funcdefs = 0
         self.class_stats = dict()
         self.current_class = None
-        self.self_type = None
+        self.self_type = Basetype({PyType(type(None))})
 
-    # def get_from_base(self, base: ast.Name | ast.Subscript) -> Basetype:
-    #     past_slice = None
-    #     if isinstance(base, ast.Subscript):
-    #         if not past_slice:
-    #             # aux = self.parse_node_type(base)
-    #             kvtuple = False
-    #             if base.value.id in MAPPING_BASES:
-    #                 kvtuple = True
-    #             parsed_type = self.parse_node_type(base)
-    #             if parsed_type == '':
-    #                 ss = f'Type for node {base} not supported'
-    #                 mylogger.error(ss)
-    #                 raise TypeError(ss)
-    #             parsed_slice = '< ' + parsed_type.split('<', maxsplit=1)[1].strip()
-    #             # self_type += '<' + self.parse_node_type(base.slice, True, kvtuple) + '>'
-    #             self_type += parsed_slice
-    #             past_slice = base.slice
-    #         else:
-    #             # if past_slice.id != base.slice.id:
-    #             if astor.to_source(past_slice) != astor.to_source(base.slice):
-    #                 ss = f'Inconsistent slice for {node.name}'
-    #                 mylogger.warning(ss)
-    #                 raise TypeError(ss)
+    @staticmethod
+    def get_funcnode_from_name(classnode: ast.ClassDef, funcname: str) -> ast.FunctionDef:
+        for node in classnode.body:
+            if not isinstance(node, ast.FunctionDef):
+                continue
+            if node.name == funcname:
+                return node
+        return None
+
+    def parse_node_type(self, node: ast.expr) -> Basetype:
+        if isinstance(node, ast.Name):
+            # int, list, float, _T, ...
+            # new_name = TYPE_REPLACE[node.id] if node.id in TYPE_REPLACE else node.id
+            new_name = node.id
+            if new_name.startswith('T') and len(new_name) <= MAX_VARTYPE_LEN:
+                ptip = VarType(new_name)
+                bt = Basetype({ptip})
+            elif new_name == BIG_SELF:
+                bt = deepcopy(self.self_type)
+            else:
+                ptip = PyType(eval(new_name))
+                bt = Basetype({ptip})
+            return bt
+        elif isinstance(node, ast.Constant):
+            # 3, 5.6, 'a', ...
+            bt = Basetype({PyType(type(node.value))})
+            return bt
+        elif isinstance(node, ast.Subscript):
+            # list[int], dict[int, float], list[int | float], ...
+            if not isinstance(node.value, ast.Name):
+                ss = f'{type(node.value)} is not yet supported'
+                mylogger.warning(ss)
+                raise TypeError(ss)
+            container = TYPE_REPLACE[node.value.id] if node.value.id in TYPE_REPLACE else node.value.id
+            if container in ignore_list:
+                ss = f'ignored type (for now) <<{container}>> for {astor.to_source(node.value).strip()}'
+                mylogger.warning(ss)
+                raise TypeError(ss)
+            contained = node.slice
+            kvtuple = False
+            if container in MAPPING_BASES or container in DICT_SPECIFIC_TYPES:
+                kvtuple = True
+            if not isinstance(node.value, ast.Name):
+                ss = f'{type(node.value)} is not yet supported here'
+                mylogger.warning(ss)
+                raise TypeError(ss)
+            contained_str = ''
+            container_ptip = PyType(eval(container))
+            if isinstance(contained, ast.Name) or isinstance(contained, ast.BinOp):
+                if kvtuple:
+                    ss = f'Type {astor.to_source(node)} is not compatible with key-value pairs'
+                    mylogger.warning(ss)
+                    raise TypeError(ss)
+                container_ptip.keys = self.parse_node_type(contained)
+                return Basetype({container_ptip})
+            elif isinstance(contained, ast.Tuple):
+                if not kvtuple:
+                    contained_bt = Basetype()
+                    for elem in contained.elts:
+                        contained_bt |= self.parse_node_type(elem)
+                    container_ptip.keys = deepcopy(contained_bt)
+                else:
+                    if len(contained.elts) != 2:
+                        ss = f'{astor.to_source(node)} type not supported for key-value pairs'
+                        mylogger.warning(ss)
+                        raise TypeError(ss)
+                    container_ptip.keys = self.parse_node_type(contained.elts[0])
+                    container_ptip.values = self.parse_node_type(contained.elts[1])
+                return Basetype({container_ptip})
+            else:
+                ss = f'Slice for {astor.to_source(node).strip()} is not yet supported'
+                mylogger.warning(ss)
+                raise TypeError(ss)
+        elif isinstance(node, ast.BinOp):
+            # int | float, complex | list[int], ...
+            if not isinstance(node.op, ast.BitOr):
+                ss = f'{node.op} operation not supported for types {node.left} and {node.right}'
+                mylogger.warning(ss)
+                raise TypeError(ss)
+            bt = Basetype()
+            bt |= self.parse_node_type(node.left)
+            bt |= self.parse_node_type(node.right)
+            return bt
+        else:
+            ss = f'{type(node)} is not yet supported here'
+            mylogger.warning(ss)
+            raise TypeError(ss)
+
+    def parse_funcdef(self, node: ast.FunctionDef) -> FuncSpec:
+        param_lists = [node.args.posonlyargs, node.args.args, [node.args.vararg],
+                       node.args.kwonlyargs, [node.args.kwarg]]
+        param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
+        func_spec = FuncSpec()
+        for i in range(0, len(param_lists)):
+            # for parameters in param_lists:
+            parameters = param_lists[i]
+            prefix = param_prefix[i]
+            if len(parameters) == 0:
+                continue
+            if len(parameters) == 1 and parameters[0] is None:
+                continue  # no vararg or kwarg
+            for param in parameters:
+                if param.arg == SMALL_SELF and param.annotation is None:
+                    param_basetype = self.self_type
+                else:
+                    param_basetype = self.parse_node_type(param.annotation)
+                spec_param_name = f'{prefix}{param.arg}'
+                func_spec.in_state.assignment[spec_param_name] = deepcopy(param_basetype)
+        return_basetype = self.parse_node_type(node.returns)
+        func_spec.out_state.assignment[RETURN_VARNAME] = deepcopy(return_basetype)
+        return func_spec
 
     def visit_ClassDef(self, node: ast.ClassDef):
         global mylogger
@@ -336,7 +248,26 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 str_type += f'[{str_slice}]'
                 break
         ast_type = ast.parse(str_type).body[0].value
-        self.self_type = parse_node_type(ast_type)
+        try:
+            self.self_type = self.parse_node_type(ast_type)
+            mylogger.info(f'Successfully parsed class {node.name}')
+        except Exception as exc:
+            ss = f'Cannot parse type for class {node.name} with exception {str(exc)}'
+            mylogger.error(ss)
+        for body_node in node.body:
+            try:
+                if not isinstance(body_node, ast.FunctionDef):
+                    continue
+                func_spec = self.parse_funcdef(body_node)
+                funcname = body_node.name
+                if funcname not in self.spec_dict:
+                    self.spec_dict[funcname] = {func_spec}
+                else:
+                    self.spec_dict[funcname].add(func_spec)
+            except Exception as exc:
+                ss = f'Cannot parse type for function {body_node.name} in class {node.name} with exception {str(exc)}'
+                mylogger.error(ss)
+                continue
 
 
 def write_op_equivalences():
@@ -375,20 +306,15 @@ def write_op_equivalences():
         f.write('}\n\n\n')
 
 
-# def write_type_equivalences():
-#     equiv = get_equivalences_dict()
-#     with open(OUTPUT_FILE, 'a') as f:
-#         f.write('type_equiv = {\n')
-#         for node, typelist in equiv.items():
-#             sum_string = '+'.join(typelist)
-#             f.write(f'\t{node.__name__}: \'{sum_string}\',\n')
-#         f.write('}\n\n\n')
-
-
 def generate_specs(stub_file):
     ctb = ClassdefToBasetypes()
     tree = ast.parse(open(stub_file, 'r').read())
+    tree = TypeReplacer().visit(tree)
     ctb.visit(tree)
+    for funcname, funcspecs in ctb.spec_dict.items():
+        print(f'{funcname}:')
+        for funcspec in funcspecs:
+            print(f'{funcspec}')
 
 
 if __name__ == "__main__":
