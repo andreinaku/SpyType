@@ -16,7 +16,7 @@ from typing_extensions import (
     final,
 )
 
-MAX_VARTYPE_LEN = 4
+MAX_VARTYPE_LEN = 6
 BUILTIN_CATEGORY = 'builtins'
 NAME_LITERAL = 'Literal'
 BIG_SELF = 'Self'
@@ -32,11 +32,11 @@ IGNORED_CLASSES = ['object', 'staticmethod', 'classmethod', 'ellipsis', '_Format
                    'BaseExceptionGroup', 'ExceptionGroup', '_SupportsSumWithNoDefaultGiven', 'type', 'super',
                    'memoryview']
 DEFAULT_TYPEVAR = '_T'
-SPEC_DEFAULT_TYPEVAR = 'Ts0'
+# SPEC_DEFAULT_TYPEVAR = 'T?0'
 # param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
 PREFIX_POSONLY, PREFIX_ARGS, PREFIX_VARARG, PREFIX_KWONLY, PREFIX_KWARG = range(5)
-TYPE_REPLACE = {'_T': 'Ts0', '_PositiveInteger': 'int', '_KT': 'TsK', '_VT': 'TsV', '_T_co': 'Tsco',
-                '_NegativeInteger': 'int', '_S': 'Tss', '_P': 'Tsp', '_R_co': 'Tsrco',
+TYPE_REPLACE = {'_PositiveInteger': 'int',
+                '_NegativeInteger': 'int',
                 'object': 'TopType', 'ReadOnlyBuffer': 'bytes', 'Any': 'TopType',
                 'WriteableBuffer': 'bytearray | memoryview', 'ReadableBuffer': 'bytes | bytearray | memoryview',
                 '_TranslateTable': 'dict[int, str | int]', '_FormatMapMapping': 'dict[str, int]', 'LiteralString': 'str',
@@ -44,9 +44,13 @@ TYPE_REPLACE = {'_T': 'Ts0', '_PositiveInteger': 'int', '_KT': 'TsK', '_VT': 'Ts
                 '_GetItemIterable': 'GetItemIterable',
                 '_SupportsPow2': 'SupportsSomeKindOfPow', '_SupportsPow3NoneOnly': 'SupportsSomeKindOfPow',
                 '_SupportsPow3': 'SupportsSomeKindOfPow', '_SupportsRound1': 'SupportsRound',
-                '_SupportsRound2': 'SupportsRound', '_T_contra': 'Tscontra', 'SupportsIter': 'Iterable',
+                '_SupportsRound2': 'SupportsRound', 'SupportsIter': 'Iterable',
                 '_SupportsNextT': 'SupportsNext', 'Sized': 'SupportsLen', 'FileDescriptorOrPath': 'str',
                 '_SupportsSumNoDefaultT': 'int'}
+VARTYPE_REPLACE = {
+    '_T': 'T?0', '_KT': 'T?K', '_VT': 'T?V', '_T_co': 'T?co',
+    '_S': 'T?s', '_P': 'T?p', '_R_co': 'T?rco', '_T_contra': 'T?contra'
+}
 # 0 - first typevar, 1 - second typevar, -1 - tuple<first, second>
 DICT_SPECIFIC_TYPES = {'dict_keys': 0, 'dict_values': 1, 'dict_items': -1}
 OUTPUT_FILE = 'specs_shed.py'
@@ -107,7 +111,11 @@ class TypeReplacer(ast.NodeTransformer):
     def visit_Name(self, node):
         if node.id in TYPE_REPLACE:
             new_id = TYPE_REPLACE[node.id]
-            new_node = ast.parse(new_id).body[0].value
+            if new_id.startswith('T?'):
+                new_node = deepcopy(node)
+                new_node.id = deepcopy(new_id)
+            else:
+                new_node = ast.parse(new_id).body[0].value
         else:
             new_node = deepcopy(node)
         return new_node
@@ -138,7 +146,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             # int, list, float, _T, ...
             # new_name = TYPE_REPLACE[node.id] if node.id in TYPE_REPLACE else node.id
             new_name = node.id
-            if new_name.startswith('T') and len(new_name) <= MAX_VARTYPE_LEN:
+            if new_name.startswith('_') and len(new_name) <= MAX_VARTYPE_LEN:
                 ptip = VarType(new_name)
                 bt = Basetype({ptip})
             elif new_name == BIG_SELF:

@@ -1,5 +1,6 @@
 import unittest
 from statev2.transfer import *
+from statev2.pyiparser_2 import VARTYPE_REPLACE
 
 
 class SpecTestCases(unittest.TestCase):
@@ -243,4 +244,23 @@ class SpecTestCases(unittest.TestCase):
                 )
             }
         )
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_replace_vartype_1(self):
+        bt = Translator.translate_basetype('list< T_1 > + dict< T_K, T_V >')
+        result = bt.replace_vartype('T_1', 'T?0')
+        result = result.replace_vartype('T_K', 'T?K')
+        result = result.replace_vartype('T_V', 'T?V')
+        expected_result = Translator.translate_basetype('list< T?0 > + dict< T?K, T?V >')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_replace_vartype_2(self):
+        bt = Basetype({
+            PyType(list, Basetype({VarType('_T')})),
+            PyType(dict, Basetype({VarType('_KT')}), Basetype({VarType('_VT')}))
+        })
+        for entry, replacement in VARTYPE_REPLACE.items():
+            bt = bt.replace_vartype(entry, replacement)
+        result = bt
+        expected_result = Translator.translate_basetype('list< T?0 > + dict< T?K, T?V >')
         self.assertEqual(result, expected_result)

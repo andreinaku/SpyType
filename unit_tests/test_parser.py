@@ -53,7 +53,7 @@ class ParseTestCases(unittest.TestCase):
         cv = ClassdefToBasetypes()
         cv.visit(node)
         result = cv.self_type
-        expected_result = Basetype({PyType(list, Basetype({VarType('Ts0')}))})
+        expected_result = Basetype({PyType(list, Basetype({VarType('_T')}))})
         self.assertEqual(result, expected_result)
 
     def test_parse_funcdef_1(self):

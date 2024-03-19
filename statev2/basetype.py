@@ -100,6 +100,33 @@ class Basetype(hset):
     def __hash__(self):
         return super().__hash__()
 
+    def replace_vartype(self, to_replace: str, replace_with: str) -> Basetype:
+        new_bt = Basetype()
+        for tip in self:
+            if isinstance(tip, VarType):
+                if tip.varexp == to_replace:
+                    new_tip = VarType(replace_with)
+                    new_bt.add(new_tip)
+                else:
+                    new_bt.add(deepcopy(tip))
+            elif isinstance(tip, PyType):
+                if tip.ptype not in container_ptypes and tip.ptype not in mapping_types:
+                    new_bt.add(deepcopy(tip))
+                elif tip.ptype in mapping_types:
+                    new_keys = tip.keys.replace_vartype(to_replace, replace_with)
+                    new_values = tip.values.replace_vartype(to_replace, replace_with)
+                    newtip = PyType(tip.ptype, keys=new_keys, values=new_values)
+                    new_bt.add(newtip)
+                elif tip.ptype in container_ptypes:
+                    new_keys = tip.keys.replace_vartype(to_replace, replace_with)
+                    newtip = PyType(tip.ptype, keys=new_keys)
+                    new_bt.add(newtip)
+                else:
+                    raise RuntimeError(f'What base type is this? f{tip.ptype}')
+            else:
+                raise RuntimeError(f'What type is this inside my basetype? {tip}')
+        return new_bt
+
 
 class Assignment(hdict):
     def __str__(self):
@@ -116,6 +143,15 @@ class Assignment(hdict):
 
     def __hash__(self):
         return super().__hash__()
+
+    def replace_vartype(self, to_replace: str, replace_with: str) -> Assignment:
+        new_assignment = Assignment()
+        expr: str
+        bt: Basetype
+        for expr, bt in self.items():
+            new_bt = bt.replace_vartype(to_replace, replace_with)
+            new_assignment[expr] = new_bt
+        return new_assignment
 
 
 class Relation:
@@ -145,6 +181,12 @@ class Relation:
         # return -1
         return hash((self.bt_left, self.relop.value, self.bt_right))
 
+    def replace_vartype(self, to_replace: str, replace_with: str) -> Relation:
+        new_bt_left = self.bt_left.replace_vartype(to_replace, replace_with)
+        new_bt_right = self.bt_right.replace_vartype(to_replace, replace_with)
+        new_rel = Relation(new_bt_left, new_bt_right)
+        return new_rel
+
 
 class AndConstraints(hset):
     def __str__(self):
@@ -163,6 +205,14 @@ class AndConstraints(hset):
 
     def __hash__(self):
         return super().__hash__()
+
+    def replace_vartype(self, to_replace: str, replace_with: str) -> AndConstraints:
+        new_andconstr = AndConstraints()
+        rel: Relation
+        for rel in self:
+            new_rel = rel.replace_vartype(to_replace, replace_with)
+            new_andconstr.add(new_rel)
+        return new_andconstr
 
 
 class OrConstraints(hset):
@@ -212,6 +262,12 @@ class State:
     def __eq__(self, other: State):
         return hash(self) == hash(other)
 
+    def replace_vartype(self, to_replace: str, replace_with: str) -> State:
+        new_assignment = self.assignment.replace_vartype(to_replace, replace_with)
+        new_constraints = self.constraints.replace_vartype(to_replace, replace_with)
+        new_state = State(new_assignment, new_constraints)
+        return new_state
+
 
 class StateSet(hset):
     def __str__(self):
@@ -228,6 +284,14 @@ class StateSet(hset):
 
     def __hash__(self):
         return super().__hash__()
+
+    def replace_vartype(self, to_replace: str, replace_with: str) -> StateSet:
+        new_state_set = StateSet()
+        st: State
+        for st in self:
+            new_state = st.replace_vartype(to_replace, replace_with)
+            new_state_set.add(new_state)
+        return new_state_set
 
 
 class FuncSpec:
@@ -252,3 +316,9 @@ class FuncSpec:
 
     def __eq__(self, other: FuncSpec):
         return hash(self) == hash(other)
+
+    def replace_vartype(self, to_replace: str, replace_with: str):
+        new_in = self.in_state.replace_vartype(to_replace, replace_with)
+        new_out = self.out_state.replace_vartype(to_replace, replace_with)
+        new_funcspec = FuncSpec(new_in, new_out)
+        return new_funcspec
