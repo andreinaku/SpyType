@@ -173,3 +173,4 @@ pyiparser/united_specs.py
 *.txt
 *.err
 *.out
+statev2/united_specs.py

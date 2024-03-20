@@ -6,7 +6,7 @@ import string
 
 
 id_index = 0
-container_ptypes = [list, set, tuple]
+container_ptypes = [list, set, tuple, frozenset]
 mapping_types = [dict]
 SPECTYPE_MARKER = '?'
 BOTTOM = 'T_bot'

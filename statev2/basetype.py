@@ -292,7 +292,7 @@ class State:
             self.constraints = deepcopy(constraints)
 
     def __str__(self):
-        if self.constraints is None:
+        if len(self.constraints) == 0:
             retstr = f'({self.assignment})'
         else:
             retstr = f'({self.assignment}) ^ ({self.constraints})'

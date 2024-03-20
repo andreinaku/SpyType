@@ -59,7 +59,7 @@ MAPPING_BASES = ['Mapping', 'MutableMapping', 'dict']
 # builtin types according to the Python Library Reference: https://docs.python.org/3.11/library/stdtypes.html
 # minus the iterator type, for now
 builtin_types = [int, float, complex, list, tuple, range, str, bytes, bytearray,
-                 memoryview, set, frozenset, dict, type(None), object]
+                 memoryview, set, frozenset, dict, type(None), object, BottomType, TopType]
 
 
 class IgnoredTypeError(Exception):
@@ -156,6 +156,10 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 bt = Basetype({ptip})
             elif new_name == BIG_SELF:
                 bt = deepcopy(self.self_type)
+            elif new_name == 'TopType':
+                bt = Basetype({PyType(TopType)})
+            elif new_name == 'BottomType':
+                bt = Basetype({PyType(BottomType)})
             else:
                 ptip = PyType(eval(new_name))
                 bt = Basetype({ptip})
@@ -243,9 +247,17 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                     param_basetype = self.self_type
                 else:
                     param_basetype = self.parse_node_type(param.annotation)
+                new_basetype = param_basetype.filter_pytypes(builtin_types)
+                if len(new_basetype) == 0:
+                    raise TypeError(f'This basetype is fully unsupported: {param_basetype}')
+                param_basetype = new_basetype
                 spec_param_name = f'{prefix}{param.arg}'
                 func_spec.in_state.assignment[spec_param_name] = deepcopy(param_basetype)
         return_basetype = self.parse_node_type(node.returns)
+        new_basetype = return_basetype.filter_pytypes(builtin_types)
+        if len(new_basetype) == 0:
+            raise TypeError(f'This basetype is fully unsupported: {return_basetype}')
+        return_basetype = new_basetype
         func_spec.out_state.assignment[RETURN_VARNAME] = deepcopy(return_basetype)
         return func_spec
 
@@ -319,6 +331,19 @@ def write_op_equivalences():
         f.write('}\n\n\n')
 
 
+def print_united_specs(united: dict[str, set[FuncSpec]], indent=4):
+    # with open(OUTPUT_FILE, 'a') as f:
+    with open('united_specs.py', 'w') as f:
+        f.write('unitedspecs = {\n')
+        for funcname, spec_set in united.items():
+            f.write(f'{' ' * indent}\'{funcname}\': {{\n')
+            for func_spec in spec_set:
+                writestr = f'{' ' * 2 * indent}r\'{func_spec}\',\n'
+                f.write(writestr)
+            f.write(f'{' ' * indent}}},\n')
+        f.write('\n}\n')
+
+
 def generate_specs(stub_file):
     ctb = ClassdefToBasetypes()
     tree = ast.parse(open(stub_file, 'r').read())
@@ -331,11 +356,8 @@ def generate_specs(stub_file):
             new_spec = deepcopy(funcspec)
             for to_replace, replace_with in VARTYPE_REPLACE.items():
                 new_spec = new_spec.replace_vartype(to_replace, replace_with)
-                replaced_dict[funcname].add(new_spec)
-    for funcname, funcspecs in replaced_dict.items():
-        print(f'{funcname}:')
-        for funcspec in funcspecs:
-            print(f'{funcspec}')
+            replaced_dict[funcname].add(new_spec)
+    print_united_specs(replaced_dict)
 
 
 if __name__ == "__main__":
