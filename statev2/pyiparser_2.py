@@ -56,6 +56,11 @@ DICT_SPECIFIC_TYPES = {'dict_keys': 0, 'dict_values': 1, 'dict_items': -1}
 OUTPUT_FILE = 'specs_shed.py'
 MAPPING_BASES = ['Mapping', 'MutableMapping', 'dict']
 
+# builtin types according to the Python Library Reference: https://docs.python.org/3.11/library/stdtypes.html
+# minus the iterator type, for now
+builtin_types = [int, float, complex, list, tuple, range, str, bytes, bytearray,
+                 memoryview, set, frozenset, dict, type(None), object]
+
 
 class IgnoredTypeError(Exception):
     pass
@@ -319,7 +324,15 @@ def generate_specs(stub_file):
     tree = ast.parse(open(stub_file, 'r').read())
     tree = TypeReplacer().visit(tree)
     ctb.visit(tree)
+    replaced_dict = dict()
     for funcname, funcspecs in ctb.spec_dict.items():
+        replaced_dict[funcname] = set()
+        for funcspec in funcspecs:
+            new_spec = deepcopy(funcspec)
+            for to_replace, replace_with in VARTYPE_REPLACE.items():
+                new_spec = new_spec.replace_vartype(to_replace, replace_with)
+                replaced_dict[funcname].add(new_spec)
+    for funcname, funcspecs in replaced_dict.items():
         print(f'{funcname}:')
         for funcspec in funcspecs:
             print(f'{funcspec}')

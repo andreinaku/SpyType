@@ -1,6 +1,6 @@
 import unittest
 from statev2.transfer import *
-from statev2.pyiparser_2 import VARTYPE_REPLACE
+from statev2.pyiparser_2 import VARTYPE_REPLACE, builtin_types
 
 
 class SpecTestCases(unittest.TestCase):
@@ -263,4 +263,73 @@ class SpecTestCases(unittest.TestCase):
             bt = bt.replace_vartype(entry, replacement)
         result = bt
         expected_result = Translator.translate_basetype('list< T?0 > + dict< T?K, T?V >')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_filter_pytypes_1(self):
+        bt = Translator.translate_basetype('int + float + list< set < T1 > > + list< reversed< T2 > + complex >')
+        result = bt.filter_pytypes(builtin_types)
+        expected_result = Translator.translate_basetype('int + float + list< set < T1 > > + list< complex >')
+        self.assertEqual(result, expected_result)
+
+    def test_assignment_filter_pytypes_1(self):
+        assignment = Translator.translate_assignment(
+            'a:int + float + list< set < T1 > > + list< reversed< T2 > + complex > /\\ b: int + reversed< T3 >'
+        )
+        result = assignment.filter_pytypes(builtin_types)
+        expected_result = Translator.translate_assignment(
+            'a:int + float + list< set < T1 > > + list< complex > /\\ b: int'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_relation_filter_pytypes_1(self):
+        relation = Translator.translate_relation(
+            'T1 <= int + float + list< set < T1 > > + list< reversed< T2 > + complex >'
+        )
+        result = relation.filter_pytypes(builtin_types)
+        expected_result = Translator.translate_relation(
+            'T1 <= int + float + list< set < T1 > > + list< complex >'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_andconstraints_filter_pytypes_1(self):
+        andconstr = Translator.translate_and_constraints(
+            'T1 <= int + float + list< set < T1 > > + list< reversed< T2 > + complex > /\\ '
+            'T2 <= reversed< T3 > + float'
+        )
+        result = andconstr.filter_pytypes(builtin_types)
+        expected_result = Translator.translate_and_constraints(
+            'T1 <= int + float + list< set < T1 > > + list< complex > /\\ T2 <= float'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_state_filter_pytypes_1(self):
+        state = Translator.translate_state(
+            '((a:reversed< Ta > + int /\\ b:complex + float) ^ (Ta <= reversed< T1 > + list< int >))'
+        )
+        result = state.filter_pytypes(builtin_types)
+        expected_result = Translator.translate_state(
+            '((a: int /\\ b:complex + float) ^ (Ta <= list< int >))'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_stateset_filter_pytypes_1(self):
+        stateset = Translator.translate_state_set(
+            '((a:reversed< Ta > + int /\\ b:complex + float) ^ (Ta <= reversed< T1 > + list< int >)) \\/ '
+            '(a:int /\\ b:reversed + float)'
+        )
+        result = stateset.filter_pytypes(builtin_types)
+        expected_result = Translator.translate_state_set(
+            '((a: int /\\ b:complex + float) ^ (Ta <= list< int >)) \\/ '
+            '(a:int /\\ b:float)'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_funcspec_filter_pytypes_1(self):
+        funcspec = Translator.translate_func_spec(
+            '((a:reversed< Ta > + int /\\ b:complex + float) -> (return: reversed + complex))'
+        )
+        result = funcspec.filter_pytypes(builtin_types)
+        expected_result = Translator.translate_func_spec(
+            '((a:int /\\ b:complex + float) -> (return: complex))'
+        )
         self.assertEqual(result, expected_result)

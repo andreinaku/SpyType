@@ -127,6 +127,28 @@ class Basetype(hset):
                 raise RuntimeError(f'What type is this inside my basetype? {tip}')
         return new_bt
 
+    def filter_pytypes(self, supported_list: list[type]) -> Basetype | None:
+        new_bt = Basetype()
+        if self is None:
+            return None
+        for tip in self:
+            if isinstance(tip, VarType):
+                new_bt.add(tip)
+                continue
+            elif isinstance(tip, PyType):
+                if tip.ptype not in supported_list:
+                    continue
+                new_keys = tip.keys.filter_pytypes(supported_list) if tip.keys is not None else None
+                new_values = tip.values.filter_pytypes(supported_list) if tip.values is not None else None
+                new_ptip = PyType(tip.ptype,
+                                  keys=new_keys,
+                                  values=new_values
+                                  )
+                new_bt.add(new_ptip)
+            else:
+                raise RuntimeError(f'This is not a supported element of Basetype: {tip}')
+        return new_bt
+
 
 class Assignment(hdict):
     def __str__(self):
@@ -150,6 +172,15 @@ class Assignment(hdict):
         bt: Basetype
         for expr, bt in self.items():
             new_bt = bt.replace_vartype(to_replace, replace_with)
+            new_assignment[expr] = new_bt
+        return new_assignment
+
+    def filter_pytypes(self, supported_list: list[type]) -> Assignment:
+        new_assignment = Assignment()
+        expr: str
+        bt: Basetype
+        for expr, bt in self.items():
+            new_bt = bt.filter_pytypes(supported_list)
             new_assignment[expr] = new_bt
         return new_assignment
 
@@ -184,7 +215,13 @@ class Relation:
     def replace_vartype(self, to_replace: str, replace_with: str) -> Relation:
         new_bt_left = self.bt_left.replace_vartype(to_replace, replace_with)
         new_bt_right = self.bt_right.replace_vartype(to_replace, replace_with)
-        new_rel = Relation(new_bt_left, new_bt_right)
+        new_rel = Relation(self.relop, new_bt_left, new_bt_right)
+        return new_rel
+
+    def filter_pytypes(self, supported_list: list[type]) -> Relation:
+        new_bt_left = self.bt_left.filter_pytypes(supported_list)
+        new_bt_right = self.bt_right.filter_pytypes(supported_list)
+        new_rel = Relation(self.relop, new_bt_left, new_bt_right)
         return new_rel
 
 
@@ -211,6 +248,14 @@ class AndConstraints(hset):
         rel: Relation
         for rel in self:
             new_rel = rel.replace_vartype(to_replace, replace_with)
+            new_andconstr.add(new_rel)
+        return new_andconstr
+
+    def filter_pytypes(self, supported_list: list[type]) -> AndConstraints:
+        new_andconstr = AndConstraints()
+        rel: Relation
+        for rel in self:
+            new_rel = rel.filter_pytypes(supported_list)
             new_andconstr.add(new_rel)
         return new_andconstr
 
@@ -268,6 +313,12 @@ class State:
         new_state = State(new_assignment, new_constraints)
         return new_state
 
+    def filter_pytypes(self, supported_list: list[type]) -> State:
+        new_assignment = self.assignment.filter_pytypes(supported_list)
+        new_constraints = self.constraints.filter_pytypes(supported_list)
+        new_state = State(new_assignment, new_constraints)
+        return new_state
+
 
 class StateSet(hset):
     def __str__(self):
@@ -290,6 +341,14 @@ class StateSet(hset):
         st: State
         for st in self:
             new_state = st.replace_vartype(to_replace, replace_with)
+            new_state_set.add(new_state)
+        return new_state_set
+
+    def filter_pytypes(self, supported_list: list[type]) -> StateSet:
+        new_state_set = StateSet()
+        st: State
+        for st in self:
+            new_state = st.filter_pytypes(supported_list)
             new_state_set.add(new_state)
         return new_state_set
 
@@ -320,5 +379,11 @@ class FuncSpec:
     def replace_vartype(self, to_replace: str, replace_with: str):
         new_in = self.in_state.replace_vartype(to_replace, replace_with)
         new_out = self.out_state.replace_vartype(to_replace, replace_with)
+        new_funcspec = FuncSpec(new_in, new_out)
+        return new_funcspec
+
+    def filter_pytypes(self, supported_list: list[type]) -> FuncSpec:
+        new_in = self.in_state.filter_pytypes(supported_list)
+        new_out = self.out_state.filter_pytypes(supported_list)
         new_funcspec = FuncSpec(new_in, new_out)
         return new_funcspec
