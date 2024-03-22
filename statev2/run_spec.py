@@ -1,3 +1,5 @@
+import os.path
+
 from statev2.transfer import *
 from statev2.united_specs import unitedspecs, op_equiv
 
@@ -16,9 +18,14 @@ def get_constraints_list(state_set: StateSet) -> list[AndConstraints]:
     return ll
 
 
-def output_expressions(expr_list: list[str], str_state_set: str):
+def output_expressions(expr_list: list[str], str_state_set: str,
+                       outc_file: str = 'out_constraints.txt', outs_file: str = 'out_states.txt'):
     current = Translator.translate_state_set(str_state_set)
-    with open('out_constraints.txt', 'a') as f:
+    if os.path.exists(outc_file):
+        os.remove(outc_file)
+    if os.path.exists(outs_file):
+        os.remove(outs_file)
+    with open(outc_file, 'a') as f:
         for expr in expr_list:
             f.write(f'{'-' * (len(expr) + 4)}\n| {expr} |\n{'-' * (len(expr) + 4)}\n')
             applied = get_states(current, expr)
@@ -29,8 +36,7 @@ def output_expressions(expr_list: list[str], str_state_set: str):
                 #     retstr = retstr.replace(eq_in, eq_out)
                 print_str += f'({retstr}) \\/ \n'
             f.write(print_str[:-5] + '\n\n')
-
-    with open('out_states.txt', 'a') as f:
+    with open(outs_file, 'a') as f:
         for expr in expr_list:
             f.write(f'{'-' * (len(expr) + 4)}\n| {expr} |\n{'-' * (len(expr) + 4)}\n')
             applied = get_states(current, expr)
@@ -47,6 +53,8 @@ if __name__ == "__main__":
     start_set = r'(a:int + float /\ b:int + float + str)'
     simple_expr = ['a+b', 'a/b', 'a>>b', 'a*b', 'a-b']
     expr_1 = ['(a+b)/c']
-    output_expressions(simple_expr, start_set)
-    start_set = r'(a:int+float /\ b:int+float+str /\ c:str)'
+    # output_expressions(simple_expr, start_set)
+    # start_set = r'(a:int+float /\ b:int+float+str /\ c:str)'
     # output_expressions(expr_1, start_set)
+    start_set = r'(a:list< int + str > /\ b:list< float >)'
+    output_expressions(simple_expr, start_set)
