@@ -2,19 +2,21 @@ import ast
 import astor
 import logging
 from statev2.basetype import *
+from typing_extensions import *
+from statev2.supported_types import builtin_types
 
-from typing_extensions import (
-    Concatenate,
-    Literal,
-    LiteralString,
-    ParamSpec,
-    Self,
-    SupportsIndex,
-    TypeAlias,
-    TypeGuard,
-    TypeVarTuple,
-    final,
-)
+# from typing_extensions import (
+#     Concatenate,
+#     Literal,
+#     LiteralString,
+#     ParamSpec,
+#     Self,
+#     SupportsIndex,
+#     TypeAlias,
+#     TypeGuard,
+#     TypeVarTuple,
+#     final,
+# )
 
 MAX_VARTYPE_LEN = 6
 BUILTIN_CATEGORY = 'builtins'
@@ -37,15 +39,24 @@ DEFAULT_TYPEVAR = '_T'
 PREFIX_POSONLY, PREFIX_ARGS, PREFIX_VARARG, PREFIX_KWONLY, PREFIX_KWARG = range(5)
 TYPE_REPLACE = {'_PositiveInteger': 'int',
                 '_NegativeInteger': 'int',
-                'object': 'TopType', 'ReadOnlyBuffer': 'bytes', 'Any': 'TopType',
-                'WriteableBuffer': 'bytearray | memoryview', 'ReadableBuffer': 'bytes | bytearray | memoryview',
-                '_TranslateTable': 'dict[int, str | int]', '_FormatMapMapping': 'dict[str, int]', 'LiteralString': 'str',
-                'SupportsKeysAndGetItem': 'dict', 'AbstractSet': 'set', '_PathLike': 'str | bytes',
+                'object': 'TopType',
+                'ReadOnlyBuffer': 'bytes',
+                'Any': 'TopType',
+                'WriteableBuffer': 'bytearray | memoryview',
+                'ReadableBuffer': 'bytes | bytearray | memoryview',
+                '_TranslateTable': 'dict[int, str | int]',
+                '_FormatMapMapping': 'dict[str, int]',
+                'LiteralString': 'str',
+                'SupportsKeysAndGetItem': 'dict',
+                'AbstractSet': 'set',
+                '_PathLike': 'str | bytes',
                 '_GetItemIterable': 'GetItemIterable',
-                '_SupportsPow2': 'SupportsSomeKindOfPow', '_SupportsPow3NoneOnly': 'SupportsSomeKindOfPow',
-                '_SupportsPow3': 'SupportsSomeKindOfPow', '_SupportsRound1': 'SupportsRound',
-                '_SupportsRound2': 'SupportsRound', 'SupportsIter': 'Iterable',
-                '_SupportsNextT': 'SupportsNext', 'Sized': 'SupportsLen', 'FileDescriptorOrPath': 'str',
+                # '_SupportsPow2': 'SupportsSomeKindOfPow', '_SupportsPow3NoneOnly': 'SupportsSomeKindOfPow',
+                # '_SupportsPow3': 'SupportsSomeKindOfPow', '_SupportsRound1': 'SupportsRound',
+                # '_SupportsRound2': 'SupportsRound',
+                # 'SupportsIter': 'Iterable',
+                # '_SupportsNextT': 'SupportsNext', 'Sized': 'SupportsLen',
+                'FileDescriptorOrPath': 'str',
                 '_SupportsSumNoDefaultT': 'int'}
 VARTYPE_REPLACE = {
     '_T': 'T?0', '_KT': 'T?K', '_VT': 'T?V', '_T_co': 'T?co',
@@ -55,11 +66,6 @@ VARTYPE_REPLACE = {
 DICT_SPECIFIC_TYPES = {'dict_keys': 0, 'dict_values': 1, 'dict_items': -1}
 OUTPUT_FILE = 'specs_shed.py'
 MAPPING_BASES = ['Mapping', 'MutableMapping', 'dict']
-
-# builtin types according to the Python Library Reference: https://docs.python.org/3.11/library/stdtypes.html
-# minus the iterator type, for now
-builtin_types = [int, float, complex, list, tuple, range, str, bytes, bytearray,
-                 memoryview, set, frozenset, dict, type(None), object, BottomType, TopType]
 
 
 class IgnoredTypeError(Exception):
@@ -149,8 +155,8 @@ class ClassdefToBasetypes(ast.NodeVisitor):
     def parse_node_type(self, node: ast.expr) -> Basetype:
         if isinstance(node, ast.Name):
             # int, list, float, _T, ...
-            # new_name = TYPE_REPLACE[node.id] if node.id in TYPE_REPLACE else node.id
-            new_name = node.id
+            new_name = TYPE_REPLACE[node.id] if node.id in TYPE_REPLACE else node.id
+            # new_name = node.id
             if new_name.startswith('_') and len(new_name) <= MAX_VARTYPE_LEN:
                 ptip = VarType(new_name)
                 bt = Basetype({ptip})
@@ -175,6 +181,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 mylogger.warning(ss)
                 raise TypeError(ss)
             container = TYPE_REPLACE[node.value.id] if node.value.id in TYPE_REPLACE else node.value.id
+            # container = node.value.id
             if container in ignore_list:
                 ss = f'ignored type (for now) <<{container}>> for {astor.to_source(node.value).strip()}'
                 mylogger.warning(ss)
@@ -243,10 +250,14 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             if len(parameters) == 1 and parameters[0] is None:
                 continue  # no vararg or kwarg
             for param in parameters:
-                if param.arg == SMALL_SELF and param.annotation is None:
-                    param_basetype = self.self_type
-                else:
-                    param_basetype = self.parse_node_type(param.annotation)
+                try:
+                    if param.arg == SMALL_SELF and param.annotation is None:
+                        param_basetype = self.self_type
+                    else:
+                        param_basetype = self.parse_node_type(param.annotation)
+                except NameError:
+                    ss = f'This type is unsupported: {astor.to_source(param.annotation)}'
+                    raise TypeError(ss)
                 new_basetype = param_basetype.filter_pytypes(builtin_types)
                 if len(new_basetype) == 0:
                     raise TypeError(f'This basetype is fully unsupported: {param_basetype}')
@@ -283,7 +294,11 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             try:
                 if not isinstance(body_node, ast.FunctionDef):
                     continue
-                func_spec = self.parse_funcdef(body_node)
+                try:
+                    func_spec = self.parse_funcdef(body_node)
+                except TypeError as te:
+                    mylogger.error(str(te))
+                    continue
                 funcname = body_node.name
                 if funcname not in self.spec_dict:
                     self.spec_dict[funcname] = {func_spec}
@@ -331,9 +346,9 @@ def write_op_equivalences():
         f.write('}\n\n\n')
 
 
-def print_united_specs(united: dict[str, set[FuncSpec]], indent=4):
+def dump_specs(filename: str, united: dict[str, set[FuncSpec]], indent=4):
     # with open(OUTPUT_FILE, 'a') as f:
-    with open('united_specs.py', 'w') as f:
+    with open(filename, 'w') as f:
         f.write('unitedspecs = {\n')
         for funcname, spec_set in united.items():
             f.write(f'{' ' * indent}\'{funcname}\': {{\n')
@@ -344,20 +359,51 @@ def print_united_specs(united: dict[str, set[FuncSpec]], indent=4):
         f.write('\n}\n')
 
 
-def generate_specs(stub_file):
-    ctb = ClassdefToBasetypes()
-    tree = ast.parse(open(stub_file, 'r').read())
-    tree = TypeReplacer().visit(tree)
-    ctb.visit(tree)
+def filter_specs(spec_dict: dict[str, set[FuncSpec]]) -> dict[str, set[FuncSpec]]:
     replaced_dict = dict()
-    for funcname, funcspecs in ctb.spec_dict.items():
+    for funcname, funcspecs in spec_dict.items():
         replaced_dict[funcname] = set()
         for funcspec in funcspecs:
             new_spec = deepcopy(funcspec)
             for to_replace, replace_with in VARTYPE_REPLACE.items():
                 new_spec = new_spec.replace_vartype(to_replace, replace_with)
             replaced_dict[funcname].add(new_spec)
-    print_united_specs(replaced_dict)
+    return replaced_dict
+
+
+def get_root_specs(stub_ast: ast.Module) -> dict[str, set[FuncSpec]]:
+    spec_dict = dict()
+    for node in stub_ast.body:
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        try:
+            funcspec = ClassdefToBasetypes().parse_funcdef(node)
+        except TypeError as te:
+            continue
+        if node.name not in spec_dict:
+            spec_dict[node.name] = {funcspec}
+        else:
+            spec_dict[node.name].add(funcspec)
+    return spec_dict
+
+
+def generate_specs(stub_file):
+    ctb = ClassdefToBasetypes()
+    tree = ast.parse(open(stub_file, 'r').read())
+    tree = TypeReplacer().visit(tree)
+    ctb.visit(tree)
+    replaced_dict = filter_specs(ctb.spec_dict)
+    if 'builtins' in replaced_dict:
+        raise RuntimeError(f'Builtins class already exists in stub file. Aborting!')
+    # replaced_dict['builtins'] = get_root_specs(tree)
+    root_specs = get_root_specs(tree)
+    for funcname, funcspecs in root_specs.items():
+        if funcname not in replaced_dict:
+            replaced_dict[funcname] = deepcopy(funcspecs)
+        else:
+            replaced_dict[funcname] |= funcspecs
+    replaced_dict = filter_specs(replaced_dict)
+    dump_specs('united_specs.py', replaced_dict)
 
 
 if __name__ == "__main__":

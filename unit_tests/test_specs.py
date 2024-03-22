@@ -1,6 +1,7 @@
 import unittest
 from statev2.transfer import *
 from statev2.pyiparser_2 import VARTYPE_REPLACE, builtin_types
+from typing import *
 
 
 class SpecTestCases(unittest.TestCase):
@@ -277,6 +278,12 @@ class SpecTestCases(unittest.TestCase):
         expected_result = Basetype()
         self.assertEqual(result, expected_result)
 
+    def test_basetype_filter_pytypes_3(self):
+        bt = Translator.translate_basetype('Sized< T2 >')
+        result = bt.filter_pytypes(builtin_types)
+        expected_result = Basetype({PyType(Sized, Basetype({VarType('T2')}))})
+        self.assertEqual(result, expected_result)
+
     def test_assignment_filter_pytypes_1(self):
         assignment = Translator.translate_assignment(
             'a:int + float + list< set < T1 > > + list< reversed< T2 > + complex > /\\ b: int + reversed< T3 >'
@@ -299,8 +306,8 @@ class SpecTestCases(unittest.TestCase):
 
     def test_andconstraints_filter_pytypes_1(self):
         andconstr = Translator.translate_and_constraints(
-            'T1 <= int + float + list< set < T1 > > + list< reversed< T2 > + complex > /\\ '
-            'T2 <= reversed< T3 > + float'
+            r'T1 <= int + float + list< set< T1 > > + list< reversed< T2 > + complex > /\ '
+            r'T2 <= reversed< T3 > + float'
         )
         result = andconstr.filter_pytypes(builtin_types)
         expected_result = Translator.translate_and_constraints(

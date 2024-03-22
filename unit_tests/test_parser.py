@@ -108,3 +108,13 @@ class bytearray(MutableSequence[int]):
         })
         expected_result.out_state.assignment['return'] = Basetype({PyType(bytearray)})
         self.assertEqual(result, expected_result)
+
+    def test_parse_funcdef_4(self):
+        code = r'def len(__obj: Sized) -> int: ...'
+        funcnode = ast.parse(code).body[0]
+        # funcnode = TypeReplacer().visit(funcnode)
+        result = ClassdefToBasetypes().parse_funcdef(funcnode)
+        expected_result = Translator.translate_func_spec(
+            r'((__obj:Sized) -> (return:int))'
+        )
+        self.assertEqual(result, expected_result)

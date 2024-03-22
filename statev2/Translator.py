@@ -1,6 +1,7 @@
 from __future__ import annotations
 import re
 from statev2.basetype import *
+from typing import *
 import typing_extensions
 from typing_extensions import (
     Concatenate,
@@ -118,7 +119,8 @@ class Translator:
                 btip = type(None)
             else:
                 btip = eval(strtype)
-            if not isinstance(btip, type):
+            # if not isinstance(btip, type):
+            if not is_supported_type(btip, strict=False):
                 raise RuntimeError('Type {} does not denote  a Python type'.format(strtype))
             return PyType(btip)
         # for containers: list[int, float, set[T_2, complex], bool] etc.
@@ -130,7 +132,9 @@ class Translator:
         foundtuple = foundlist[0]
 
         btip = eval(foundtuple[0])
-        if type(btip) is not type:
+        # if type(btip) is not type:
+        # if not isinstance(btip, type):
+        if not is_supported_type(btip, strict=False):
             raise RuntimeError('Type {} does not eval to a type type'.format(type))
 
         kvlist = get_kvlist(foundtuple[1])

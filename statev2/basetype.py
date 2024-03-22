@@ -2,6 +2,7 @@ from __future__ import annotations
 from utils import *
 from enum import Enum
 from copy import deepcopy
+from statev2.supported_types import is_supported_type
 
 
 class RelOp(Enum):
@@ -136,7 +137,9 @@ class Basetype(hset):
                 new_bt.add(tip)
                 continue
             elif isinstance(tip, PyType):
-                if tip.ptype not in supported_list:
+                # if tip.ptype not in supported_list:
+                #     continue
+                if not is_supported_type(tip.ptype):
                     continue
                 new_keys = tip.keys.filter_pytypes(supported_list) if tip.keys is not None else None
                 new_values = tip.values.filter_pytypes(supported_list) if tip.values is not None else None
