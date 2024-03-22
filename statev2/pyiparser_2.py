@@ -260,14 +260,15 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                     raise TypeError(ss)
                 new_basetype = param_basetype.filter_pytypes(builtin_types)
                 if len(new_basetype) == 0:
-                    raise TypeError(f'This basetype is fully unsupported: {param_basetype}')
+                    raise TypeError(f'This basetype ({astor.to_source(param.annotation).strip()}) '
+                                    f'is fully unsupported: {param_basetype}')
                 param_basetype = new_basetype
                 spec_param_name = f'{prefix}{param.arg}'
                 func_spec.in_state.assignment[spec_param_name] = deepcopy(param_basetype)
         return_basetype = self.parse_node_type(node.returns)
         new_basetype = return_basetype.filter_pytypes(builtin_types)
         if len(new_basetype) == 0:
-            raise TypeError(f'This basetype is fully unsupported: {return_basetype}')
+            raise TypeError(f'This basetype (return) is fully unsupported: {return_basetype}')
         return_basetype = new_basetype
         func_spec.out_state.assignment[RETURN_VARNAME] = deepcopy(return_basetype)
         return func_spec
