@@ -2,7 +2,7 @@ from utils import BottomType, TopType
 
 # builtin types according to the Python Library Reference: https://docs.python.org/3.11/library/stdtypes.html
 # minus the iterator type, for now
-builtin_types = [int, float, complex, list, tuple, range, str, bytes, bytearray,
+builtin_types = [bool, int, float, complex, list, tuple, range, str, bytes, bytearray,
                  memoryview, set, frozenset, dict, type(None), object, BottomType, TopType]
 
 
