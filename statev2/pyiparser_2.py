@@ -310,53 +310,60 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 continue
 
 
-def write_op_equivalences():
-    equiv_dict = {
-        'ast.UnaryOp':
-            {
-                'ast.UAdd': '__pos__',
-                'ast.USub': '__neg__',
-                'ast.Not': '__bool__',
-                'ast.Invert': '__invert__',
-            },
-        'ast.BinOp':
-            {
-                'ast.Add': '__add__',
-                'ast.Sub': '__sub__',
-                'ast.Mult': '__mul__ ',
-                'ast.Div': '__truediv__ ',
-                'ast.FloorDiv': '__floordiv__',
-                'ast.Mod': '__mod__',
-                'ast.Pow': '__pow__',
-                'ast.LShift': '__lshift__',
-                'ast.RShift': '__rshift__',
-                'ast.BitOr': '__or__',
-                'ast.BitXor': '__xor__',
-                'ast.BitAnd': '__and__',
-                'ast.MatMult': '__matmul__',
-            }
-    }
-    with open(OUTPUT_FILE, 'a') as f:
+def dump_specs(filename: str, united: dict[str, set[FuncSpec]], indent=4):
+    def write_op_equivalences(f: IO):
+        equiv_dict = {
+            'ast.UnaryOp':
+                {
+                    'ast.UAdd': '__pos__',
+                    'ast.USub': '__neg__',
+                    'ast.Not': '__bool__',
+                    'ast.Invert': '__invert__',
+                },
+            'ast.BinOp':
+                {
+                    'ast.Add': '__add__',
+                    'ast.Sub': '__sub__',
+                    'ast.Mult': '__mul__',
+                    'ast.Div': '__truediv__',
+                    'ast.FloorDiv': '__floordiv__',
+                    'ast.Mod': '__mod__',
+                    'ast.Pow': '__pow__',
+                    'ast.LShift': '__lshift__',
+                    'ast.RShift': '__rshift__',
+                    'ast.BitOr': '__or__',
+                    'ast.BitXor': '__xor__',
+                    'ast.BitAnd': '__and__',
+                    'ast.MatMult': '__matmul__',
+                }
+        }
         f.write('op_equiv = {\n')
+        spaces = ' ' * indent
         for node, funcdict in equiv_dict.items():
-            f.write(f'\t{node}: {{\n')
+            f.write(f'{spaces}{node}: {{\n')
             for nodeop, funcname in funcdict.items():
-                f.write(f'\t\t{nodeop}: \'{funcname}\',\n')
-            f.write('\t},\n')
+                f.write(f'{spaces * 2}{nodeop}: \'{funcname}\',\n')
+            f.write(f'{spaces}}},\n')
         f.write('}\n\n\n')
 
-
-def dump_specs(filename: str, united: dict[str, set[FuncSpec]], indent=4):
-    # with open(OUTPUT_FILE, 'a') as f:
-    with open(filename, 'w') as f:
+    def write_united_specs(f: IO):
         f.write('unitedspecs = {\n')
+        spaces = ' ' * indent
         for funcname, spec_set in united.items():
-            f.write(f'{' ' * indent}\'{funcname}\': {{\n')
+            f.write(f'{spaces}\'{funcname}\': {{\n')
             for func_spec in spec_set:
-                writestr = f'{' ' * 2 * indent}r\'{func_spec}\',\n'
+                writestr = f'{spaces * 2}r\'{func_spec}\',\n'
                 f.write(writestr)
-            f.write(f'{' ' * indent}}},\n')
+            f.write(f'{spaces}}},\n')
         f.write('\n}\n')
+
+    def write_headers(f: IO):
+        f.write('import ast\n\n')
+
+    with open(filename, 'w') as of:
+        write_headers(of)
+        write_op_equivalences(of)
+        write_united_specs(of)
 
 
 def filter_specs(spec_dict: dict[str, set[FuncSpec]]) -> dict[str, set[FuncSpec]]:

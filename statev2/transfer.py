@@ -1,5 +1,6 @@
 from statev2.basetype import *
-from statev2.specs import unitedspecs, op_equiv
+from statev2.united_specs import unitedspecs
+from statev2.united_specs import op_equiv
 from statev2.Translator import Translator
 
 

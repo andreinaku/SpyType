@@ -1,5 +1,5 @@
 from statev2.transfer import *
-from statev2.specs import *
+from statev2.united_specs import unitedspecs, op_equiv
 
 
 def get_states(state_set: StateSet, expr: str) -> StateSet:
@@ -25,8 +25,8 @@ def output_expressions(expr_list: list[str], str_state_set: str):
             print_str = ''
             for constraint in get_constraints_list(applied):
                 retstr = str(constraint)
-                for eq_in, eq_out in type_equiv.items():
-                    retstr = retstr.replace(eq_in, eq_out)
+                # for eq_in, eq_out in type_equiv.items():
+                #     retstr = retstr.replace(eq_in, eq_out)
                 print_str += f'({retstr}) \\/ \n'
             f.write(print_str[:-5] + '\n\n')
 
@@ -37,14 +37,14 @@ def output_expressions(expr_list: list[str], str_state_set: str):
             print_str = ''
             for state in applied:
                 retstr = str(state)
-                for eq_in, eq_out in type_equiv.items():
-                    retstr = retstr.replace(eq_in, eq_out)
+                # for eq_in, eq_out in type_equiv.items():
+                #     retstr = retstr.replace(eq_in, eq_out)
                 print_str += f'({retstr}) \\/ \n'
             f.write(print_str[:-5] + '\n\n')
 
 
 if __name__ == "__main__":
-    start_set = r'(a:int+float /\ b:int+float+str)'
+    start_set = r'(a:int + float /\ b:int + float + str)'
     simple_expr = ['a+b', 'a/b', 'a>>b', 'a*b', 'a-b']
     expr_1 = ['(a+b)/c']
     output_expressions(simple_expr, start_set)

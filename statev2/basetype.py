@@ -368,7 +368,7 @@ class FuncSpec:
             self.out_state = deepcopy(_out)
 
     def __str__(self):
-        return f'({self.in_state}) -> ({self.out_state})'
+        return f'({self.in_state} -> {self.out_state})'
 
     def __repr__(self):
         return self.__str__()
