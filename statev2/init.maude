@@ -1,0 +1,163 @@
+fmod TYPE is
+  sorts ConstType VarType BoundVarType  Type .
+  subsort BoundVarType  VarType ConstType < Type .
+  ops NoneType AnyType int float str complex memoryview bytearray bytes SupportsIndex : -> ConstType [ctor]. 
+  op tuple<_> : Type -> Type [ctor].
+  op list<_> : Type -> Type [ctor]. 
+  op set<_> : Type -> Type [ctor]. 
+  op frozenset<_> : Type -> Type [ctor].
+  op dic<_,_> : Type Type -> Type [ctor].
+  op _+_ : Type Type -> Type [assoc comm ctor]. 
+  eq T + T = T .
+  eq T + AnyType = AnyType .
+  eq tuple< T1 > + tuple< T2 > = tuple< T1 + T2 > . 
+  eq list< T1 > + list< T2 > = list< T1 + T2 > . 
+  eq dic< T1, T2 > + dic< T1', T2' > = dic< T1 + T1', T2 + T2' > .
+  
+  sort Subst .
+  op nil : -> Subst [ctor] .
+  op _|->_ : BoundVarType Type -> Subst [ctor] .
+  op _`,_ : Subst Subst -> Subst  [ctor assoc comm id: nil].
+  eq ((X? |-> T), (X? |-> T)) = (X? |-> T) .
+  
+  sort TypeSubst .
+  op [_;_] : Type Subst -> TypeSubst [ctor] .
+  var S S' S'' : Subst .
+  
+  var T T' T1 T2 T1' T2' : Type . 
+  vars X Y : VarType . 
+  vars X? Y? : BoundVarType .
+  var CT : ConstType .
+
+  op leq : Type Type -> Bool [strat(1 2 0)] .
+  eq leq(NoneType, T) = true .
+  eq leq(T, AnyType) = true .
+  eq leq(T, T) = true .
+  eq leq(tuple< T1 >, tuple< T2 >) = leq(T1, T2) . 
+  eq leq(list< T1 >, list< T2 >) = leq(T1, T2) . 
+  eq leq(set< T1 >, set< T2 >) = leq(T1, T2) .  
+  eq leq(frozenset< T1 >, frozenset< T2 >) = leq(T1, T2) .
+  eq leq(dic< T1, T2 >, dic< T1', T2' >) = leq(T1, T1') and leq(T2, T2') .
+  eq leq(T1, T1 + T2) = true .
+  eq leq(T1, T2) = false [owise].
+
+  op lub : Type Type Subst -> TypeSubst .
+ ceq lub(T1, T2, S) = [ T2 ; S ] if leq(T1, T2). 
+ ceq lub(T1, T2, S) = [ T1 ; S ] if leq(T2, T1).
+ ceq lub(tuple< T1 >, tuple< T2 >, S) = [ tuple< T' > ; S' ]
+  if [ T' ; S' ] := lub(T1, T2, S) .
+ ceq lub(list< T1 >, list< T2 >, S) = [ list< T' > ; S' ]
+  if [ T' ; S' ] := lub(T1, T2, S) . 
+ ceq lub(set< T1 >, set< T2 >, S) = [ set< T' > ; S' ]
+  if [ T' ; S' ] := lub(T1, T2, S) . 
+ ceq lub(frozenset< T1 >, frozenset< T2 >, S) = [ frozenset< T' > ; S' ] 
+  if [ T' ; S' ] := lub(T1, T2, S) . 
+ ceq lub(dic< T1, T2 >, dic< T1', T2' >, S) = [ dic< T, T' > ; S'' ]
+  if [ T  ; S'  ] := lub(T1, T2, S)
+  /\ [ T' ; S'' ] := lub(T1', T2', S').
+  eq lub(X?, T, S) = [ T ; (S, X? |-> T) ] . 
+  eq lub(T, Y?, S) = [ T ; (S, Y? |-> T) ] . 
+  eq lub(T1, T2, S) = [ T1 + T2 ; S ] [owise].
+  
+
+  op glb : Type Type Subst -> TypeSubst .
+ ceq glb(T1, T2, S) = [ T1 ; S ] if leq(T1, T2). 
+ ceq glb(T1, T2, S) = [ T2 ; S ] if leq(T2, T1).
+ ceq glb(tuple< T1 >, tuple< T2 >, S) = [ tuple< T' > ; S' ]
+  if [ T' ; S' ] := glb(T1, T2, S) .
+ ceq glb(list< T1 >, list< T2 >, S) = [ list< T' > ; S' ]
+  if [ T' ; S' ] := glb(T1, T2, S) . 
+ ceq glb(set< T1 >, set< T2 >, S) = [ set< T' > ; S' ]
+  if [ T' ; S' ] := glb(T1, T2, S) . 
+ ceq glb(frozenset< T1 >, frozenset< T2 >, S) = [ frozenset< T' > ; S' ] 
+  if [ T' ; S' ] := glb(T1, T2, S) . 
+ ceq glb(dic< T1, T2 >, dic< T1', T2' >, S) = [ dic< T, T' > ; S'' ]
+  if [ T  ; S'  ] := glb(T1, T2, S)
+  /\ [ T' ; S'' ] := glb(T1', T2', S').
+  eq glb(X?, T, S) = [ T ; (S, X? |-> T) ] . 
+  eq glb(T, Y?, S) = [ T ; (S, Y? |-> T) ] . 
+  eq glb(T1, T2, S) = [ NoneType ; S ] [owise].
+
+endfm
+
+
+mod CONSTR is
+  protecting TYPE .
+  sort Basic  Conj Disj .
+  subsort Basic < Conj < Disj .
+  
+  var T T' T1 T2 T1' T2' : Type .
+  var C C1 C2  C1' C2' : Conj .
+  var D D1 D2 D1' D2' : Disj . 
+  var S S' S'' S1 S2 : Subst .
+  var Cfg Cfg1 Cfg2 : Config .
+  
+  op _<=_ : Type Type -> Basic [ctor] .
+  op _/\_ : Conj Conj -> Conj [ctor assoc comm] .
+  op _\/_ : Disj Disj -> Disj [ctor assoc comm] .
+  
+  sort Config .
+  op none : -> Config [ctor] .
+  op _[_] : Disj Subst -> Config [ctor] .
+  op _&&_ : Config Config -> Config [prec 31 ctor assoc comm] .
+  op _||_ : Config Config -> Config [prec 33 ctor assoc comm] .
+
+  rl [Step1]: (D1 \/ D2)[S] => (D1[S]) || (D2[S]) . 
+  rl [Step2]: (C1 /\ C2)[S] => (C1[S]) && (C2[S]) .
+ ***()
+ crl [Step3]: ((T <= T1)[S1]) && ((T <= T2)[S2]) => (T <= T')[S']
+  if [T' ; S'] := glb(T1, T2, (S1, S2)).
+
+ crl [Step4]: (Cfg1 && ((T <= T1)[S1])) || (Cfg2 && ((T <= T2)[S2]))
+     =>
+     (Cfg1 && ((T <= T')[S'])) || Cfg2
+  if [T' ; S'] := lub(T1, T2, (S1, S2)). 
+  
+ crl [Step4]: (Cfg1 && ((T <= T1)[S1])) || ((T <= T2)[S2])
+     =>
+     Cfg1 && ((T <= T')[S'])
+  if [T' ; S'] := lub(T1, T2, (S1, S2)).
+  
+ crl [Step4]: ((T <= T1)[S1]) || ((T <= T2)[S2])
+     =>
+     (T <= T')[S']
+  if [T' ; S'] := lub(T1, T2, (S1, S2)).
+
+  rl [Step5]: Cfg && (C1[S1]) && (C2[S2]) => Cfg && ((C1 /\ C2)[S1, S2]) . 
+  rl [Step5]: (C1[S1]) && (C2[S2]) => (C1 /\ C2)[S1, S2] .
+  
+  rl [Step6]: (C [S])  || (C [S]) => C [S] .
+***)
+  
+***(
+ crl [Conj]: ((T <= T1) /\ (T <= T2))[S] => (T <= T')[S']
+  if [T' ; S'] := glb(T1, T2, S).
+
+ crl [Conj]: C /\ ((T <= T1) /\ (T <= T2))[S] => C /\ (T <= T')[S']
+  if [T' ; S'] := glb(T1, T2, S).
+
+ crl [Conj]: D \/ ((T <= T1) /\ (T <= T2))[S] => D \/ (T <= T')[S']
+  if [T' ; S'] := glb(T1, T2, S). 
+ crl [Conj]: D \/ (C /\ ((T <= T1) /\ (T <= T2)))[S] => D \/ (C /\ (T <= T'))[S']
+  if [T' ; S'] := glb(T1, T2, S).
+
+ crl [Disj1]: ((C1 /\ (T <= T1)) \/ (C2 /\ (T <= T2)))[S] => ((C1 /\ (T <= T')) \/ C2)[S']
+  if [T' ; S'] := lub(T1, T2, S). 
+ crl [Disj1]: D \/ ((C1 /\ (T <= T1)) \/ (C2 /\ (T <= T2)))[S] => D \/ ((C1 /\ (T <= T')) \/ C2)[S']
+  if [T' ; S'] := lub(T1, T2, S).
+ 
+ crl [Disj2]: ((C1 /\ (T <= T1)) \/ (T <= T2))[S] => (C1 /\ (T <= T'))[S']
+  if [T' ; S'] := lub(T1, T2, S).  
+ crl [Disj2]: D \/ ((C1 /\ (T <= T1)) \/ (T <= T2))[S] => D \/ (C1 /\ (T <= T'))[S']
+  if [T' ; S'] := lub(T1, T2, S).
+ 
+ crl [Disj3]: ((T <= T1) \/ (T <= T2))[S] => (T <= T')[S']
+  if [T' ; S'] := lub(T1, T2, S).
+ crl [Disj3]: D \/ ((T <= T1) \/ (T <= T2))[S] => D \/ (T <= T')[S']
+  if [T' ; S'] := lub(T1, T2, S). 
+
+  rl [Disj4]: C \/ C [S] => C [S] . 
+ ***)
+  
+endm
+

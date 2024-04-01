@@ -174,3 +174,4 @@ pyiparser/united_specs.py
 *.err
 *.out
 statev2/united_specs.py
+statev2/tempmod.maude
