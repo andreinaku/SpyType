@@ -61,17 +61,13 @@ TYPE_REPLACE = {'_PositiveInteger': 'int',
                 'FileDescriptorOrPath': 'str',
                 '_SupportsSumNoDefaultT': 'int'}
 VARTYPE_REPLACE = {
-    '_T': 'T?0', '_KT': 'T?K', '_VT': 'T?V', '_T_co': 'T?co',
-    '_S': 'T?s', '_P': 'T?p', '_R_co': 'T?rco', '_T_contra': 'T?contra'
+    '_T': 'T?0', '_KT': 'T?1', '_VT': 'T?2', '_T_co': 'T?3',
+    '_S': 'T?4', '_P': 'T?5', '_R_co': 'T?6', '_T_contra': 'T?7'
 }
 # 0 - first typevar, 1 - second typevar, -1 - tuple<first, second>
 DICT_SPECIFIC_TYPES = {'dict_keys': 0, 'dict_values': 1, 'dict_items': -1}
 OUTPUT_FILE = 'specs_shed.py'
 MAPPING_BASES = ['Mapping', 'MutableMapping', 'dict']
-
-
-class IgnoredTypeError(Exception):
-    pass
 
 
 def get_logger(

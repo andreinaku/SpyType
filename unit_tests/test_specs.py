@@ -263,7 +263,7 @@ class SpecTestCases(unittest.TestCase):
         for entry, replacement in VARTYPE_REPLACE.items():
             bt = bt.replace_vartype(entry, replacement)
         result = bt
-        expected_result = Translator.translate_basetype('list< T?0 > + dict< T?K, T?V >')
+        expected_result = Translator.translate_basetype('list< T?0 > + dict< T?1, T?2 >')
         self.assertEqual(result, expected_result)
 
     def test_basetype_filter_pytypes_1(self):
