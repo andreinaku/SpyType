@@ -3,10 +3,11 @@ from copy import deepcopy
 import ast
 import astor
 import string
+from typing import *
 
 
 id_index = 0
-container_ptypes = [list, set, tuple, frozenset]
+container_ptypes = [list, set, tuple, frozenset, Iterable]
 mapping_types = [dict]
 SPECTYPE_MARKER = '?'
 BOTTOM = 'T_bot'

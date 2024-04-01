@@ -118,3 +118,14 @@ class bytearray(MutableSequence[int]):
             r'((__obj:Sized) -> (return:int))'
         )
         self.assertEqual(result, expected_result)
+
+    def test_parse_funcdef_5(self):
+        code = r'def len(__obj: SupportsAbs[_T]) -> int: ...'
+        funcnode = ast.parse(code).body[0]
+        # funcnode = TypeReplacer().visit(funcnode)
+        result = False
+        try:
+            aux = ClassdefToBasetypes().parse_funcdef(funcnode)
+        except TypeError as te:
+            result = True
+        self.assertEqual(result, True)

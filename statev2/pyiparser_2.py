@@ -1,4 +1,6 @@
 import ast
+import typing
+
 import astor
 import logging
 from statev2.basetype import *
@@ -26,7 +28,7 @@ SMALL_SELF = 'self'
 SMALL_CLS = 'cls'
 RETURN_VARNAME = 'return'
 ignore_list = ['slice', 'GenericAlias', 'Callable', 'ellipsis', 'TracebackType', '_SupportsWriteAndFlush', 'CodeType',
-               '_ClassInfo', '_Opener', 'type', 'super']
+               '_ClassInfo', '_Opener', 'type', 'super', 'SupportsAbs']
 IGNORED_CLASSES = ['object', 'staticmethod', 'classmethod', 'ellipsis', '_FormatMapMapping',
                    '_TranslateTable', 'function', '_PathLike', '_SupportsSynchronousAnext',
                    '_GetItemIterable', '_SupportsWriteAndFlush', 'SupportsSomeKindOfPow',
