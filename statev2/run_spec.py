@@ -58,12 +58,12 @@ def output_expressions(expr_list: list[str], str_state_set: str,
             f.write(print_str[:-5] + '\n\n')
 
 
-def dump_to_maude(expr: str, str_state_set: str) -> str:
+def dump_to_maude(expr: str, str_state_set: str, dump=False) -> str:
     current = Translator.translate_state_set(str_state_set)
     applied = get_states(current, expr)
     c_value = get_constraints_string_from_states(applied)
-    newfile = mod_generator('tempmod', c_value)
-    return newfile
+    maude_input = mod_generator('tempmod', c_value, dump_to_file=dump)
+    return maude_input
 
 
 if __name__ == "__main__":
@@ -81,10 +81,10 @@ if __name__ == "__main__":
     strat = constr_module.parseStrategy('one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; Step5 ! ; Step6 ! ')
     with open('solver.out', 'w') as f:
         for expr in simple_expr:
-            mfile = dump_to_maude(expr, start_set)
-            aux = maude.load(mfile)
-            maudemod = maude.getModule('tempmod')
-            term = maudemod.parseTerm('c [nil]')
+            m_input = dump_to_maude(expr, start_set, dump=False)
+            aux = maude.input(m_input)
+            mod = maude.getModule('tempmod')
+            term = mod.parseTerm('c [nil]')
             f.write(f'{expr}{os.linesep}')
             for result, nrew in term.srewrite(strat):
                 f.write(f'{result}{os.linesep} in {nrew} rewrites{os.linesep}')
