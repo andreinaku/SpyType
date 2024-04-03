@@ -79,6 +79,7 @@ if __name__ == "__main__":
     aux = maude.load('init.maude')
     constr_module = maude.getModule('CONSTR')
     strat = constr_module.parseStrategy('one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; Step5 ! ; Step6 ! ')
+    strat2 = constr_module.parseStrategy('one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! ')
     with open('solver.out', 'w') as f:
         for expr in simple_expr:
             m_input = dump_to_maude(expr, start_set, dump=False)
@@ -87,5 +88,7 @@ if __name__ == "__main__":
             term = mod.parseTerm('c [nil]')
             f.write(f'{expr}{os.linesep}')
             for result, nrew in term.srewrite(strat):
+                f.write(f'{result}{os.linesep} in {nrew} rewrites{os.linesep}')
+            for result, nrew in term.srewrite(strat2):
                 f.write(f'{result}{os.linesep} in {nrew} rewrites{os.linesep}')
             f.write(os.linesep)
