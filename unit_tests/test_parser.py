@@ -1,6 +1,6 @@
 import unittest
 from statev2.transfer import *
-from statev2.pyiparser_2 import *
+from pyiparser_2 import *
 
 
 class ParseTestCases(unittest.TestCase):

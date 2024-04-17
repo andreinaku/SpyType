@@ -1,6 +1,6 @@
 import unittest
 from statev2.transfer import *
-from statev2.pyiparser_2 import VARTYPE_REPLACE, builtin_types
+from pyiparser_2 import VARTYPE_REPLACE, builtin_types
 from typing import *
 
 

@@ -1,4 +1,4 @@
-from utils import BottomType, TopType
+from utils.utils import BottomType, TopType
 
 
 # builtin types according to the Python Library Reference: https://docs.python.org/3.11/library/stdtypes.html

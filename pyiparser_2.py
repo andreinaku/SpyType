@@ -413,4 +413,4 @@ def generate_specs(stub_file):
 
 
 if __name__ == "__main__":
-    generate_specs('../pyiparser/builtins.pyi')
+    generate_specs('sheds/builtins.pyi')

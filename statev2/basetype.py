@@ -1,5 +1,5 @@
 from __future__ import annotations
-from utils import *
+from utils.utils import *
 from enum import Enum
 from copy import deepcopy
 from statev2.supported_types import is_supported_type

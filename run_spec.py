@@ -1,9 +1,10 @@
 import os.path
 import os
+import ast
+import maude
 from statev2.maude_gen import mod_generator
 from statev2.transfer import *
 from statev2.united_specs import unitedspecs, op_equiv
-import maude
 
 
 def get_states(state_set: StateSet, expr: str) -> StateSet:
