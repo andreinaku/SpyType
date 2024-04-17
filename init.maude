@@ -1,7 +1,7 @@
 fmod TYPE is
   sorts ConstType VarType BoundVarType  Type .
   subsort BoundVarType  VarType ConstType < Type .
-  ops NoneType AnyType int float str complex memoryview bytearray bytes SupportsIndex : -> ConstType [ctor]. 
+  ops NoneType AnyType bool int float str complex memoryview bytearray bytes SupportsIndex : -> ConstType [ctor]. 
   op tuple<_> : Type -> Type [ctor].
   op list<_> : Type -> Type [ctor]. 
   op set<_> : Type -> Type [ctor]. 

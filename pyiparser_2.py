@@ -166,7 +166,8 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 bt = Basetype({PyType(BottomType)})
             else:
                 ptip = PyType(eval(new_name))
-                bt = Basetype({ptip})
+                # bt = Basetype({ptip})
+                bt = get_builtin_basetype(ptip)
             return bt
         elif isinstance(node, ast.Constant):
             # 3, 5.6, 'a', ...
@@ -193,6 +194,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 mylogger.warning(ss)
                 raise TypeError(ss)
             contained_str = ''
+            # todo: are there Protocol containers used anywhere? 
             container_ptip = PyType(eval(container))
             if isinstance(contained, ast.Name) or isinstance(contained, ast.BinOp):
                 if kvtuple:

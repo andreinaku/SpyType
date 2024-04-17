@@ -2,7 +2,7 @@ from __future__ import annotations
 from utils.utils import *
 from enum import Enum
 from copy import deepcopy
-from statev2.supported_types import is_supported_type
+from statev2.supported_types import is_supported_type, builtin_types, builtin_seqs, builtin_dicts, builtins
 
 
 class RelOp(Enum):
@@ -18,6 +18,40 @@ def generate_id(state):
 
 class GenericType:
     pass
+
+
+def get_builtin_basetype(ptip: PyType) -> Basetype:
+    new_bt = Basetype()
+    if isinstance(ptip, VarType):
+        new_bt.add(deepcopy(ptip))
+        return new_bt
+    for blist in builtins:
+        if ptip.ptype in blist:
+            # if it is already a builtin type, just add it
+            # only protocol are replaced
+            new_bt.add(deepcopy(ptip))
+            return new_bt
+    for btype in builtin_types:
+        try:
+            if issubclass(btype, ptip.ptype):
+                new_bt.add(PyType(btype))
+        except TypeError:
+            continue
+    for btype in builtin_seqs:
+        try:
+            if issubclass(btype, ptip.ptype):
+                new_bt.add(PyType(btype, Basetype({PyType(TopType)})))
+        except TypeError as te:
+            continue
+    for btype in builtin_dicts:
+        try:
+            if issubclass(btype, ptip.ptype):
+                new_bt.add(PyType(btype, Basetype({PyType(TopType)}), Basetype({PyType(TopType)})))
+        except TypeError:
+            continue
+    if len(new_bt) == 0:
+        new_bt.add(deepcopy(ptip))
+    return new_bt
 
 
 class PyType(GenericType):

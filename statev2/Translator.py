@@ -2,7 +2,7 @@ from __future__ import annotations
 import re
 from statev2.basetype import *
 from typing import *
-import typing_extensions
+# import typing_extensions
 from typing_extensions import (
     Concatenate,
     Literal,
@@ -15,6 +15,7 @@ from typing_extensions import (
     TypeVarTuple,
     final,
 )
+
 
 NONE_TYPE = 'NoneType'
 
@@ -71,7 +72,7 @@ class Translator:
         return typelist
 
     @staticmethod
-    def translate_type(strtype: str, start_br="<", end_br=">", sep="+"):
+    def translate_type(strtype: str, start_br="<", end_br=">", sep="+") -> PyType | VarType:
 
         def get_kvlist(strtypes):
             level = 0
@@ -148,7 +149,9 @@ class Translator:
             c_types = Basetype()
             for c_strtype in c_strtypes:
                 newtip = Translator.translate_type(c_strtype, start_br, end_br, sep)
-                c_types.add(newtip)
+                # c_types.add(newtip)
+                new_bt = get_builtin_basetype(newtip)
+                c_types |= deepcopy(new_bt)
             ll.append(c_types)
         # c_types = frozenset(c_types)
         # newtype = PyType(btip, c_types)
@@ -160,10 +163,14 @@ class Translator:
         str_basetype = elim_paren(str_basetype)
         str_bt_split = Translator.get_types_from_list(str_basetype, "<", ">", "+")
         bt_typelist = []
+        new_bt = Basetype()
         for _cte_type in str_bt_split:
             cte_type = _cte_type.strip()
-            bt_typelist.append(Translator.translate_type(cte_type, "<", ">", "+"))
-        new_bt = Basetype(bt_typelist)
+            newtip = Translator.translate_type(cte_type, "<", ">", "+")
+            aux_bt = get_builtin_basetype(newtip)
+            new_bt |= deepcopy(aux_bt)
+            # bt_typelist.append(Translator.translate_type(cte_type, "<", ">", "+"))
+        # new_bt = Basetype(bt_typelist)
         return new_bt
 
     @staticmethod

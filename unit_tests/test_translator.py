@@ -20,6 +20,22 @@ class TranslatorTestCases(unittest.TestCase):
         })
         self.assertEqual(result, expected_result)
 
+    def test_translate_basetype_3(self):
+        result = Translator.translate_basetype('Sized')
+        expected_result = Basetype({
+            PyType(memoryview),
+            PyType(range), 
+            PyType(bytes),
+            PyType(str),
+            PyType(bytearray),
+            PyType(list, Basetype({PyType(TopType)})),
+            PyType(set, Basetype({PyType(TopType)})),
+            PyType(tuple, Basetype({PyType(TopType)})),
+            PyType(frozenset, Basetype({PyType(TopType)})),
+            PyType(dict, Basetype({PyType(TopType)}), Basetype({PyType(TopType)})),
+        })
+        self.assertEqual(result, expected_result)
+
     def test_translate_assignment(self):
         result = Translator.translate_assignment(r'(a:int+float /\ b:T_b)')
         expected_result = Assignment()
