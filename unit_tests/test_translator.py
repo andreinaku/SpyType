@@ -39,7 +39,10 @@ class TranslatorTestCases(unittest.TestCase):
     def test_translate_basetype_4(self):
         result = Translator.translate_basetype('Iterable< T1 >')
         expected_result = Basetype({
-            PyType(Iterable, Basetype({VarType('T1')}))
+            PyType(list, Basetype({VarType('T1')})),
+            PyType(set, Basetype({VarType('T1')})),
+            PyType(tuple, Basetype({VarType('T1')})),
+            PyType(frozenset, Basetype({VarType('T1')})),
         })
         self.assertEqual(result, expected_result)
 

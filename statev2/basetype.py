@@ -31,38 +31,41 @@ def get_builtin_basetype(ptip: PyType) -> Basetype:
             # only protocol are replaced
             new_bt.add(deepcopy(ptip))
             return new_bt
-    for btype in builtin_types:
-        try:
-            if issubclass(btype, ptip.ptype):
-                new_bt.add(PyType(btype))
-        except TypeError:
-            continue
-    for btype in builtin_seqs:
-        contained_keys = Basetype({PyType(TopType)})
-        if ptip.keys is not None and len(ptip.keys) != 0:
-            if len(ptip.keys) == 1:
-                contained_keys = deepcopy(ptip.keys)
-            else:
-                raise TypeError(f'We do not support {ptip} substitution yet')
-        try:
-            if issubclass(btype, ptip.ptype):
-                new_bt.add(PyType(btype, contained_keys))
-        except TypeError as te:
-            continue
-    for btype in builtin_dicts:
-        contained_keys = Basetype({PyType(TopType)})
-        contained_values = Basetype({PyType(TopType)})
-        if (ptip.keys is not None and len(ptip.keys) != 0) and (ptip.values is not None and len(ptip.values) != 0):
-            if len(ptip.keys) == 1 and len(ptip.values) == 1:
-                contained_keys = deepcopy(ptip.keys)
-                contained_values = deepcopy(ptip.values)
-            else:
-                raise TypeError(f'We do not support {ptip} substitution yet')
-        try:
-            if issubclass(btype, ptip.ptype):
-                new_bt.add(PyType(btype, contained_keys, contained_values))
-        except TypeError:
-            continue
+    if ptip.keys is None:
+        for btype in builtin_types:
+            try:
+                if issubclass(btype, ptip.ptype):
+                    new_bt.add(PyType(btype))
+            except TypeError:
+                continue
+    if (ptip.keys is not None and ptip.values is None) or (ptip.keys is None and ptip.values is None):
+        for btype in builtin_seqs:
+            contained_keys = Basetype({PyType(TopType)})
+            if ptip.keys is not None and len(ptip.keys) != 0:
+                if len(ptip.keys) == 1:
+                    contained_keys = deepcopy(ptip.keys)
+                else:
+                    raise TypeError(f'We do not support {ptip} substitution yet')
+            try:
+                if issubclass(btype, ptip.ptype):
+                    new_bt.add(PyType(btype, contained_keys))
+            except TypeError as te:
+                continue
+    if (ptip.keys is not None and ptip.values is not None) or (ptip.keys is None and ptip.values is None):
+        for btype in builtin_dicts:
+            contained_keys = Basetype({PyType(TopType)})
+            contained_values = Basetype({PyType(TopType)})
+            if (ptip.keys is not None and len(ptip.keys) != 0) and (ptip.values is not None and len(ptip.values) != 0):
+                if len(ptip.keys) == 1 and len(ptip.values) == 1:
+                    contained_keys = deepcopy(ptip.keys)
+                    contained_values = deepcopy(ptip.values)
+                else:
+                    raise TypeError(f'We do not support {ptip} substitution yet')
+            try:
+                if issubclass(btype, ptip.ptype):
+                    new_bt.add(PyType(btype, contained_keys, contained_values))
+            except TypeError:
+                continue
     if len(new_bt) == 0:
         new_bt.add(deepcopy(ptip))
     return new_bt
