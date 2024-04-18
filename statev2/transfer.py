@@ -105,7 +105,8 @@ class TransferFunc(ast.NodeVisitor):
         new_set = StateSet()
         for state in self.state_set:
             new_state = deepcopy(state)
-            new_state.assignment[astor.to_source(node).strip()] = Basetype({PyType(type(node.value))})
+            # new_state.assignment[astor.to_source(node).strip()] = Basetype({PyType(type(node.value))})
+            new_state.assignment[str(node.value)] = Basetype({PyType(type(node.value))})
             new_set.add(new_state)
         self.state_set = deepcopy(new_set)
 
@@ -113,3 +114,21 @@ class TransferFunc(ast.NodeVisitor):
         self.visit(node.left)
         self.visit(node.right)
         self.state_set = set_apply_binop_spec(self.state_set, node, self.testmode)
+
+    def visit_Tuple(self, node: ast.Tuple):
+        for elem in node.elts:
+            self.visit(elem)
+        node_name = astor.to_source(node).strip()
+        new_set = StateSet()
+        new_state: State
+        state: State
+        for state in self.state_set:
+            contained_bt = Basetype()
+            for elem in node.elts:
+                elem_name = astor.to_source(elem).strip()
+                contained_bt |= deepcopy(state.assignment[elem_name])
+            new_bt = Basetype({PyType(tuple, contained_bt)})
+            new_state = deepcopy(state)
+            new_state.assignment[node_name] = deepcopy(new_bt)
+            new_set.add(new_state)
+        self.state_set = new_set

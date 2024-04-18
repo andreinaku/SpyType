@@ -235,15 +235,8 @@ class SpecTestCases(unittest.TestCase):
         tf = TransferFunc(state_set, True)
         tf.visit(node)
         result = tf.state_set
-        expected_result = StateSet(
-            {
-                Translator.translate_state(
-                    r'(a:Ta /\ b:Tb /\ (3):int)'
-                ),
-                Translator.translate_state(
-                    r'(a:int /\ b:int /\ (3):int)'
-                )
-            }
+        expected_result = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb /\ 3:int) \/ (a:int /\ b:int /\ 3:int)'
         )
         self.assertEqual(result, expected_result)
 
@@ -344,5 +337,34 @@ class SpecTestCases(unittest.TestCase):
         result = funcspec.filter_pytypes(builtin_types)
         expected_result = Translator.translate_func_spec(
             '((a:int /\\ b:complex + float) -> (return: complex))'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_visit_Tuple_1(self):
+        expr = '(2, 3.5)'
+        state_set = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb) \/ (a:int /\ b:int)'
+        )
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, True)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb /\ 2:int /\ 3.5:float /\ (2, 3.5):tuple< int + float >) \/ '
+            r'(a:int /\ b:int /\ 2:int /\ 3.5:float /\ (2, 3.5):tuple< int + float >)'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_visit_Tuple_2(self):
+        expr = '(a, b)'
+        state_set = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb) \/ (a:int /\ b:int)'
+        )
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, True)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb /\ (a, b): tuple< Ta + Tb >) \/ (a:int /\ b:int /\ (a, b): tuple< int >)'
         )
         self.assertEqual(result, expected_result)
