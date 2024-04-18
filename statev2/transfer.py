@@ -1,13 +1,8 @@
+from ast import Assign
+from typing import Any
 from statev2.basetype import *
-# from statev2.united_specs import unitedspecs
-# from statev2.united_specs import op_equiv
 from united_specs import op_equiv, unitedspecs
 from statev2.Translator import Translator
-# from basetype import *
-# from united_specs import unitedspecs
-# from united_specs import op_equiv
-# from Translator import Translator
-
 
 
 def state_apply_spec(state: State, spec: State, testmode=False) -> State:
@@ -132,3 +127,9 @@ class TransferFunc(ast.NodeVisitor):
             new_state.assignment[node_name] = deepcopy(new_bt)
             new_set.add(new_state)
         self.state_set = new_set
+
+    def visit_Assign(self, node: Assign):
+        self.visit(node.value)
+        for target in node.targets:
+            target_name = astor.to_source(target).strip()
+            
