@@ -71,6 +71,15 @@ def get_builtin_basetype(ptip: PyType) -> Basetype:
     return new_bt
 
 
+def get_builtin_bt(bt: Basetype) -> Basetype:
+    new_bt = Basetype()
+    for ptip in bt:
+        if not isinstance(ptip, PyType):
+            continue
+        new_bt |= get_builtin_basetype(ptip)
+    return new_bt
+
+
 class PyType(GenericType):
     def __init__(self, ptype, keys=None, values=None):
         self.ptype = deepcopy(ptype)
