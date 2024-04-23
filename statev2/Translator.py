@@ -104,6 +104,8 @@ class Translator:
             return PyType(BottomType)
         if strtype == 'err':
             return PyType(ErrorType)
+        if strtype == 'top':
+            return PyType(TopType)
         # for vartypes
         if strtype.startswith('T') and strtype != 'TopType':
             # vartype_patt = r'^T[_\?][a-zA-Z0-9_`\.]+$'
@@ -149,9 +151,9 @@ class Translator:
             c_types = Basetype()
             for c_strtype in c_strtypes:
                 newtip = Translator.translate_type(c_strtype, start_br, end_br, sep)
-                # c_types.add(newtip)
-                new_bt = get_builtin_basetype(newtip)
-                c_types |= deepcopy(new_bt)
+                c_types.add(newtip)
+                # new_bt = get_builtin_from_pytype(newtip)
+                # c_types |= deepcopy(new_bt)
             ll.append(c_types)
         # c_types = frozenset(c_types)
         # newtype = PyType(btip, c_types)
@@ -167,10 +169,11 @@ class Translator:
         for _cte_type in str_bt_split:
             cte_type = _cte_type.strip()
             newtip = Translator.translate_type(cte_type, "<", ">", "+")
-            aux_bt = get_builtin_basetype(newtip)
-            new_bt |= deepcopy(aux_bt)
-            # bt_typelist.append(Translator.translate_type(cte_type, "<", ">", "+"))
-        # new_bt = Basetype(bt_typelist)
+            # aux_bt = get_builtin_from_pytype(newtip)
+            # new_bt |= deepcopy(aux_bt)
+            bt_typelist.append(Translator.translate_type(cte_type, "<", ">", "+"))
+        new_bt = Basetype(bt_typelist)
+        new_bt = get_builtin_from_bt(new_bt)
         return new_bt
 
     @staticmethod

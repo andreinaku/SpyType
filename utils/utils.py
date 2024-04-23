@@ -7,7 +7,8 @@ from typing import *
 
 
 id_index = 0
-container_ptypes = [list, set, tuple, frozenset, Iterable]
+# container_ptypes = [list, set, tuple, frozenset, Iterable]
+container_ptypes = [list, set, tuple, frozenset]
 mapping_types = [dict]
 SPECTYPE_MARKER = '?'
 BOTTOM = 'T_bot'

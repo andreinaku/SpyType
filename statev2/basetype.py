@@ -20,7 +20,7 @@ class GenericType:
     pass
 
 
-def get_builtin_basetype(ptip: PyType) -> Basetype:
+def get_builtin_from_pytype(ptip: PyType) -> Basetype:
     new_bt = Basetype()
     if isinstance(ptip, VarType):
         new_bt.add(deepcopy(ptip))
@@ -28,10 +28,10 @@ def get_builtin_basetype(ptip: PyType) -> Basetype:
     for blist in builtins:
         if ptip.ptype in blist:
             # if it is already a builtin type, just add it
-            # only protocol are replaced
+            # only Protocols are replaced
             new_bt.add(deepcopy(ptip))
             return new_bt
-    if ptip.keys is None:
+    if ptip.keys is None or ptip.keys == Basetype({PyType(TopType)}):
         for btype in builtin_types:
             try:
                 if issubclass(btype, ptip.ptype):
@@ -43,7 +43,8 @@ def get_builtin_basetype(ptip: PyType) -> Basetype:
             contained_keys = Basetype({PyType(TopType)})
             if ptip.keys is not None and len(ptip.keys) != 0:
                 if len(ptip.keys) == 1:
-                    contained_keys = deepcopy(ptip.keys)
+                    # contained_keys = deepcopy(ptip.keys)
+                    contained_keys = get_builtin_from_bt(ptip.keys)
                 else:
                     raise TypeError(f'We do not support {ptip} substitution yet')
             try:
@@ -71,12 +72,15 @@ def get_builtin_basetype(ptip: PyType) -> Basetype:
     return new_bt
 
 
-def get_builtin_bt(bt: Basetype) -> Basetype:
+def get_builtin_from_bt(bt: Basetype) -> Basetype:
     new_bt = Basetype()
     for ptip in bt:
         if not isinstance(ptip, PyType):
+            if not isinstance(ptip, VarType):
+                raise RuntimeError(f'Type not supported: {ptip}')
+            new_bt.add(ptip)
             continue
-        new_bt |= get_builtin_basetype(ptip)
+        new_bt |= get_builtin_from_pytype(ptip)
     return new_bt
 
 
@@ -103,7 +107,8 @@ class PyType(GenericType):
         else:
             # retstr = str(self.ptype).split("'")[1]
             retstr = self.ptype.__name__
-        if self.keys is not None:
+        # if self.keys is not None:
+        if self.ptype in container_ptypes:
             retstr += '< '
             # for c_type in self.contains:
             #     retstr += str(c_type) + ','

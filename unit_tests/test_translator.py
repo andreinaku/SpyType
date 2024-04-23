@@ -46,6 +46,16 @@ class TranslatorTestCases(unittest.TestCase):
         })
         self.assertEqual(result, expected_result)
 
+    def test_translate_basetype_5(self):
+        result = Translator.translate_basetype('Iterable< top >')
+        expected_result = None
+        self.assertEqual(result, expected_result)
+    
+    def test_translate_basetype_6(self):
+        result = Translator.translate_basetype('str')
+        expected_result = Basetype({PyType(str)})
+        self.assertEqual(result, expected_result)
+
     def test_translate_assignment(self):
         result = Translator.translate_assignment(r'(a:int+float /\ b:T_b)')
         expected_result = Assignment()
