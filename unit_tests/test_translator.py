@@ -48,7 +48,15 @@ class TranslatorTestCases(unittest.TestCase):
 
     def test_translate_basetype_5(self):
         result = Translator.translate_basetype('Iterable< top >')
-        expected_result = None
+        expected_result = Basetype({
+            # list, set, tuple, frozenset
+            PyType(list, Basetype({PyType(TopType)})),
+            PyType(set, Basetype({PyType(TopType)})),
+            PyType(tuple, Basetype({PyType(TopType)})),
+            PyType(frozenset, Basetype({PyType(TopType)})),
+            PyType(str), PyType(memoryview), PyType(bytes),
+            PyType(bytearray), PyType(range)
+        })
         self.assertEqual(result, expected_result)
     
     def test_translate_basetype_6(self):
