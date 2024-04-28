@@ -29,3 +29,16 @@ class int:
     f.write('\n-----------------\n')
     f.write(astpretty.pformat(ast.parse('x, *y, z = 1,2,3,4,5')))
     f.write('\n-----------------\n')
+    f.write(astpretty.pformat(ast.parse('a = b, c = [1,2]')))
+    f.write('\n-----------------\n')
+    f.write(astpretty.pformat(ast.parse('a = [b, c] = [1,2]')))
+    f.write('\n-----------------\n')
+    aux = '''
+x = 10
+def f():
+   global x
+   print(x)
+    '''
+    tree = ast.parse(aux)
+    f.write(astpretty.pformat(tree))
+    f.write('\n-----------------\n')
