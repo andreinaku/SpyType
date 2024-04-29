@@ -403,3 +403,16 @@ class SpecTestCases(unittest.TestCase):
             r'str + memoryview + bytes + bytearray + range'
         )
         self.assertEqual(result, expected_result)
+
+    def test_get_specset_1(self):
+        code = 'len(a)'
+        node = ast.parse(code).body[0].value
+        result = get_specset(node)
+        expected_result = hset()
+        expected_result.add(
+            Translator.translate_func_spec(
+                r'((__obj:list< top > + set< top > + frozenset< top > + tuple< top > + dict< top, top > + '
+                r'str + memoryview + bytes + bytearray + range) -> (return:int))'
+            )
+        )
+        self.assertEqual(result, expected_result)

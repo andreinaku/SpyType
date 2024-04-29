@@ -556,7 +556,7 @@ class FuncSpec:
         new_funcspec = FuncSpec(new_in, new_out)
         return new_funcspec
     
-    def replace_superclasses() -> FuncSpec:
+    def replace_superclasses(self) -> FuncSpec:
         new_in = self.in_state.replace_superclasses()
         new_out = self.out_state.replace_superclasses()
         new_funcspec = FuncSpec(new_in, new_out)
