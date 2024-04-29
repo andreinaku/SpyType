@@ -22,40 +22,32 @@ class TranslatorTestCases(unittest.TestCase):
 
     def test_translate_basetype_3(self):
         result = Translator.translate_basetype('Sized')
-        expected_result = Basetype({
-            PyType(memoryview),
-            PyType(range), 
-            PyType(bytes),
-            PyType(str),
-            PyType(bytearray),
-            PyType(list, Basetype({PyType(TopType)})),
-            PyType(set, Basetype({PyType(TopType)})),
-            PyType(tuple, Basetype({PyType(TopType)})),
-            PyType(frozenset, Basetype({PyType(TopType)})),
-            PyType(dict, Basetype({PyType(TopType)}), Basetype({PyType(TopType)})),
-        })
+        # expected_result = Basetype({
+        #     PyType(memoryview),
+        #     PyType(range), 
+        #     PyType(bytes),
+        #     PyType(str),
+        #     PyType(bytearray),
+        #     PyType(list, Basetype({PyType(TopType)})),
+        #     PyType(set, Basetype({PyType(TopType)})),
+        #     PyType(tuple, Basetype({PyType(TopType)})),
+        #     PyType(frozenset, Basetype({PyType(TopType)})),
+        #     PyType(dict, Basetype({PyType(TopType)}), Basetype({PyType(TopType)})),
+        # })
+        expected_result = Basetype({PyType(Sized)})
         self.assertEqual(result, expected_result)
 
     def test_translate_basetype_4(self):
         result = Translator.translate_basetype('Iterable< T1 >')
         expected_result = Basetype({
-            PyType(list, Basetype({VarType('T1')})),
-            PyType(set, Basetype({VarType('T1')})),
-            PyType(tuple, Basetype({VarType('T1')})),
-            PyType(frozenset, Basetype({VarType('T1')})),
+            PyType(Iterable, Basetype({VarType('T1')})),
         })
         self.assertEqual(result, expected_result)
 
     def test_translate_basetype_5(self):
         result = Translator.translate_basetype('Iterable< top >')
         expected_result = Basetype({
-            # list, set, tuple, frozenset
-            PyType(list, Basetype({PyType(TopType)})),
-            PyType(set, Basetype({PyType(TopType)})),
-            PyType(tuple, Basetype({PyType(TopType)})),
-            PyType(frozenset, Basetype({PyType(TopType)})),
-            PyType(str), PyType(memoryview), PyType(bytes),
-            PyType(bytearray), PyType(range)
+            PyType(Iterable, Basetype({PyType(TopType)})),
         })
         self.assertEqual(result, expected_result)
     

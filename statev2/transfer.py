@@ -46,14 +46,32 @@ def spec_to_state(spec: FuncSpec) -> State:
     return ret_state
 
 
+def find_spec(node: ast.BinOp | ast.Call) -> StateSet:
+    if isinstance(node, ast.BinOp):
+        spec_name = op_equiv[ast.BinOp][type(node.op)]
+        raw_set = unitedspecs[spec_name]
+    elif isinstance(node, ast.Call):
+        funcname = node.func.id
+        raw_set = unitedspecs[funcname]
+    else:
+        raise TypeError(f'{astor.to_source(node)} is not a BinOp or a Call')
+    return raw_set
+
+
 def find_spec_from_binop(binop_node: ast.BinOp) -> StateSet:
     spec_name = op_equiv[ast.BinOp][type(binop_node.op)]
     raw_set = unitedspecs[spec_name]
     return raw_set
 
 
+def find_spec_from_call(call_node: ast.Call) -> StateSet:
+    funcname = call_node.func.id
+    raw_set = unitedspecs[funcname]
+    return raw_set
+
+
 def get_specset_from_binop(binop_node: ast.BinOp) -> hset[FuncSpec]:
-    raw_set = find_spec_from_binop(binop_node)
+    raw_set = find_spec(binop_node)
     spec_set = hset()
     for str_spec in raw_set:
         spec = Translator.translate_func_spec(str_spec)

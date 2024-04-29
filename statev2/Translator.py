@@ -173,7 +173,7 @@ class Translator:
             # new_bt |= deepcopy(aux_bt)
             bt_typelist.append(Translator.translate_type(cte_type, "<", ">", "+"))
         new_bt = Basetype(bt_typelist)
-        new_bt = get_builtin_from_bt(new_bt)
+        # new_bt = get_builtin_from_bt(new_bt)
         return new_bt
 
     @staticmethod

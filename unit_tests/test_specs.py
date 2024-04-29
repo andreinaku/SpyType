@@ -55,7 +55,7 @@ class SpecTestCases(unittest.TestCase):
     def test_find_specs_1(self):
         expr = 'a + b'
         binop_node = ast.parse(expr).body[0].value
-        result = find_spec_from_binop(binop_node)
+        result = find_spec(binop_node)
         expected_result = unitedspecs['__add__']
         self.assertEqual(result, expected_result)
 
@@ -367,4 +367,19 @@ class SpecTestCases(unittest.TestCase):
         expected_result = Translator.translate_state_set(
             r'(a:Ta /\ b:Tb /\ (a, b): tuple< Ta + Tb >) \/ (a:int /\ b:int /\ (a, b): tuple< int >)'
         )
+        self.assertEqual(result, expected_result)
+
+    def test_replace_superclasses_1(self):
+        state_set = Translator.translate_state_set(r'__obj:Sized')
+        result = state_set.replace_superclasses()
+        expected_result = Translator.translate_state_set(
+            r'__obj:memoryview + range + bytes + str + bytearray + list< top > + set< top > + '
+            r'tuple< top > + frozenset< top > + dict< top, top >'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_get_builtin_1(self):
+        bt = Translator.translate_basetype(r'Iterable< T1 >')
+        result = bt.get_builtin_from_bt()
+        expected_result = None
         self.assertEqual(result, expected_result)
