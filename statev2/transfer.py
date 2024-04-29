@@ -58,19 +58,22 @@ def find_spec(node: ast.BinOp | ast.Call) -> StateSet:
     return raw_set
 
 
-def get_specset_from_binop(binop_node: ast.BinOp) -> hset[FuncSpec]:
-    raw_set = find_spec(binop_node)
+def get_specset(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
+    if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):
+        raise TypeError(f'Node {astor.to_source(node)} not supported yet')
+    raw_set = find_spec(node)
     spec_set = hset()
     for str_spec in raw_set:
         spec = Translator.translate_func_spec(str_spec)
         # spec_state = spec_to_state(spec)
+        spec = spec.replace_superclasses()
         spec_set.add(deepcopy(spec))
     return spec_set
 
 
 def substitute_binop_state_arguments(state: State, binop_node: ast.BinOp) -> hset[FuncSpec]:
     return_name = 'return'
-    spec_set = get_specset_from_binop(binop_node)
+    spec_set = get_specset(binop_node)
     op_args = (astor.to_source(binop_node.left).strip(), astor.to_source(binop_node.right).strip())
     new_set = hset()
     for spec in spec_set:
