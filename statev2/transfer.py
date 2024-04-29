@@ -71,10 +71,20 @@ def get_specset(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
     return spec_set
 
 
-def substitute_binop_state_arguments(state: State, binop_node: ast.BinOp) -> hset[FuncSpec]:
+def substitute_state_arguments(state: State, node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
+    if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):
+        raise TypeError(f'Node {astor.to_source(node)} cannot have arguments (afaik)')
+    
+    spec_set = get_specset(node)
     return_name = 'return'
-    spec_set = get_specset(binop_node)
-    op_args = (astor.to_source(binop_node.left).strip(), astor.to_source(binop_node.right).strip())
+    
+    if isinstance(node, ast.BinOp):
+        op_args = (astor.to_source(node.left).strip(), astor.to_source(node.right).strip())
+    else:
+        op_args = []  # todo
+        for _arg in node.args:
+            op_args.append(astor.to_source(_arg).strip())
+        op_args = tuple(op_args)
     new_set = hset()
     for spec in spec_set:
         new_spec = FuncSpec()
@@ -82,16 +92,18 @@ def substitute_binop_state_arguments(state: State, binop_node: ast.BinOp) -> hse
         for expr in spec.in_state.assignment:
             new_spec.in_state.assignment[op_args[i]] = deepcopy(spec.in_state.assignment[expr])
             i = i + 1
-        op_expr = astor.to_source(binop_node).strip()
+        op_expr = astor.to_source(node).strip()
         new_spec.out_state.assignment[op_expr] = deepcopy(spec.out_state.assignment[return_name])
         new_set.add(deepcopy(new_spec))
     return new_set
 
 
-def set_apply_binop_spec(state_set: StateSet, binop_node: ast.BinOp, testmode: bool = False) -> StateSet:
+def set_apply_specset(state_set: StateSet, node: ast.BinOp | ast.Call, testmode: bool = False) -> StateSet:
+    if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):
+        raise TypeError(f'Node {astor.to_source(node)} cannot have specs to apply (afaik)')
     new_set = StateSet()
     for state in state_set:
-        interim_spec_set = substitute_binop_state_arguments(state, binop_node)
+        interim_spec_set = substitute_state_arguments(state, node)
         for spec in interim_spec_set:
             new_state = state_apply_spec(state, spec.in_state, testmode)
             for expr, bt in spec.out_state.assignment.items():
@@ -117,7 +129,12 @@ class TransferFunc(ast.NodeVisitor):
     def visit_BinOp(self, node: ast.BinOp):
         self.visit(node.left)
         self.visit(node.right)
-        self.state_set = set_apply_binop_spec(self.state_set, node, self.testmode)
+        self.state_set = set_apply_specset(self.state_set, node, self.testmode)
+
+    def visit_Call(self, node: ast.Call):
+        for _arg in node.args:
+            self.visit(_arg)
+        self.state_set = set_apply_specset(self.state_set, node, self.testmode)
 
     def visit_Tuple(self, node: ast.Tuple):
         for elem in node.elts:

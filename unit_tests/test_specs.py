@@ -62,7 +62,7 @@ class SpecTestCases(unittest.TestCase):
     def test_get_specset_from_binop_1(self):
         expr = 'a / b'
         binop_node = ast.parse(expr).body[0].value
-        result = get_specset_from_binop(binop_node)
+        result = get_specset(binop_node)
         expected_result = hset(
             {
                 Translator.translate_func_spec(r'((self:complex /\ __value:complex) -> (return:complex))'),
@@ -76,7 +76,7 @@ class SpecTestCases(unittest.TestCase):
         expr = 'a / b'
         binop_node = ast.parse(expr).body[0].value
         state = Translator.translate_state(r'(a:int+float /\ b:int+float)')
-        result = substitute_binop_state_arguments(state, binop_node)
+        result = substitute_state_arguments(state, binop_node)
         expected_result = hset(
             {
                 Translator.translate_func_spec(r'((a:complex /\ b:complex) -> ((a / b):complex))'),
@@ -90,7 +90,8 @@ class SpecTestCases(unittest.TestCase):
         expr = 'a / b'
         binop_node = ast.parse(expr).body[0].value
         state_set = Translator.translate_state_set(r'(a:Ta /\ b:Tb)')
-        result = set_apply_binop_spec(state_set, binop_node, testmode=True)
+        # result = set_apply_binop_spec(state_set, binop_node, testmode=True)
+        result = set_apply_specset(state_set, binop_node, testmode=True)
         expected_result = StateSet(
             {
                 Translator.translate_state(
@@ -116,7 +117,7 @@ class SpecTestCases(unittest.TestCase):
             r'((a:Ta /\ b:Tb) ^ (Ta <= int+float /\ Tb <= int+float)) \/ '
             r'(a:str /\ b:str)'
         )
-        result = set_apply_binop_spec(state_set, binop_node, testmode=True)
+        result = set_apply_specset(state_set, binop_node, testmode=True)
         expected_result = StateSet(
             {
                 Translator.translate_state(
@@ -153,7 +154,7 @@ class SpecTestCases(unittest.TestCase):
         state_set = Translator.translate_state_set(
             r'(a:str /\ b:str)'
         )
-        result = set_apply_binop_spec(state_set, binop_node, testmode=True)
+        result = set_apply_specset(state_set, binop_node, testmode=True)
         expected_result = StateSet(
             {
                 Translator.translate_state(
@@ -415,4 +416,12 @@ class SpecTestCases(unittest.TestCase):
                 r'str + memoryview + bytes + bytearray + range) -> (return:int))'
             )
         )
+        self.assertEqual(result, expected_result)
+
+    def test_substitute_call_state_arguments_1(self):
+        expr = 'len(a)'
+        call_node = ast.parse(expr).body[0].value
+        state = Translator.translate_state(r'(a:int+float /\ b:int+float)')
+        result = substitute_state_arguments(state, call_node)
+        expected_result = None
         self.assertEqual(result, expected_result)
