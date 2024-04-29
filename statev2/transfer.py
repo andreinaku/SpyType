@@ -58,18 +58,6 @@ def find_spec(node: ast.BinOp | ast.Call) -> StateSet:
     return raw_set
 
 
-def find_spec_from_binop(binop_node: ast.BinOp) -> StateSet:
-    spec_name = op_equiv[ast.BinOp][type(binop_node.op)]
-    raw_set = unitedspecs[spec_name]
-    return raw_set
-
-
-def find_spec_from_call(call_node: ast.Call) -> StateSet:
-    funcname = call_node.func.id
-    raw_set = unitedspecs[funcname]
-    return raw_set
-
-
 def get_specset_from_binop(binop_node: ast.BinOp) -> hset[FuncSpec]:
     raw_set = find_spec(binop_node)
     spec_set = hset()
