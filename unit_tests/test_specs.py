@@ -381,5 +381,25 @@ class SpecTestCases(unittest.TestCase):
     def test_basetype_get_builtin_1(self):
         bt = Translator.translate_basetype(r'Iterable< T1 >')
         result = bt.get_builtin_from_bt()
-        expected_result = None
+        expected_result = Translator.translate_basetype(
+            r'list< T1 > + set< T1 > + frozenset< T1 > + tuple< T1 > '
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_get_builtin_2(self):
+        bt = Translator.translate_basetype(r'Iterable< top >')
+        result = bt.get_builtin_from_bt()
+        expected_result = Translator.translate_basetype(
+            r'list< top > + set< top > + frozenset< top > + tuple< top > + '
+            r'str + memoryview + bytes + bytearray + range'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_get_builtin_3(self):
+        bt = Translator.translate_basetype(r'Iterable')
+        result = bt.get_builtin_from_bt()
+        expected_result = Translator.translate_basetype(
+            r'list< top > + set< top > + frozenset< top > + tuple< top > + dict< top, top > + '
+            r'str + memoryview + bytes + bytearray + range'
+        )
         self.assertEqual(result, expected_result)
