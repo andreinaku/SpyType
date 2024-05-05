@@ -423,5 +423,10 @@ class SpecTestCases(unittest.TestCase):
         call_node = ast.parse(expr).body[0].value
         state = Translator.translate_state(r'(a:int+float /\ b:int+float)')
         result = substitute_state_arguments(state, call_node)
-        expected_result = None
+        param_instantiated = Translator.translate_func_spec(
+            r'((a:bytearray + str + tuple< top > + memoryview + set< top > + dict< top, top > + '
+            r'frozenset< top > + range + list< top > + bytes) -> (len(a):int))'
+        )
+        expected_result = hset()
+        expected_result.add(param_instantiated)
         self.assertEqual(result, expected_result)
