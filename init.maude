@@ -40,7 +40,9 @@ fmod TYPE is
   eq leq(set< T1 >, set< T2 >) = leq(T1, T2) .  
   eq leq(frozenset< T1 >, frozenset< T2 >) = leq(T1, T2) .
   eq leq(dict< T1, T2 >, dict< T1', T2' >) = leq(T1, T1') and leq(T2, T2') .
-  eq leq(T1, T1 + T2) = true .
+  *** eq leq(T1, T1 + T2) = true .
+  ceq leq(T, T1 + T2) = true 
+    if leq(T, T1) = true . 
   eq leq(T1, T2) = false [owise].
 
   op lub : Type Type Subst -> TypeSubst .
