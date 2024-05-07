@@ -66,7 +66,7 @@ def get_specset(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
     for str_spec in raw_set:
         spec = Translator.translate_func_spec(str_spec)
         # spec_state = spec_to_state(spec)
-        spec = spec.replace_superclasses()
+        # spec = spec.replace_superclasses()
         spec_set.add(deepcopy(spec))
     return spec_set
 

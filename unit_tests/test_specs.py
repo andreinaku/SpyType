@@ -412,8 +412,7 @@ class SpecTestCases(unittest.TestCase):
         expected_result = hset()
         expected_result.add(
             Translator.translate_func_spec(
-                r'((__obj:list< top > + set< top > + frozenset< top > + tuple< top > + dict< top, top > + '
-                r'str + memoryview + bytes + bytearray + range) -> (return:int))'
+                r'((__obj:Sized) -> (return:int))'
             )
         )
         self.assertEqual(result, expected_result)
@@ -424,8 +423,7 @@ class SpecTestCases(unittest.TestCase):
         state = Translator.translate_state(r'(a:int+float /\ b:int+float)')
         result = substitute_state_arguments(state, call_node)
         param_instantiated = Translator.translate_func_spec(
-            r'((a:bytearray + str + tuple< top > + memoryview + set< top > + dict< top, top > + '
-            r'frozenset< top > + range + list< top > + bytes) -> (len(a):int))'
+            r'((a:Sized) -> (len(a):int))'
         )
         expected_result = hset()
         expected_result.add(param_instantiated)
@@ -438,5 +436,8 @@ class SpecTestCases(unittest.TestCase):
         tf = TransferFunc(state_set, False)
         tf.visit(node)
         result = tf.state_set
-        expected_result = None
+
+        expected_result = Translator.translate_state_set(
+            r'((a:T1 /\ b:int+float /\ len(a):int) ^ (T1 <= int + float /\ T1 <= Sized))'
+        )
         self.assertEqual(result, expected_result)

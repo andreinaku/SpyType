@@ -107,9 +107,15 @@ class PyType(GenericType):
             # for c_type in self.contains:
             #     retstr += str(c_type) + ','
             retstr += str(self.keys)
-            if self.values is not None:
-                retstr += ', '
-                retstr += str(self.values)
+            # if self.values is not None:
+            #     retstr += ', '
+            #     retstr += str(self.values)
+            retstr += ' >'
+        if self.ptype in mapping_types:
+            retstr += '< '
+            retstr += str(self.keys)
+            retstr += ', '
+            retstr += str(self.values)
             retstr += ' >'
         return retstr
 
