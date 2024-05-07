@@ -11,7 +11,7 @@ def state_apply_spec(state: State, spec: State, testmode=False) -> State:
     new_state.constraints = deepcopy(state.constraints)
     for expr in spec.assignment:
         if testmode is False:
-            new_basetype = Basetype({VarType(generate_id(new_state))})
+            new_basetype = Basetype({VarType(new_state.generate_id())})
         else:
             new_varname = f'T{expr}`'
             new_basetype = Basetype({VarType(new_varname)})

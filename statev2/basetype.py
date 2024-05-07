@@ -10,12 +10,6 @@ class RelOp(Enum):
     EQ = '=='
 
 
-def generate_id(state):
-    retstr = f'T{state.gen_id}'
-    state.gen_id = state.gen_id + 1
-    return retstr
-
-
 class GenericType:
     pass
 
@@ -478,6 +472,11 @@ class State:
         new_constraints = self.constraints.replace_superclasses()
         new_state = State(new_assignment, new_constraints)
         return new_state
+
+    def generate_id(self):
+        retstr = f'T{self.gen_id}'
+        self.gen_id = self.gen_id + 1
+        return retstr
 
 
 class StateSet(hset):

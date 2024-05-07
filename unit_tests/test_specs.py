@@ -1,4 +1,4 @@
-import unittest
+from testbase import *
 from statev2.transfer import *
 from pyiparser_2 import VARTYPE_REPLACE, builtin_types
 from typing import *
@@ -429,4 +429,14 @@ class SpecTestCases(unittest.TestCase):
         )
         expected_result = hset()
         expected_result.add(param_instantiated)
+        self.assertEqual(result, expected_result)
+
+    def test_visit_Call_1(self):
+        expr = 'len(a)'
+        state_set = Translator.translate_state_set(r'(a:int+float /\ b:int+float)')
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, False)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = None
         self.assertEqual(result, expected_result)

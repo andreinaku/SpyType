@@ -1,6 +1,4 @@
 import ast
-import typing
-
 import astor
 import logging
 from statev2.basetype import *
