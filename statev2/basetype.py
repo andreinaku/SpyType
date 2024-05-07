@@ -365,8 +365,8 @@ class Relation:
         return new_rel
 
     def replace_superclasses(self) -> Relation:
-        new_bt_left = self.bt_left.replace_superclasses()
-        new_bt_right = self.bt_right.replace_superclasses()
+        new_bt_left = self.bt_left.get_builtin_from_bt()
+        new_bt_right = self.bt_right.get_builtin_from_bt()
         new_rel = Relation(self.relop, new_bt_left, new_bt_right)
         return new_rel
 

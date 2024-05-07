@@ -62,6 +62,7 @@ def output_expressions(expr_list: list[str], str_state_set: str,
 def dump_to_maude(expr: str, str_state_set: str, dump=False) -> str:
     current = Translator.translate_state_set(str_state_set)
     applied = get_states(current, expr)
+    applied = applied.replace_superclasses()
     c_value = get_constraints_string_from_states(applied)
     maude_input = mod_generator('tempmod', c_value, dump_to_file=dump)
     return maude_input
@@ -69,8 +70,9 @@ def dump_to_maude(expr: str, str_state_set: str, dump=False) -> str:
 
 if __name__ == "__main__":
     start_set = r'(a:int + float /\ b:int + float + str)'
-    simple_expr = ['a+b', 'a/b', 'a>>b', 'a*b', 'a-b']
-    expr_1 = ['(a+b)/c']
+    # simple_expr = ['a+b', 'a/b', 'a>>b', 'a*b', 'a-b']
+    # simple_expr = ['(a+b)/c']
+    simple_expr = ['len(a)']
     # output_expressions(simple_expr, start_set)
     # start_set = r'(a:int+float /\ b:int+float+str /\ c:str)'
     # output_expressions(expr_1, start_set)
@@ -83,7 +85,7 @@ if __name__ == "__main__":
     strat2 = constr_module.parseStrategy('one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! ')
     with open('solver.out', 'w') as f:
         for expr in simple_expr:
-            m_input = dump_to_maude(expr, start_set, dump=False)
+            m_input = dump_to_maude(expr, start_set, dump=True)
             aux = maude.input(m_input)
             mod = maude.getModule('tempmod')
             term = mod.parseTerm('c [nil]')
