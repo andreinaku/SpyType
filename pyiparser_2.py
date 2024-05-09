@@ -235,8 +235,56 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             raise TypeError(ss)
 
     def parse_funcdef(self, node: ast.FunctionDef) -> FuncSpec:
-        param_lists = [node.args.posonlyargs, node.args.args, [node.args.vararg],
-                       node.args.kwonlyargs, [node.args.kwarg]]
+        # mark positionals which have default values
+        defaults_prefix = '__d_'
+        args_list = deepcopy(node.args.args)
+        posonly_list = deepcopy(node.args.posonlyargs)
+        kwonly_list = deepcopy(node.args.kwonlyargs)
+        default_args_list = []
+        default_posonly_list = []
+        default_kwonly_list = []
+        
+        if len(node.args.defaults) > 0:
+            posdefaults = deepcopy(node.args.defaults)
+            while len(posdefaults) > 0:
+                if len(args_list) > 0:
+                    current_arg = args_list.pop()
+                    current_arg.arg = defaults_prefix + current_arg.arg
+                    default_args_list.insert(0, deepcopy(current_arg))
+                    posdefaults.pop()
+                elif len(posonly_list) > 0:
+                    current_arg = posonly_list.pop()
+                    current_arg.arg = defaults_prefix + current_arg.arg
+                    default_posonly_list.insert(0, deepcopy(current_arg))
+                    posdefaults.pop()
+                else:
+                    raise RuntimeError(f'More defaults than arguments for {astor.to_source(node).strip()}')
+        # add the remaining positional arguments, if any, starting with the remaining args and the posonly 
+        # order is important here!
+        while len(args_list) > 0:
+            current_arg = args_list.pop()
+            default_args_list.insert(0, deepcopy(current_arg))
+        while len(posonly_list) > 0:
+            current_arg = posonly_list.pop()
+            default_posonly_list.insert(0, deepcopy(current_arg))
+        # mark keyword only parameters which have default values
+        if len(node.args.kw_defaults) > 0:
+            kwdefaults = deepcopy(node.args.kw_defaults)
+            while len(kwdefaults) > 0:
+                if len(kwonly_list) > 0:
+                    current_arg = kwonly_list.pop()
+                    current_arg.arg = defaults_prefix + current_arg.arg
+                    default_kwonly_list.insert(0, deepcopy(current_arg))
+                    kwdefaults.pop()
+        # add the remaining kwonly nodes, if any
+        while len(kwonly_list) > 0:
+            current_arg = kwonly_list.pop()
+            default_kwonly_list.insert(0, deepcopy(current_arg))
+
+        # param_lists = [node.args.posonlyargs, node.args.args, [node.args.vararg],
+        #                node.args.kwonlyargs, [node.args.kwarg]]
+        param_lists = [default_posonly_list, default_args_list, [node.args.vararg],
+                       default_kwonly_list, [node.args.kwarg]]
         param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
         func_spec = FuncSpec()
         for i in range(0, len(param_lists)):

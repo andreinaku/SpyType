@@ -129,3 +129,21 @@ class bytearray(MutableSequence[int]):
         except TypeError as te:
             result = True
         self.assertEqual(result, True)
+
+    def test_parse_funcdef_6(self):
+        code = r'def f(a: int, b: bool, c: float = 3.5) -> int: ...'
+        funcnode = ast.parse(code).body[0]
+        result = ClassdefToBasetypes().parse_funcdef(funcnode)
+        expected_result = Translator.translate_func_spec(
+            r'((a:int /\ b:bool /\ __d_c:float) -> (return:int))'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_parse_funcdef_7(self):
+        code = r'def f(a: int, b: bool, c: float = 3.5, * , d: bool = True) -> int: ...'
+        funcnode = ast.parse(code).body[0]
+        result = ClassdefToBasetypes().parse_funcdef(funcnode)
+        expected_result = Translator.translate_func_spec(
+            r'((a:int /\ b:bool /\ __d_c:float /\ __ko___d_d: bool) -> (return:int))'
+        )
+        self.assertEqual(result, expected_result)

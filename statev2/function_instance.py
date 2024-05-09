@@ -24,7 +24,7 @@ class FunctionInstance:
         self.spec = spec
         self.call_str = astor.to_source(call_node).strip()
     
-    def param_map(self):
+    def param_to_args(self):
         param_link = dict()
         param_list = list(self.spec.in_state.assignment)
         vararg = None
@@ -35,12 +35,19 @@ class FunctionInstance:
             elif param.startswith(KWARG_MARKER):
                 kwarg = param
             else:
+                # posonly, normal parameters and keyword-only, in order
                 param_link[param] = None
         arg_list = []
         for arg in self.call_node.args:
+            # take only the args without keywords
             argname = astor.to_source(arg).strip()
             arg_list.append(argname)
-        if len(param_list) > len(arg_list):
-            raise ArgumentMismatchError(f'Too few arguments in call {self.call_str}')
         for i in range(0, len(param_list)):
-            param_link[param_list[i]] = arg_list[i]
+            if param_list[i] in param_link:
+                raise ArgumentMismatchError(f'{param_list[i]} already exists. Aborting!')
+            try:
+                param_link[param_list[i]] = arg_list.pop(0)  # pop the FIRST element
+            except IndexError as inderr:
+                raise ArgumentMismatchError(f'Ran out of arguments for {param_list[i]}')
+        if len(arg_list) > 0:
+            

@@ -9,6 +9,15 @@ builtin_seqs = [set, frozenset, list, tuple]
 builtin_dicts = [dict]
 builtins = [builtin_types, builtin_seqs, builtin_dicts]
 
+# for later use, sequences with implicit types contained
+extra_sequences = {
+    range: int,
+    str: str,
+    bytes: int,
+    bytearray: int,
+    memoryview: int
+}
+
 
 def is_supported_type(tip, strict=True) -> bool:
     if strict and tip in builtin_types:

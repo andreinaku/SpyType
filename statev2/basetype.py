@@ -83,11 +83,11 @@ class PyType(GenericType):
         self.ptype = deepcopy(ptype)
         self.keys = deepcopy(keys)
         self.values = deepcopy(values)
-        if (ptype in container_ptypes) and (self.keys is None):
-            self.keys = Basetype()
-        if (ptype in mapping_types) and (self.keys is None) and (self.values is None):
-            self.keys = Basetype()
-            self.values = Basetype()
+        # if (ptype in container_ptypes) and (self.keys is None):
+        #     self.keys = Basetype()
+        # if (ptype in mapping_types) and (self.keys is None) and (self.values is None):
+        #     self.keys = Basetype()
+        #     self.values = Basetype()
 
     def __str__(self):
         if self.ptype == BottomType:
@@ -102,7 +102,8 @@ class PyType(GenericType):
             # retstr = str(self.ptype).split("'")[1]
             retstr = self.ptype.__name__
         # if self.keys is not None:
-        if self.ptype in container_ptypes:
+        # if self.ptype in container_ptypes:
+        if self.keys is not None and len(self.keys) > 0 and self.values is None:
             retstr += '< '
             # for c_type in self.contains:
             #     retstr += str(c_type) + ','
@@ -111,7 +112,7 @@ class PyType(GenericType):
             #     retstr += ', '
             #     retstr += str(self.values)
             retstr += ' >'
-        if self.ptype in mapping_types:
+        elif self.keys is not None and len(self.keys) > 0 and self.values is not None and len(self.values) > 0:
             retstr += '< '
             retstr += str(self.keys)
             retstr += ', '
