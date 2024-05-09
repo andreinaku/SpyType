@@ -247,6 +247,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
         if len(node.args.defaults) > 0:
             posdefaults = deepcopy(node.args.defaults)
             while len(posdefaults) > 0:
+                # order is important here because the defaults field treats posonly and args together
                 if len(args_list) > 0:
                     current_arg = args_list.pop()
                     current_arg.arg = defaults_prefix + current_arg.arg
@@ -259,15 +260,16 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                     posdefaults.pop()
                 else:
                     raise RuntimeError(f'More defaults than arguments for {astor.to_source(node).strip()}')
-        # add the remaining positional arguments, if any, starting with the remaining args and the posonly 
-        # order is important here!
+        # add the remaining posonly/args, if any
         while len(args_list) > 0:
             current_arg = args_list.pop()
             default_args_list.insert(0, deepcopy(current_arg))
         while len(posonly_list) > 0:
             current_arg = posonly_list.pop()
             default_posonly_list.insert(0, deepcopy(current_arg))
+        
         # mark keyword only parameters which have default values
+        # similar to above, but with keyword only parameters
         if len(node.args.kw_defaults) > 0:
             kwdefaults = deepcopy(node.args.kw_defaults)
             while len(kwdefaults) > 0:
@@ -276,19 +278,17 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                     current_arg.arg = defaults_prefix + current_arg.arg
                     default_kwonly_list.insert(0, deepcopy(current_arg))
                     kwdefaults.pop()
-        # add the remaining kwonly nodes, if any
+        # add the remaining kw only nodes, if any
         while len(kwonly_list) > 0:
             current_arg = kwonly_list.pop()
             default_kwonly_list.insert(0, deepcopy(current_arg))
 
-        # param_lists = [node.args.posonlyargs, node.args.args, [node.args.vararg],
-        #                node.args.kwonlyargs, [node.args.kwarg]]
+        # prefix with the corresponding parameter type
         param_lists = [default_posonly_list, default_args_list, [node.args.vararg],
                        default_kwonly_list, [node.args.kwarg]]
-        param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
+        param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']  # order is important here! 
         func_spec = FuncSpec()
         for i in range(0, len(param_lists)):
-            # for parameters in param_lists:
             parameters = param_lists[i]
             prefix = param_prefix[i]
             if len(parameters) == 0:
@@ -301,7 +301,6 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                         param_basetype = self.self_type
                     else:
                         param_basetype = self.parse_node_type(param.annotation)
-                        # param_basetype = get_builtin_from_bt(param_basetype)
                 except NameError:
                     ss = f'This type is unsupported: {astor.to_source(param.annotation)}'
                     raise TypeError(ss)
@@ -313,7 +312,6 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 spec_param_name = f'{prefix}{param.arg}'
                 func_spec.in_state.assignment[spec_param_name] = deepcopy(param_basetype)
         return_basetype = self.parse_node_type(node.returns)
-        # return_basetype = get_builtin_from_bt(return_basetype)
         new_basetype = return_basetype.filter_pytypes(builtin_types)
         if len(new_basetype) == 0:
             raise TypeError(f'This basetype (return) is fully unsupported: {return_basetype}')
