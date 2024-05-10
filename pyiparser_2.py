@@ -274,14 +274,17 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             kwdefaults = deepcopy(node.args.kw_defaults)
             while len(kwdefaults) > 0:
                 if len(kwonly_list) > 0:
+                    def_value = kwdefaults.pop()
                     current_arg = kwonly_list.pop()
-                    current_arg.arg = defaults_prefix + current_arg.arg
+                    if def_value is not None:    
+                        current_arg.arg = defaults_prefix + current_arg.arg
                     default_kwonly_list.insert(0, deepcopy(current_arg))
-                    kwdefaults.pop()
+        if len(kwonly_list) > 0:
+            raise RuntimeError(f'Still have kwonly arguments, when I should not')
         # add the remaining kw only nodes, if any
-        while len(kwonly_list) > 0:
-            current_arg = kwonly_list.pop()
-            default_kwonly_list.insert(0, deepcopy(current_arg))
+        # while len(kwonly_list) > 0:
+        #     current_arg = kwonly_list.pop()
+        #     default_kwonly_list.insert(0, deepcopy(current_arg))
 
         # prefix with the corresponding parameter type
         param_lists = [default_posonly_list, default_args_list, [node.args.vararg],
@@ -461,4 +464,5 @@ def generate_specs(stub_file):
 
 
 if __name__ == "__main__":
-    generate_specs('sheds/builtins.pyi')
+    # generate_specs('sheds/builtins.pyi')
+    generate_specs('sheds/test.pyi')
