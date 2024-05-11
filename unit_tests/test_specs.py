@@ -446,7 +446,7 @@ class SpecTestCases(unittest.TestCase):
         # def foo(a:int, b:int, /, c:int, *d:Any, e:int, f:int, **g:Any) -> bool: ...
         callnode = ast.parse('foo(h,i,j,k,l,m,n,e=o,f=p,w=q,x=r,y=s,z=t)').body[0].value
         spec_set = get_specset(callnode)
-        fi = FunctionInstance(callnode, None, spec_set[0])
+        fi = FunctionInstance(callnode, spec_set[0])
         result = fi.param_to_args()
         expected_result = {
             '__po_a': 'h',
@@ -468,7 +468,7 @@ class SpecTestCases(unittest.TestCase):
         # def qux(a:int, b:float, c:str) -> complex: ...
         callnode = ast.parse('qux(h,i,j)').body[0].value
         spec_set = get_specset(callnode)
-        fi = FunctionInstance(callnode, None, spec_set[0])
+        fi = FunctionInstance(callnode, spec_set[0])
         result = fi.param_to_args()
         expected_result = {
             'a': 'h',
@@ -481,7 +481,7 @@ class SpecTestCases(unittest.TestCase):
         # def corge(*args:Any, **kwargs:Any) -> bool: ...
         callnode = ast.parse('corge(a,b,c,d)').body[0].value
         spec_set = get_specset(callnode)
-        fi = FunctionInstance(callnode, None, spec_set[0])
+        fi = FunctionInstance(callnode, spec_set[0])
         result = fi.param_to_args()
         expected_result = {
             '__va_args': ['a', 'b', 'c', 'd'],
@@ -493,7 +493,7 @@ class SpecTestCases(unittest.TestCase):
         # def corge(*args:Any, **kwargs:Any) -> bool: ...
         callnode = ast.parse('corge(a,b,c,d,e=x,f=y)').body[0].value
         spec_set = get_specset(callnode)
-        fi = FunctionInstance(callnode, None, spec_set[0])
+        fi = FunctionInstance(callnode, spec_set[0])
         result = fi.param_to_args()
         expected_result = {
             '__va_args': ['a', 'b', 'c', 'd'],
@@ -508,7 +508,7 @@ class SpecTestCases(unittest.TestCase):
         # def corge(*args:Any, **kwargs:Any) -> bool: ...
         callnode = ast.parse('a+b').body[0].value
         spec_set = get_specset(callnode)
-        fi = FunctionInstance(callnode, None, spec_set[0])
+        fi = FunctionInstance(callnode, spec_set[0])
         result = fi.param_to_args()
         expected_result = {
             'self': 'a',

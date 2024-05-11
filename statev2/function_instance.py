@@ -24,9 +24,8 @@ class ArgumentMismatchError(Exception):
 
 
 class FunctionInstance:
-    def __init__(self, ast_node: ast.Call | ast.BinOp, current_state: State, spec: FuncSpec):
+    def __init__(self, ast_node: ast.Call | ast.BinOp, spec: FuncSpec):
         self.ast_node = ast_node
-        self.current_state = current_state
         self.spec = spec
         self.call_str = astor.to_source(ast_node).strip()
     
