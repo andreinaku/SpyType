@@ -503,3 +503,15 @@ class SpecTestCases(unittest.TestCase):
             }
         }
         self.assertEqual(result, expected_result)
+    
+    def test_param_link_5(self):
+        # def corge(*args:Any, **kwargs:Any) -> bool: ...
+        callnode = ast.parse('a+b').body[0].value
+        spec_set = get_specset(callnode)
+        fi = FunctionInstance(callnode, None, spec_set[0])
+        result = fi.param_to_args()
+        expected_result = {
+            'self': 'a',
+            '__value': 'b'
+        }
+        self.assertEqual(result, expected_result)

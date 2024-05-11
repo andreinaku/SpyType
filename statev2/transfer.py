@@ -3,6 +3,7 @@ from typing import Any
 from statev2.basetype import *
 from united_specs import op_equiv, unitedspecs
 from statev2.Translator import Translator
+from statev2.function_instance import FunctionInstance
 
 
 def state_apply_spec(state: State, spec: State, testmode=False) -> State:

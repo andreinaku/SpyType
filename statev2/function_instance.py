@@ -24,13 +24,13 @@ class ArgumentMismatchError(Exception):
 
 
 class FunctionInstance:
-    def __init__(self, call_node: ast.Call, current_state: State, spec: FuncSpec):
+    def __init__(self, call_node: ast.Call | ast.BinOp, current_state: State, spec: FuncSpec):
         self.call_node = call_node
         self.current_state = current_state
         self.spec = spec
         self.call_str = astor.to_source(call_node).strip()
     
-    def param_to_args(self):
+    def _param_to_args_call(self):
         param_link = dict()
         param_list = list(self.spec.in_state.assignment)
         vararg = None
@@ -101,3 +101,14 @@ class FunctionInstance:
                 new_k = KEYWORDONLY_MARKER + k
                 param_link[kwarg][new_k] = deepcopy(v)
         return param_link
+    
+    def _param_to_args_binop(self):
+        return None
+
+    def param_to_args(self):
+        if isinstance(self.call_node, ast.Call):
+            return self._param_to_args_call()
+        elif isinstance(self.call_node, ast.BinOp):
+            return self._param_to_args_binop()
+        else:
+            raise TypeError(f'Node {astor.to_source(self.call_node).strip()} is not Call or BinOp')
