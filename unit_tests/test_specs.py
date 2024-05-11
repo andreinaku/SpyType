@@ -476,3 +476,30 @@ class SpecTestCases(unittest.TestCase):
             'c': 'j',
         }
         self.assertEqual(result, expected_result)
+
+    def test_param_link_3(self):
+        # def corge(*args:Any, **kwargs:Any) -> bool: ...
+        callnode = ast.parse('corge(a,b,c,d)').body[0].value
+        spec_set = get_specset(callnode)
+        fi = FunctionInstance(callnode, None, spec_set[0])
+        result = fi.param_to_args()
+        expected_result = {
+            '__va_args': ['a', 'b', 'c', 'd'],
+            '__kw_kwargs': {}
+        }
+        self.assertEqual(result, expected_result)
+
+    def test_param_link_4(self):
+        # def corge(*args:Any, **kwargs:Any) -> bool: ...
+        callnode = ast.parse('corge(a,b,c,d,e=x,f=y)').body[0].value
+        spec_set = get_specset(callnode)
+        fi = FunctionInstance(callnode, None, spec_set[0])
+        result = fi.param_to_args()
+        expected_result = {
+            '__va_args': ['a', 'b', 'c', 'd'],
+            '__kw_kwargs': {
+                '__ko_e': 'x',
+                '__ko_f': 'y'
+            }
+        }
+        self.assertEqual(result, expected_result)
