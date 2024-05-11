@@ -2,8 +2,8 @@ import sys
 import os
 aux = os.getcwd()
 sys.path.append(aux)
-from basetype import *
-from Translator import *
+from statev2.basetype import *
+from statev2.Translator import *
 
 
 POSONLY_MARKER = '__po_'
@@ -50,6 +50,7 @@ class FunctionInstance:
             # take only the args without keywords
             argname = astor.to_source(arg).strip()
             arg_list.append(argname)
+        current_index = None
         for i in range(0, len(param_list)):
             if param_list[i].startswith(VARARG_MARKER) or param_list[i].startswith(KWARG_MARKER):
                 continue
@@ -57,11 +58,13 @@ class FunctionInstance:
                 raise ArgumentMismatchError(f'{param_list[i]} already exists. Aborting!')
             try:
                 if param_list[i].startswith(KEYWORDONLY_MARKER):
+                    current_index = i
                     break
                 param_link[param_list[i]] = arg_list.pop(0)  # pop the FIRST element
             except IndexError as inderr:
                 raise ArgumentMismatchError(f'Ran out of arguments for {param_list[i]}')
-        current_index = i
+        if current_index is None:
+            current_index = i + 1
         if len(arg_list) > 0:
             if vararg is None:
                 raise ArgumentMismatchError(f'Too many positional arguments and no vararg for {arg_list}')

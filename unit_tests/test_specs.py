@@ -2,6 +2,7 @@ from testbase import *
 from statev2.transfer import *
 from pyiparser_2 import VARTYPE_REPLACE, builtin_types
 from typing import *
+from statev2.function_instance import FunctionInstance
 
 
 class SpecTestCases(unittest.TestCase):
@@ -436,8 +437,42 @@ class SpecTestCases(unittest.TestCase):
         tf = TransferFunc(state_set, False)
         tf.visit(node)
         result = tf.state_set
-
         expected_result = Translator.translate_state_set(
             r'((a:T1 /\ b:int+float /\ len(a):int) ^ (T1 <= int + float /\ T1 <= Sized))'
         )
+        self.assertEqual(result, expected_result)
+
+    def test_param_link_1(self):
+        # def foo(a:int, b:int, /, c:int, *d:Any, e:int, f:int, **g:Any) -> bool: ...
+        callnode = ast.parse('foo(h,i,j,k,l,m,n,e=o,f=p,w=q,x=r,y=s,z=t)').body[0].value
+        spec_set = get_specset(callnode)
+        fi = FunctionInstance(callnode, None, spec_set[0])
+        result = fi.param_to_args()
+        expected_result = {
+            '__po_a': 'h',
+            '__po_b': 'i',
+            'c': 'j',
+            '__va_d': ['k', 'l', 'm', 'n'],
+            '__ko_e': 'o',
+            '__ko_f': 'p',
+            '__kw_g': {
+                '__ko_w': 'q',
+                '__ko_x': 'r',
+                '__ko_y': 's',
+                '__ko_z': 't'
+            }
+        }
+        self.assertEqual(result, expected_result)
+        
+    def test_param_link_2(self):
+        # def qux(a:int, b:float, c:str) -> complex: ...
+        callnode = ast.parse('qux(h,i,j)').body[0].value
+        spec_set = get_specset(callnode)
+        fi = FunctionInstance(callnode, None, spec_set[0])
+        result = fi.param_to_args()
+        expected_result = {
+            'a': 'h',
+            'b': 'i',
+            'c': 'j',
+        }
         self.assertEqual(result, expected_result)

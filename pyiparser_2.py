@@ -460,9 +460,14 @@ def generate_specs(stub_file):
         else:
             replaced_dict[funcname] |= funcspecs
     replaced_dict = filter_specs(replaced_dict)
-    dump_specs('united_specs.py', replaced_dict)
+    return replaced_dict
 
 
 if __name__ == "__main__":
-    # generate_specs('sheds/builtins.pyi')
-    generate_specs('sheds/test.pyi')
+    spec_dict = generate_specs('sheds/builtins.pyi')
+    # for testing purposes
+    test_dict = generate_specs('sheds/test.pyi')
+    for k, v in test_dict.items():
+        spec_dict[k] = deepcopy(v)
+    #
+    dump_specs('united_specs.py', spec_dict)
