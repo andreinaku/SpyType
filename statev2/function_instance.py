@@ -119,3 +119,18 @@ class FunctionInstance:
             return self._param_to_args_binop()
         else:
             raise TypeError(f'Node {astor.to_source(self.ast_node).strip()} is not Call or BinOp')
+
+    def instantiate_spec(self):
+        param_link = self.param_to_args()
+        new_spec = FuncSpec()
+        new_spec.out_state = deepcopy(self.spec.out_state)
+        for param_name, bt in self.spec.in_state.assignment.items():
+            # todo: check issue #13
+            if param_name not in param_link:
+                raise RuntimeError(f'Something went wrong. {param_name} does not have a link')
+            if param_name.startswith(VARARG_MARKER) or param_name.startswith(KWARG_MARKER):
+                new_spec.in_state.assignment[param_name] = deepcopy(bt)
+            else:
+                new_spec.in_state.assignment[param_link[param_name]] = deepcopy(bt)
+        return new_spec
+    

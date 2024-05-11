@@ -515,3 +515,12 @@ class SpecTestCases(unittest.TestCase):
             '__value': 'b'
         }
         self.assertEqual(result, expected_result)
+
+    def test_instantiate_spec_1(self):
+        # def corge(*args:Any, **kwargs:Any) -> bool: ...
+        callnode = ast.parse('a+b').body[0].value
+        spec_set = get_specset(callnode)
+        fi = FunctionInstance(callnode, spec_set[0])
+        result = fi.instantiate_spec()
+        expected_result = None
+        self.assertEqual(result, expected_result)
