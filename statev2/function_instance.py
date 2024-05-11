@@ -24,11 +24,11 @@ class ArgumentMismatchError(Exception):
 
 
 class FunctionInstance:
-    def __init__(self, call_node: ast.Call | ast.BinOp, current_state: State, spec: FuncSpec):
-        self.call_node = call_node
+    def __init__(self, ast_node: ast.Call | ast.BinOp, current_state: State, spec: FuncSpec):
+        self.ast_node = ast_node
         self.current_state = current_state
         self.spec = spec
-        self.call_str = astor.to_source(call_node).strip()
+        self.call_str = astor.to_source(ast_node).strip()
     
     def _param_to_args_call(self):
         param_link = dict()
@@ -46,7 +46,7 @@ class FunctionInstance:
                 # posonly, normal parameters and keyword-only, in order
                 param_link[param] = None
         arg_list = []
-        for arg in self.call_node.args:
+        for arg in self.ast_node.args:
             # take only the args without keywords
             argname = astor.to_source(arg).strip()
             arg_list.append(argname)
@@ -74,7 +74,7 @@ class FunctionInstance:
                 vararg_list.append(deepcopy(current_arg))
             param_link[vararg] = vararg_list
         kw_dict = {}
-        for kw in self.call_node.keywords:
+        for kw in self.ast_node.keywords:
             kw_formal = deepcopy(kw.arg)
             kw_actual = astor.to_source(kw.value).strip()
             if kw_formal in kw_dict:
@@ -103,12 +103,20 @@ class FunctionInstance:
         return param_link
     
     def _param_to_args_binop(self):
-        return None
+        param_link = dict()
+        param_list = list(self.spec.in_state.assignment)
+        if len(param_list) != 2:
+            raise TypeError(f'Node {astor.to_source(self.ast_node).strip()} is a BinOp with more than 2 operands?')
+        param_link = {
+            param_list[0]: astor.to_source(self.ast_node.left).strip(),
+            param_list[1]: astor.to_source(self.ast_node.right).strip()
+        }
+        return param_link
 
     def param_to_args(self):
-        if isinstance(self.call_node, ast.Call):
+        if isinstance(self.ast_node, ast.Call):
             return self._param_to_args_call()
-        elif isinstance(self.call_node, ast.BinOp):
+        elif isinstance(self.ast_node, ast.BinOp):
             return self._param_to_args_binop()
         else:
-            raise TypeError(f'Node {astor.to_source(self.call_node).strip()} is not Call or BinOp')
+            raise TypeError(f'Node {astor.to_source(self.ast_node).strip()} is not Call or BinOp')
