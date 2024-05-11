@@ -101,18 +101,3 @@ class FunctionInstance:
                 new_k = KEYWORDONLY_MARKER + k
                 param_link[kwarg][new_k] = deepcopy(v)
         return param_link
-
-
-if __name__ == "__main__":
-    spec = Translator.translate_func_spec(
-        # r'((__po_a:int /\ __po_b:float /\ __d_c:bool /\ __ko___d_d:str) -> (return:bool))'
-        r'((__po_a:int /\ __po_b:int /\ c:int /\ __va_d:top /\ __ko_e:int /\ __ko_f:int /\ __kw_g:top) -> (return:bool))'
-    )
-    # callnode = ast.parse('f(x, y, z, d=foo)').body[0].value
-
-    # def foo(a:int, b:int, /, c:int, *d:Any, e:int, f:int, **g:Any) -> bool: ...
-    callnode = ast.parse('foo(h,i,j,k,l,m,n,e=o,f=p,w=q,x=r,y=s,z=t)').body[0].value
-
-    fi = FunctionInstance(callnode, None, spec)
-    aux = fi.param_to_args()
-    print('ok')
