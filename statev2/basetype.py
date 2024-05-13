@@ -567,3 +567,13 @@ class FuncSpec:
         new_out = self.out_state.replace_superclasses()
         new_funcspec = FuncSpec(new_in, new_out)
         return new_funcspec
+
+
+# for later use, sequences with implicit types contained
+extra_sequences = {
+    PyType(range):      Basetype({PyType(int)}),
+    PyType(str):        Basetype({PyType(str)}),
+    PyType(bytes):      Basetype({PyType(int)}),
+    PyType(bytearray):  Basetype({PyType(int)}),
+    PyType(memoryview): Basetype({PyType(int)})
+}

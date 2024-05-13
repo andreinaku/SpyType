@@ -505,7 +505,6 @@ class SpecTestCases(unittest.TestCase):
         self.assertEqual(result, expected_result)
     
     def test_param_link_5(self):
-        # def corge(*args:Any, **kwargs:Any) -> bool: ...
         callnode = ast.parse('a+b').body[0].value
         spec_set = get_specset(callnode)
         fi = FunctionInstance(callnode, spec_set[0])
@@ -517,10 +516,22 @@ class SpecTestCases(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_instantiate_spec_1(self):
-        # def corge(*args:Any, **kwargs:Any) -> bool: ...
-        callnode = ast.parse('a+b').body[0].value
+        callnode = ast.parse('a>>b').body[0].value
         spec_set = get_specset(callnode)
         fi = FunctionInstance(callnode, spec_set[0])
-        result = fi.instantiate_spec()
-        expected_result = None
+        result = fi.instantiate_spec(astor.to_source(callnode).strip())
+        expected_result = Translator.translate_func_spec(
+            r'((a:int /\ b:int) -> ((a >> b):int))'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_instantiate_spec_2(self):
+        # def corge(*args:Any, **kwargs:Any) -> bool: ...
+        callnode = ast.parse('corge(a, b, c=x, d=y)').body[0].value
+        spec_set = get_specset(callnode)
+        fi = FunctionInstance(callnode, spec_set[0])
+        result = fi.instantiate_spec(astor.to_source(callnode).strip())
+        expected_result = Translator.translate_func_spec(
+            r'((a:top /\ b:top /\ x:top /\ y:top) -> (corge(a, b, c=x, d=y):bool))'
+        )
         self.assertEqual(result, expected_result)
