@@ -134,14 +134,15 @@ class FunctionInstance:
                     raise TypeError(f'{bt} for the parameter {param_name} should be only one type, not a sum. Aborting!')
                 pt = bt[0]
                 if isinstance(pt, VarType):
-                    contained_bt = Basetype({deepcopy(pt)})
+                    # contained_bt = Basetype({deepcopy(pt)})
+                    contained_bt = Basetype({PyType(TopType)})
                 elif isinstance(pt, PyType):
                     if pt.keys is not None:
                         if pt.values is not None:
                             raise TypeError(f'Mapping pairs not supported yet for {bt} for the parameter {param_name}')
-                        contained_bt = deepcopy(bt.keys)
+                        contained_bt = deepcopy(pt.keys)
                     elif pt in extra_sequences:
-                        contained_bt = deepcopy(extra_sequences[bt])
+                        contained_bt = deepcopy(extra_sequences[pt])
                     elif pt == PyType(TopType):
                         contained_bt = Basetype({deepcopy(pt)})
                     else:

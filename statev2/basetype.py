@@ -229,14 +229,17 @@ class Basetype(hset):
                 else:
                     new_bt.add(deepcopy(tip))
             elif isinstance(tip, PyType):
-                if tip.ptype not in container_ptypes and tip.ptype not in mapping_types:
+                # if tip.ptype not in container_ptypes and tip.ptype not in mapping_types:
+                if tip.keys is None and tip.values is None:
                     new_bt.add(deepcopy(tip))
-                elif tip.ptype in mapping_types:
+                # elif tip.ptype in mapping_types:
+                elif tip.keys is not None and tip.values is not None:
                     new_keys = tip.keys.replace_vartype(to_replace, replace_with)
                     new_values = tip.values.replace_vartype(to_replace, replace_with)
                     newtip = PyType(tip.ptype, keys=new_keys, values=new_values)
                     new_bt.add(newtip)
-                elif tip.ptype in container_ptypes:
+                # elif tip.ptype in container_ptypes:
+                elif tip.keys is not None:
                     new_keys = tip.keys.replace_vartype(to_replace, replace_with)
                     newtip = PyType(tip.ptype, keys=new_keys)
                     new_bt.add(newtip)

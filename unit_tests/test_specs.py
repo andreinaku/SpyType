@@ -535,3 +535,36 @@ class SpecTestCases(unittest.TestCase):
             r'((a:top /\ b:top /\ x:top /\ y:top) -> (corge(a, b, c=x, d=y):bool))'
         )
         self.assertEqual(result, expected_result)
+
+    def test_instantiate_spec_3(self):
+        # def fred(*args:str, **kwargs:str) -> bool: ...
+        callnode = ast.parse('fred(a, b, c=x, d=y)').body[0].value
+        spec_set = get_specset(callnode)
+        fi = FunctionInstance(callnode, spec_set[0])
+        result = fi.instantiate_spec(astor.to_source(callnode).strip())
+        expected_result = Translator.translate_func_spec(
+            r'((a:str /\ b:str /\ x:str /\ y:str) -> (fred(a, b, c=x, d=y):bool))'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_instantiate_spec_4(self):
+        # def thud(*args: _KT, **kwargs: _VT) -> bool: ...
+        callnode = ast.parse('thud(a, b, c=x, d=y)').body[0].value
+        spec_set = get_specset(callnode)
+        fi = FunctionInstance(callnode, spec_set[0])
+        result = fi.instantiate_spec(astor.to_source(callnode).strip())
+        expected_result = Translator.translate_func_spec(
+            r'((a:top /\ b:top /\ x:top /\ y:top) -> (thud(a, b, c=x, d=y):bool))'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_instantiate_spec_5(self):
+        # def waldo(*args: Iterable[_KT] , **kwargs: Iterable[_VT]) -> bool: ...
+        callnode = ast.parse('waldo(a, b, c=x, d=y)').body[0].value
+        spec_set = get_specset(callnode)
+        fi = FunctionInstance(callnode, spec_set[0])
+        result = fi.instantiate_spec(astor.to_source(callnode).strip())
+        expected_result = Translator.translate_func_spec(
+            r'((a:T?1 /\ b:T?1 /\ x:T?2 /\ y:T?2) -> (waldo(a, b, c=x, d=y):bool))'
+        )
+        self.assertEqual(result, expected_result)
