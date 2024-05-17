@@ -77,7 +77,7 @@ class SpecTestCases(unittest.TestCase):
         expr = 'a / b'
         binop_node = ast.parse(expr).body[0].value
         state = Translator.translate_state(r'(a:int+float /\ b:int+float)')
-        result = substitute_state_arguments(state, binop_node)
+        result = substitute_state_arguments(binop_node)
         expected_result = hset(
             {
                 Translator.translate_func_spec(r'((a:complex /\ b:complex) -> ((a / b):complex))'),
@@ -422,7 +422,7 @@ class SpecTestCases(unittest.TestCase):
         expr = 'len(a)'
         call_node = ast.parse(expr).body[0].value
         state = Translator.translate_state(r'(a:int+float /\ b:int+float)')
-        result = substitute_state_arguments(state, call_node)
+        result = substitute_state_arguments(call_node)
         param_instantiated = Translator.translate_func_spec(
             r'((a:Sized) -> (len(a):int))'
         )
@@ -439,6 +439,22 @@ class SpecTestCases(unittest.TestCase):
         result = tf.state_set
         expected_result = Translator.translate_state_set(
             r'((a:T1 /\ b:int+float /\ len(a):int) ^ (T1 <= int + float /\ T1 <= Sized))'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_visit_Call_2(self):
+        # def waldo(*args: Iterable[_KT] , **kwargs: Iterable[_VT]) -> bool: ...
+        # callnode = ast.parse('waldo(a, b, c=x, d=y)').body[0].value
+        expr = 'waldo(a, b, c=x, d=y)'
+        state_set = Translator.translate_state_set(r'(a:int+float /\ b:int+float /\ x:float /\ y:str)')
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, False)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+            r'((a:T1 /\ b:T2 /\ x:T3 /\ y:T4 /\ waldo(a, b, c=x, d=y):bool) ^ '
+            r'(T1 <= int + float /\ T1 <= T?1 /\ T2 <= int+float /\ T2 <= T?1 /\ '
+            r'T3 <= float /\ T3 <= T?2 /\ T4 <= str /\ T4 <= T?2))'
         )
         self.assertEqual(result, expected_result)
 

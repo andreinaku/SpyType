@@ -72,31 +72,17 @@ def get_specset(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
     return spec_set
 
 
-def substitute_state_arguments(state: State, node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
+def substitute_state_arguments(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
     if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):
         raise TypeError(f'Node {astor.to_source(node)} cannot have arguments (afaik)')
     
+    interim_spec_set = hset()
     spec_set = get_specset(node)
-    return_name = 'return'
-    
-    if isinstance(node, ast.BinOp):
-        op_args = (astor.to_source(node.left).strip(), astor.to_source(node.right).strip())
-    else:
-        op_args = []  # todo
-        for _arg in node.args:
-            op_args.append(astor.to_source(_arg).strip())
-        op_args = tuple(op_args)
-    new_set = hset()
     for spec in spec_set:
-        new_spec = FuncSpec()
-        i = 0
-        for expr in spec.in_state.assignment:
-            new_spec.in_state.assignment[op_args[i]] = deepcopy(spec.in_state.assignment[expr])
-            i = i + 1
-        op_expr = astor.to_source(node).strip()
-        new_spec.out_state.assignment[op_expr] = deepcopy(spec.out_state.assignment[return_name])
-        new_set.add(deepcopy(new_spec))
-    return new_set
+        fi = FunctionInstance(node, spec)
+        interim_spec = fi.instantiate_spec(astor.to_source(node).strip())
+        interim_spec_set.add(deepcopy(interim_spec))
+    return interim_spec_set
 
 
 def set_apply_specset(state_set: StateSet, node: ast.BinOp | ast.Call, testmode: bool = False) -> StateSet:
@@ -104,7 +90,7 @@ def set_apply_specset(state_set: StateSet, node: ast.BinOp | ast.Call, testmode:
         raise TypeError(f'Node {astor.to_source(node)} cannot have specs to apply (afaik)')
     new_set = StateSet()
     for state in state_set:
-        interim_spec_set = substitute_state_arguments(state, node)
+        interim_spec_set = substitute_state_arguments(node)
         for spec in interim_spec_set:
             new_state = state_apply_spec(state, spec.in_state, testmode)
             for expr, bt in spec.out_state.assignment.items():
