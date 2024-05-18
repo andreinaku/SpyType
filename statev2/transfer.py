@@ -141,8 +141,55 @@ class TransferFunc(ast.NodeVisitor):
             new_set.add(new_state)
         self.state_set = new_set
 
-    def visit_Assign(self, node: Assign):
-        self.visit(node.value)
+    def state_apply_assign(self, state: State, node: Assign):
+        new_state = deepcopy(state)
         for target in node.targets:
-            target_name = astor.to_source(target).strip()
-            
+            lhs_is_container = isinstance(target, ast.List) or isinstance(target, ast.Tuple)
+            rhs_is_container = isinstance(node.value, ast.List) or isinstance(node.value, ast.Tuple)
+            if lhs_is_container and rhs_is_container:
+                # a, b = c, d
+                if len(target.elts) != len(node.value.elts):
+                    raise TypeError(f'{astor.to_source(target.strip())} and {astor.to_source(node.value).strip()} have different lengths')
+                for i in range(0, len(target.elts)):
+                    # todo: these are ast nodes; be careful!
+                    target_src = astor.to_source(target.elts[i]).strip()
+                    value_src = astor.to_source(node.value.elts[i]).strip()
+                    new_state.assignment[target_src] = deepcopy(new_state.assignment[value_src])
+            elif lhs_is_container and not rhs_is_container:
+                # a, b = expr
+                self.visit(node.value)
+                value_src = astor.to_source(node.value).strip()
+                contained_bt = Basetype()
+                value_bt = new_state.assignment[value_src]
+                for ptip in value_bt:
+                    if isinstance(ptip, PyType) and ptip.keys is not None:
+                        contained_bt |= ptip.keys
+                if len(contained_bt) > 0:
+                    # expr = container< ceva >
+                    for elem in target.elts:
+                        elem_src = astor.to_source(elem).strip()
+                        new_state.assignment[elem_src] = deepcopy(contained_bt)
+                else:
+                    # expr = not container
+                    for elem in target.elts:
+                        elem_src = astor.to_source(elem).strip()
+                        if elem_src not in new_state.assignment:
+                            new_bt = Basetype({VarType(new_state.generate_id())})
+                            new_state.assignment[elem_src] = new_bt
+                        else:
+                            new_bt = deepcopy(new_state.assignment[elem_src])
+                        new_contained |= deepcopy(new_bt)
+                    expr_bt = Basetype({PyType(Iterable, new_contained)})
+                    # todo: replace basetype in state?
+                    raise RuntimeError('not supported yet')
+            else:
+                raise RuntimeError('not supported yet')
+        return new_state
+
+    def visit_Assign(self, node: Assign):
+        new_state_set = StateSet()
+        self.visit(node.value)
+        for state in self.state_set:
+            new_state = self.state_apply_assign(state, node)
+            new_state_set.add(new_state)
+        self.state_set = deepcopy(new_state_set)

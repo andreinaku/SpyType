@@ -584,3 +584,31 @@ class SpecTestCases(unittest.TestCase):
             r'((a:T?1 /\ b:T?1 /\ x:T?2 /\ y:T?2) -> (waldo(a, b, c=x, d=y):bool))'
         )
         self.assertEqual(result, expected_result)
+
+    def test_state_apply_assign_1(self):
+        state_set = Translator.translate_state_set(
+            r'((a:Ta /\ b:Tb /\ c:Tc /\ d:Td) ^ (Ta <= Tb))'
+        )
+        code = 'a, b = c, d'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+            r'((a:Tc /\ b:Td /\ c:Tc /\ d:Td /\ (c, d):tuple< Tc + Td >) ^ (Ta <= Tb))'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_state_apply_assign_2(self):
+        state_set = Translator.translate_state_set(
+            r'((a:Ta /\ b:Tb /\ c:list< Tc >) ^ (Ta <= Tb))'
+        )
+        code = 'a, b = c'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+            r'((a:Tc /\ b:Tc /\ c:list< Tc >) ^ (Ta <= Tb))'
+        )
+        self.assertEqual(result, expected_result)
