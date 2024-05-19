@@ -612,3 +612,17 @@ class SpecTestCases(unittest.TestCase):
             r'((a:Tc /\ b:Tc /\ c:list< Tc >) ^ (Ta <= Tb))'
         )
         self.assertEqual(result, expected_result)
+
+    def test_state_apply_assign_3(self):
+        state_set = Translator.translate_state_set(
+            r'((a:Ta /\ b:Tb /\ c:int + list< float > + tuple< str > + str) ^ (Ta <= Tb))'
+        )
+        code = 'a, b = c'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+            r'((a:float + str /\ b:float + str /\ c:list< float > + tuple< str > + str) ^ (Ta <= Tb))'
+        )
+        self.assertEqual(result, expected_result)
