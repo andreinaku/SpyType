@@ -161,6 +161,7 @@ class TransferFunc(ast.NodeVisitor):
                 contained_bt = Basetype()
                 value_bt = new_state.assignment[value_src]
                 new_value_bt = Basetype()
+                value_typevars = set()
                 for ptip in value_bt:
                     if isinstance(ptip, PyType) and ptip.keys is not None:
                         contained_bt |= ptip.keys
@@ -168,24 +169,22 @@ class TransferFunc(ast.NodeVisitor):
                     elif ptip in extra_sequences:
                         contained_bt |= extra_sequences[ptip]
                         new_value_bt.add(deepcopy(ptip))
-                if len(contained_bt) > 0:
+                    elif isinstance(ptip, VarType):
+                        value_typevars.add(deepcopy(ptip))
+                        new_value_bt.add(deepcopy(ptip))
+                if len(contained_bt) > 0 or len(value_typevars) > 0:
                     # expr = container< ceva >
-                    for elem in target.elts:
-                        elem_src = astor.to_source(elem).strip()
-                        new_state.assignment[elem_src] = deepcopy(contained_bt)
+                    if len(contained_bt) > 0:
+                        for elem in target.elts:
+                            elem_src = astor.to_source(elem).strip()
+                            new_state.assignment[elem_src] = deepcopy(contained_bt)
+                    if len(value_typevars) > 0:
+                        for tv in value_typevars:
+                            aux_iterable_bt = Basetype({PyType(Iterable, deepcopy(contained_bt))})
+                            aux_bt_tv = Basetype({deepcopy(tv)})
+                            new_state.constraints.add(Relation(RelOp.LEQ, aux_bt_tv, aux_iterable_bt))
                     new_state.assignment[value_src] = new_value_bt
                 else:
-                    # expr = no containers
-                    for elem in target.elts:
-                        elem_src = astor.to_source(elem).strip()
-                        if elem_src not in new_state.assignment:
-                            new_bt = Basetype({VarType(new_state.generate_id())})
-                            new_state.assignment[elem_src] = new_bt
-                        else:
-                            new_bt = deepcopy(new_state.assignment[elem_src])
-                        new_contained |= deepcopy(new_bt)
-                    expr_bt = Basetype({PyType(Iterable, new_contained)})
-                    # todo: replace basetype in state?
                     raise RuntimeError('not supported yet')
             else:
                 raise RuntimeError('not supported yet')
