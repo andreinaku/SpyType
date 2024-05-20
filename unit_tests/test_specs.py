@@ -371,6 +371,64 @@ class SpecTestCases(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
 
+    def test_visit_List_1(self):
+        expr = '[2, 3.5]'
+        state_set = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb) \/ (a:int /\ b:int)'
+        )
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, True)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb /\ 2:int /\ 3.5:float /\ [2, 3.5]:list< int + float >) \/ '
+            r'(a:int /\ b:int /\ 2:int /\ 3.5:float /\ [2, 3.5]:list< int + float >)'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_visit_List_2(self):
+        expr = '[a, b]'
+        state_set = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb) \/ (a:int /\ b:int)'
+        )
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, True)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb /\ [a, b]: list< Ta + Tb >) \/ (a:int /\ b:int /\ [a, b]: list< int >)'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_visit_Set_1(self):
+        expr = '{2, 3.5}'
+        state_set = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb) \/ (a:int /\ b:int)'
+        )
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, True)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb /\ 2:int /\ 3.5:float /\ {2, 3.5}:set< int + float >) \/ '
+            r'(a:int /\ b:int /\ 2:int /\ 3.5:float /\ {2, 3.5}:set< int + float >)'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_visit_Set_2(self):
+        expr = '{a, b}'
+        state_set = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb) \/ (a:int /\ b:int)'
+        )
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, True)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb /\ {a, b}: set< Ta + Tb >) \/ (a:int /\ b:int /\ {a, b}: set< int >)'
+        )
+        self.assertEqual(result, expected_result)
+
     def test_replace_superclasses_1(self):
         state_set = Translator.translate_state_set(r'__obj:Sized')
         result = state_set.replace_superclasses()
@@ -638,5 +696,76 @@ class SpecTestCases(unittest.TestCase):
         result = tf.state_set
         expected_result = Translator.translate_state_set(
             r'((a:float + str /\ b:float + str /\ c:list< float > + tuple< str > + str + Tc) ^ (Ta <= Tb /\ Tc <= Iterable< float + str >))'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_state_apply_assign_5(self):
+        state_set = Translator.translate_state_set(
+            r'((a:Ta /\ b:Tb /\ c:int + list< float > + tuple< str > + str + Tc) ^ (Ta <= Tb))'
+        )
+        code = 'a = c'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+            r'((a:int + list< float > + tuple< str > + str + Tc /\ b:Tb /\ c:int + list< float > + tuple< str > + str + Tc) ^ (Ta <= Tb))'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_state_apply_assign_6(self):
+        state_set = Translator.translate_state_set(
+            r'((a:Ta /\ b:Tb /\ c:str) ^ (Ta <= Tb))'
+        )
+        code = 'a = c'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+           r'((a:str /\ b:Tb /\ c:str) ^ (Ta <= Tb))'
+        )
+        self.assertEqual(result, expected_result)
+
+    #a,b = 1,2.5
+    def test_state_apply_assign_7(self):
+        state_set = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb)'
+        )
+        code = 'a,b = 1,2.5'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+           r'(a:int /\ b:float /\ 1:int /\ 2.5:float /\ (1, 2.5):tuple< int + float >)'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_state_apply_assign_8(self):
+        state_set = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb)'
+        )
+        code = 'a,b = [1,2.5]'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+           r'(a:int /\ b:float /\ 1:int /\ 2.5:float /\ [1, 2.5]:list< int + float >)'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_state_apply_assign_9(self):
+        state_set = Translator.translate_state_set(
+            r'(a:Ta /\ b:Tb)'
+        )
+        code = '[a,b] = [1,2.5]'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+           r'(a:int /\ b:float /\ 1:int /\ 2.5:float /\ [1, 2.5]:list< int + float >)'
         )
         self.assertEqual(result, expected_result)
