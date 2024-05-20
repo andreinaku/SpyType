@@ -185,6 +185,15 @@ class TransferFunc(ast.NodeVisitor):
                     value_bt = new_state.assignment[value_src]
                     new_value_bt = Basetype()
                     value_typevars = set()
+                    target_srcs = []
+                    for target_elem_node in target.elts:
+                        target_elem_src = astor.to_source(target_elem_node).strip()
+                        if target_elem_src not in target_srcs:
+                            target_srcs.append(target_elem_src)
+                    for target_elem_src in target_srcs:
+                        if target_elem_src not in new_state.assignment:
+                            new_bt = Basetype({VarType(new_state.generate_id())})
+                            new_state.assignment[target_elem_src] = new_bt
                     for ptip in value_bt:
                         if isinstance(ptip, PyType) and ptip.keys is not None:
                             contained_bt |= ptip.keys
@@ -198,14 +207,18 @@ class TransferFunc(ast.NodeVisitor):
                     if len(contained_bt) > 0 or len(value_typevars) > 0:
                         # expr = container< ceva >
                         if len(contained_bt) > 0:
-                            for elem in target.elts:
-                                elem_src = astor.to_source(elem).strip()
-                                new_state.assignment[elem_src] = deepcopy(contained_bt)
-                        if len(value_typevars) > 0:
+                            for target_elem_src in target_srcs:
+                                new_state.assignment[target_elem_src] = deepcopy(contained_bt)
+                        iterable_pytype = PyType(Iterable)
+                        iterable_contained = Basetype()
+                        for target_elem_src in target_srcs:
+                            iterable_contained |= deepcopy(new_state.assignment[target_elem_src])
+                        iterable_pytype.keys = iterable_contained
+                        value_condition = Basetype({iterable_pytype})
+                        if len(value_typevars) > 0: 
                             for tv in value_typevars:
-                                aux_iterable_bt = Basetype({PyType(Iterable, deepcopy(contained_bt))})
                                 aux_bt_tv = Basetype({deepcopy(tv)})
-                                new_state.constraints.add(Relation(RelOp.LEQ, aux_bt_tv, aux_iterable_bt))
+                                new_state.constraints.add(Relation(RelOp.LEQ, aux_bt_tv, value_condition))
                         new_state.assignment[value_src] = new_value_bt
             else:  # todo: a = b here (no tuples)
                 new_state = deepcopy(state)

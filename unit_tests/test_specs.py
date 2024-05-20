@@ -797,3 +797,18 @@ class SpecTestCases(unittest.TestCase):
            r'(a:int /\ b:float /\ 1:int /\ 2.5:float /\ [1, 2.5]:list< int + float >)'
         )
         self.assertEqual(result, expected_result)
+
+    def test_state_apply_assign_10(self):
+        state_set = Translator.translate_state_set(
+            r'(board:Tb /\ pos:Tp)'
+        )
+        code = 'row, column = pos'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+            r'((board:Tb /\ pos:Tp /\ row:T1 /\ column:T2) ^ (Tp <= Iterable< T1 + T2 >))'
+        )
+        # expected_result = None
+        self.assertEqual(result, expected_result)
