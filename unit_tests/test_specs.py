@@ -640,3 +640,31 @@ class SpecTestCases(unittest.TestCase):
             r'((a:float + str /\ b:float + str /\ c:list< float > + tuple< str > + str + Tc) ^ (Ta <= Tb /\ Tc <= Iterable< float + str >))'
         )
         self.assertEqual(result, expected_result)
+
+    def test_state_apply_assign_5(self):
+        state_set = Translator.translate_state_set(
+            r'((a:Ta /\ b:Tb /\ c:int + list< float > + tuple< str > + str + Tc) ^ (Ta <= Tb))'
+        )
+        code = 'a = c'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+            r'((a:int + list< float > + tuple< str > + str + Tc /\ b:Tb /\ c:int + list< float > + tuple< str > + str + Tc) ^ (Ta <= Tb))'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_state_apply_assign_6(self):
+        state_set = Translator.translate_state_set(
+            r'((a:Ta /\ b:Tb /\ c:str) ^ (Ta <= Tb))'
+        )
+        code = 'a = c'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = Translator.translate_state_set(
+           r'((a:str /\ b:Tb /\ c:str) ^ (Ta <= Tb))'
+        )
+        self.assertEqual(result, expected_result)

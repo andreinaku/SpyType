@@ -143,51 +143,52 @@ class TransferFunc(ast.NodeVisitor):
 
     def state_apply_assign(self, state: State, node: Assign):
         new_state = deepcopy(state)
+        value_src = astor.to_source(node.value).strip()
         for target in node.targets:
             lhs_is_container = isinstance(target, ast.List) or isinstance(target, ast.Tuple)
             rhs_is_container = isinstance(node.value, ast.List) or isinstance(node.value, ast.Tuple)
-            if lhs_is_container and rhs_is_container:
-                # a, b = c, d
-                if len(target.elts) != len(node.value.elts):
-                    raise TypeError(f'{astor.to_source(target.strip())} and {astor.to_source(node.value).strip()} have different lengths')
-                for i in range(0, len(target.elts)):
-                    target_src = astor.to_source(target.elts[i]).strip()
-                    value_src = astor.to_source(node.value.elts[i]).strip()
-                    new_state.assignment[target_src] = deepcopy(new_state.assignment[value_src])
-            elif lhs_is_container and not rhs_is_container:
-                # a, b = expr
-                self.visit(node.value)
-                value_src = astor.to_source(node.value).strip()
-                contained_bt = Basetype()
-                value_bt = new_state.assignment[value_src]
-                new_value_bt = Basetype()
-                value_typevars = set()
-                for ptip in value_bt:
-                    if isinstance(ptip, PyType) and ptip.keys is not None:
-                        contained_bt |= ptip.keys
-                        new_value_bt.add(deepcopy(ptip))
-                    elif ptip in extra_sequences:
-                        contained_bt |= extra_sequences[ptip]
-                        new_value_bt.add(deepcopy(ptip))
-                    elif isinstance(ptip, VarType):
-                        value_typevars.add(deepcopy(ptip))
-                        new_value_bt.add(deepcopy(ptip))
-                if len(contained_bt) > 0 or len(value_typevars) > 0:
-                    # expr = container< ceva >
-                    if len(contained_bt) > 0:
-                        for elem in target.elts:
-                            elem_src = astor.to_source(elem).strip()
-                            new_state.assignment[elem_src] = deepcopy(contained_bt)
-                    if len(value_typevars) > 0:
-                        for tv in value_typevars:
-                            aux_iterable_bt = Basetype({PyType(Iterable, deepcopy(contained_bt))})
-                            aux_bt_tv = Basetype({deepcopy(tv)})
-                            new_state.constraints.add(Relation(RelOp.LEQ, aux_bt_tv, aux_iterable_bt))
-                    new_state.assignment[value_src] = new_value_bt
+            target_src = astor.to_source(target).strip()
+            if lhs_is_container:
+                if rhs_is_container:
+                    # a, b = c, d
+                    if len(target.elts) != len(node.value.elts):
+                        raise TypeError(f'{astor.to_source(target.strip())} and {astor.to_source(node.value).strip()} have different lengths')
+                    for i in range(0, len(target.elts)):
+                        target_elem_src = astor.to_source(target.elts[i]).strip()
+                        value_elem_src = astor.to_source(node.value.elts[i]).strip()
+                        new_state.assignment[target_elem_src] = deepcopy(new_state.assignment[value_elem_src])
                 else:
-                    raise RuntimeError('not supported yet')
-            else:
-                raise RuntimeError('not supported yet')
+                    # a, b = expr
+                    self.visit(node.value)
+                    contained_bt = Basetype()
+                    value_bt = new_state.assignment[value_src]
+                    new_value_bt = Basetype()
+                    value_typevars = set()
+                    for ptip in value_bt:
+                        if isinstance(ptip, PyType) and ptip.keys is not None:
+                            contained_bt |= ptip.keys
+                            new_value_bt.add(deepcopy(ptip))
+                        elif ptip in extra_sequences:
+                            contained_bt |= extra_sequences[ptip]
+                            new_value_bt.add(deepcopy(ptip))
+                        elif isinstance(ptip, VarType):
+                            value_typevars.add(deepcopy(ptip))
+                            new_value_bt.add(deepcopy(ptip))
+                    if len(contained_bt) > 0 or len(value_typevars) > 0:
+                        # expr = container< ceva >
+                        if len(contained_bt) > 0:
+                            for elem in target.elts:
+                                elem_src = astor.to_source(elem).strip()
+                                new_state.assignment[elem_src] = deepcopy(contained_bt)
+                        if len(value_typevars) > 0:
+                            for tv in value_typevars:
+                                aux_iterable_bt = Basetype({PyType(Iterable, deepcopy(contained_bt))})
+                                aux_bt_tv = Basetype({deepcopy(tv)})
+                                new_state.constraints.add(Relation(RelOp.LEQ, aux_bt_tv, aux_iterable_bt))
+                        new_state.assignment[value_src] = new_value_bt
+            else:  # todo: a = b here (no tuples)
+                new_state = deepcopy(state)
+                new_state.assignment[target_src] = deepcopy(new_state.assignment[value_src])
         return new_state
 
     def visit_Assign(self, node: Assign):
