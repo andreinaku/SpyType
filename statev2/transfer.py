@@ -166,6 +166,7 @@ class TransferFunc(ast.NodeVisitor):
     def state_apply_assign(self, state: State, node: Assign):
         new_state = deepcopy(state)
         value_src = astor.to_source(node.value).strip()
+        value_src = astor.to_source(node.value).strip()
         for target in node.targets:
             lhs_is_container = isinstance(target, ast.List) or isinstance(target, ast.Tuple)
             rhs_is_container = isinstance(node.value, ast.List) or isinstance(node.value, ast.Tuple)
