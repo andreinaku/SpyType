@@ -261,6 +261,14 @@ class SpecTestCases(unittest.TestCase):
         expected_result = Translator.translate_basetype('list< T?0 > + dict< T?1, T?2 >')
         self.assertEqual(result, expected_result)
 
+    def test_basetype_replace_vartype_with_basetype_1(self):
+        bt = Translator.translate_basetype('T1 + int')
+        result = bt.replace_vartype_with_basetype('T1',
+                                                  Translator.translate_basetype('str + float')
+                                                  )
+        expected_result = Translator.translate_basetype('int + str + float')
+        self.assertEqual(result, expected_result)
+
     def test_basetype_filter_pytypes_1(self):
         bt = Translator.translate_basetype('int + float + list< set < T1 > > + list< reversed< T2 > + complex >')
         result = bt.filter_pytypes(builtin_types)

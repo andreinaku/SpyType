@@ -249,6 +249,35 @@ class Basetype(hset):
                 raise RuntimeError(f'What type is this inside my basetype? {tip}')
         return new_bt
 
+    def replace_vartype_with_basetype(self, to_replace: str, replace_with: Basetype) -> Basetype:
+        new_bt = Basetype()
+        for tip in self:
+            if isinstance(tip, VarType):
+                if tip.varexp == to_replace:
+                    new_bt |= deepcopy(replace_with)
+                else:
+                    new_bt.add(deepcopy(tip))
+            elif isinstance(tip, PyType):
+                # if tip.ptype not in container_ptypes and tip.ptype not in mapping_types:
+                if tip.keys is None and tip.values is None:
+                    new_bt.add(deepcopy(tip))
+                # elif tip.ptype in mapping_types:
+                elif tip.keys is not None and tip.values is not None:
+                    new_keys = tip.keys.replace_vartype_with_basetype(to_replace, replace_with)
+                    new_values = tip.values.replace_vartype_with_basetype(to_replace, replace_with)
+                    newtip = PyType(tip.ptype, keys=new_keys, values=new_values)
+                    new_bt.add(newtip)
+                # elif tip.ptype in container_ptypes:
+                elif tip.keys is not None:
+                    new_keys = tip.keys.replace_vartype_with_basetype(to_replace, replace_with)
+                    newtip = PyType(tip.ptype, keys=new_keys)
+                    new_bt.add(newtip)
+                else:
+                    raise RuntimeError(f'What base type is this? f{tip.ptype}')
+            else:
+                raise RuntimeError(f'What type is this inside my basetype? {tip}')
+        return new_bt
+
     def filter_pytypes(self, supported_list: list[type]) -> Basetype | None:
         new_bt = Basetype()
         if self is None:
