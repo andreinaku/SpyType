@@ -29,7 +29,7 @@ def get_constraints_string_from_states(state_set: StateSet) -> str:
         # for eq_in, eq_out in type_equiv.items():
         #     retstr = retstr.replace(eq_in, eq_out)
         print_str += f'({retstr}) \\/ {os.linesep}'
-    print_str = print_str[:-5]
+    print_str = print_str[:(-4 - len(os.linesep))]
     return print_str
 
 
@@ -69,15 +69,16 @@ def dump_to_maude(expr: str, str_state_set: str, dump=False) -> str:
 
 
 if __name__ == "__main__":
-    start_set = r'(a:int + float /\ b:int + float + str)'
+    #start_set = r'(a:int + float /\ b:int + float + str)'
     # simple_expr = ['a+b', 'a/b', 'a>>b', 'a*b', 'a-b']
     # simple_expr = ['(a+b)/c']
-    simple_expr = ['len(a)']
+    # simple_expr = ['len(a)']
     # output_expressions(simple_expr, start_set)
     # start_set = r'(a:int+float /\ b:int+float+str /\ c:str)'
     # output_expressions(expr_1, start_set)
-    start_set = r'(a:list< int + str > /\ b:list< float >)'
+    start_set = r'(c:Tc + list< float >)'
     # simple_expr = ['a+b']
+    simple_expr = ['b = c']
     aux = maude.init()
     aux = maude.load('init.maude')
     constr_module = maude.getModule('CONSTR')
