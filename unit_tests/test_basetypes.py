@@ -142,3 +142,43 @@ class BasetypeTests(unittest.TestCase):
         result = bt1 == bt2
         expected_result = True
         self.assertEqual(result, expected_result)
+
+    def test_replace_basetype_1(self):
+        bt = Translator.translate_basetype('int + float + str')
+        bt1 = Translator.translate_basetype('float')
+        bt2 = Translator.translate_basetype('list< int >')
+        result = bt.replace_basetype(bt1, bt2)
+        expected_result = Translator.translate_basetype('int + str + list< int >')
+        self.assertEqual(result, expected_result)
+
+    def test_replace_basetype_2(self):
+        bt = Translator.translate_basetype('int + list< float > + str + float')
+        bt1 = Translator.translate_basetype('float')
+        bt2 = Translator.translate_basetype('list< int >')
+        result = bt.replace_basetype(bt1, bt2)
+        expected_result = Translator.translate_basetype('list< int > + int + str + list< list< int > >')
+        self.assertEqual(result, expected_result)
+
+    def test_replace_basetype_3(self):
+        bt = Translator.translate_basetype('int + list< float > + str + float')
+        bt1 = Translator.translate_basetype('float')
+        bt2 = Translator.translate_basetype('float')
+        result = bt.replace_basetype(bt1, bt2)
+        expected_result = bt
+        self.assertEqual(result, expected_result)
+
+    def test_replace_basetype_4(self):
+        bt = Translator.translate_basetype('int + T1 + list< float + T1 > + str + float')
+        bt1 = Translator.translate_basetype('float + T1')
+        bt2 = Translator.translate_basetype('float + complex + int')
+        result = bt.replace_basetype(bt1, bt2)
+        expected_result = Translator.translate_basetype('list< float + complex + int > + str + float + complex + int')
+        self.assertEqual(result, expected_result)
+
+    def test_replace_basetype_5(self):
+        bt = Translator.translate_basetype('int + list< float > + str + float')
+        bt1 = Translator.translate_basetype('float')
+        bt2 = Translator.translate_basetype('list< float >')
+        result = bt.replace_basetype(bt1, bt2)
+        expected_result = Translator.translate_basetype('int + list< list< float > > + str + list< float >')
+        self.assertEqual(result, expected_result)

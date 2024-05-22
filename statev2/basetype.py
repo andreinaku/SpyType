@@ -315,10 +315,43 @@ class Basetype(hset):
             if not self.contains_atom(other_atom, recursive):
                 return False
         return True
+
+    def replace_basetype(self, to_replace: Basetype, replace_with: Basetype) -> Basetype:
+        new_bt = Basetype()
+        # check if we can replace
+        if not self.contains_basetype(to_replace, True):
+            return deepcopy(self)
+        # replace on first level
+        rest_bt = Basetype()
+        if self.contains_basetype(to_replace):
+            new_bt = replace_with
+            rest_bt = self - to_replace
+        for self_atom in rest_bt:
+            if not isinstance(self_atom, PyType):
+                new_bt.add(deepcopy(self_atom))
+                continue
+            if self_atom.keys is None or len(self_atom.keys) == 0:
+                new_bt.add(deepcopy(self_atom))
+                continue
+            aux_keys = self_atom.keys.replace_basetype(to_replace, replace_with)
+            aux_values = None
+            if self_atom.values is not None:
+                aux_values = self_atom.values.replace_basetype(to_replace, replace_with)
+            aux_pytype = PyType(self_atom.ptype, aux_keys, aux_values)
+            new_bt.add(aux_pytype)
+        return new_bt
     
     def __leq__(self, other_bt: Basetype) -> bool:
         return self.contains_basetype(other_bt)
-    
+
+    def __sub__(self, other_bt: Basetype) -> bool:
+        new_bt = Basetype()
+        for self_atom in self:
+            if other_bt.contains_atom(self_atom):
+                continue
+            new_bt.add(deepcopy(self_atom))
+        return new_bt
+
     def __eq__(self, other_bt: Basetype) -> bool:
         return self.contains_basetype(other_bt) and other_bt.contains_basetype(self)
 
