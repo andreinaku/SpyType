@@ -5,6 +5,10 @@ from statev2.transfer import *
 from united_specs import unitedspecs, op_equiv
 
 
+strat1 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; Step5 ! ; Step6 ! '
+strat2 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! '
+
+
 def vartype_generator(maxitems = 20):
     normals = []
     specs = []
@@ -100,20 +104,29 @@ def dump_to_maude(state_set: StateSet, dump=False) -> str:
     return maude_input
 
 
-def parse_result(maude_result: maude.Term) -> list[Relation]:
-    relation_list = []
-    m_res = str(maude_result).replace('[nil]', '')
-    result_list = m_res.split('/\\')
-    for elem in result_list:
-        aux = elem.strip()
-        aux = aux.replace('(', '')
-        aux = aux.replace(')', '')
-        rel = Translator.translate_relation(aux)
-        relation_list.append(deepcopy(rel))
-    return relation_list
+def dump_single_state_to_maude(state:State, dump=False) -> str:
+    c_value = str(state.constraints)
+    maude_input = mod_generator('tempmod', c_value, dump_to_file=dump)
+    return maude_input
 
 
-def apply_and_solve(current_state_set: StateSet, expr: str, output_file):
+def parse_result(maude_result: maude.Term) -> list[list[Relation]]:
+    relations_list = []
+    cases = str(maude_result).split('||')
+    for case in cases:
+        relations = []
+        m_res = case.replace('[nil]', '')
+        result_list = m_res.split('/\\')
+        for elem in result_list:
+            aux = elem.strip('() ')
+            rel = Translator.translate_relation(aux)
+            relations.append(deepcopy(rel))
+        if len(relations) > 0:
+            relations_list.append(deepcopy(relations))
+    return relations_list
+
+
+def _apply_and_solve(current_state_set: StateSet, expr: str, output_file):
     aux = maude.init()
     aux = maude.load('init.maude')
     modulename = 'tempmod'
@@ -146,6 +159,96 @@ def apply_and_solve(current_state_set: StateSet, expr: str, output_file):
     return new_state_set, rel_list
 
 
+def _apply_and_solve_2(current_state_set: StateSet, expr: str, output_file):
+    aux = maude.init()
+    aux = maude.load('init.maude')
+    modulename = 'tempmod'
+    constr_module = maude.getModule('CONSTR')
+    strat = constr_module.parseStrategy('one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; Step5 ! ; Step6 ! ')
+    strat2 = constr_module.parseStrategy('one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! ')
+    rel_list = None
+    with open(output_file, 'a') as f:
+        # for expr in simple_expr:
+        new_state_set = apply_spec_on_stateset(expr, current_state_set)
+        for new_state in new_state_set:
+            f.write(str(new_state) + os.linesep)
+            m_input = dump_single_state_to_maude(new_state, dump=True)
+            if not maude.input(m_input):
+                raise RuntimeError('Maude input operation failed')
+            mod = maude.getModule(modulename)
+            if mod is None:
+                raise RuntimeError(f'Maude module {modulename} not found')
+            term = mod.parseTerm('c [nil]')
+            f.write(f'{expr}{os.linesep}')
+            # for result, nrew in term.srewrite(strat):
+            #     f.write(f'{result}{os.linesep} in {nrew} rewrites{os.linesep}')
+            srew_2 = term.srewrite(strat2)
+            aux_len = 0
+            for result, nrew in srew_2:
+                if aux_len > 0:
+                    raise RuntimeError('Too many maude results')
+                aux_len += 1
+                f.write(f'{result}{os.linesep} in {nrew} rewrites{os.linesep}')
+                rel_list = parse_result(result)
+            f.write(os.linesep)
+
+        f.write(str(new_state_set))
+        m_input = dump_to_maude(new_state_set, dump=True)
+        if not maude.input(m_input):
+            raise RuntimeError('Maude input operation failed')
+        mod = maude.getModule(modulename)
+        if mod is None:
+            raise RuntimeError(f'Maude module {modulename} not found')
+        term = mod.parseTerm('c [nil]')
+        f.write(f'{expr}{os.linesep}')
+        for result, nrew in term.srewrite(strat):
+            f.write(f'{result}{os.linesep} in {nrew} rewrites{os.linesep}')
+    return new_state_set, rel_list
+
+
+def apply_and_solve(current_state_set: StateSet, expr: str, strategy_str: str, output_file: str) -> tuple[StateSet, list[list[Relation]]]:
+    if not maude.init():
+        raise RuntimeError('Could not properly initialize maude')
+    init_module = 'init.maude'
+    if not maude.load('init.maude'):
+        raise RuntimeError(f'Could not load {init_module}')
+    modulename = 'tempmod'
+    constr_module_name = 'CONSTR'
+    constr_module = maude.getModule(constr_module_name)
+    if constr_module is None:
+        raise RuntimeError(f'Could not get module {constr_module}')
+    relation_groups = None
+    with open(output_file, 'a') as f:
+        # for expr in simple_expr:
+        new_state_set = apply_spec_on_stateset(expr, current_state_set)
+        m_input = dump_to_maude(new_state_set, dump=True)
+        if not maude.input(m_input):
+            raise RuntimeError('Maude input operation failed')
+        mod = maude.getModule(modulename)
+        if mod is None:
+            raise RuntimeError(f'Maude module {modulename} not found')
+        term_str = 'c [nil]'
+        term = mod.parseTerm(term_str)
+        if term is None:
+            raise RuntimeError(f'Cannot parse term {term_str}')
+        f.write(f'{expr}{os.linesep}')
+        strat = constr_module.parseStrategy(strategy_str)
+        if not strat:
+            raise RuntimeError(f'Cannot parse strategy {strategy_str}')
+        srew = term.srewrite(strat)
+        if srew is None:
+            raise RuntimeError(f'Could not rewrite using {strategy_str}')
+        aux_len = 0
+        for result, nrew in srew:
+            if aux_len > 0:
+                raise RuntimeError('Too many maude results')
+            aux_len += 1
+            f.write(f'{result}{os.linesep} in {nrew} rewrites{os.linesep}')
+            relation_groups = parse_result(result)
+        f.write(os.linesep)
+    return new_state_set, relation_groups
+
+
 def replace_from_relations(state: State, relations: list[Relation]) -> State:
     new_state = State()
     new_state.assignment = deepcopy(state.assignment)
@@ -158,9 +261,20 @@ def replace_from_relations(state: State, relations: list[Relation]) -> State:
 
 
 def get_new_state_set(current_state_set: StateSet, expr: str, output_file: str = 'solver.out') -> StateSet:
-    applied_state_set, rel_list = apply_and_solve(current_state_set, expr, output_file)
+    applied_state_set, rel_groups = apply_and_solve(current_state_set, expr, strat1, output_file)
+    replace_map = dict()
+    for rel_group in rel_groups:
+        skip_group = False
+        for relation in rel_group:
+            if relation.bt_right == Basetype({PyType(type(None))}):
+                skip_group = True
+        if skip_group:
+            continue
+        for relation in rel_group:
+            if relation.bt
     new_state_set = StateSet()
     for current_state in applied_state_set:
-        new_state = replace_from_relations(current_state, rel_list)
+        new_state = replace_from_relations(current_state, rel_groups)
         new_state_set.add(new_state)
+    print(f'-------------{os.linesep}Unsolved: {applied_state_set}{os.linesep}-------------{os.linesep}Solved: {new_state_set}')
     return new_state_set

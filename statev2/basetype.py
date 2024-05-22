@@ -277,6 +277,47 @@ class Basetype(hset):
             else:
                 raise RuntimeError(f'What type is this inside my basetype? {tip}')
         return new_bt
+    
+    def simple_contains_atom(self, atom: PyType | VarType) -> bool:
+        self_atom: PyType | VarType
+        for self_atom in self:
+            if (isinstance(self_atom, VarType) and isinstance(atom, VarType)) or \
+                (isinstance(self_atom, PyType) and isinstance(atom, PyType)):
+                if self_atom == atom:
+                    return True
+        return False
+    
+    def contains_atom(self, atom: PyType | VarType, recursive: bool = False) -> bool:
+        non_rec_found = self.simple_contains_atom(atom)
+        if non_rec_found is True:
+            return True
+        if not recursive:
+            return False
+        self_atom: PyType | VarType
+        for self_atom in self:
+            if not isinstance(self_atom, PyType):
+                continue
+            if self_atom.keys is None or len(self_atom.keys) == 0:
+                continue
+            found = self_atom.keys.contains_atom(atom, recursive)
+            if found:
+                return True
+            if self_atom.values is None or len(self_atom.values) == 0:
+                continue
+            found = self_atom.values.contains_atom(atom, recursive)
+            if found:
+                return True
+        return False
+    
+    def contains_basetype(self, other_bt: Basetype, recursive: bool = False) -> bool:
+        other_atom: PyType | VarType
+        for other_atom in other_bt:
+            if not self.contains_atom(other_atom, recursive):
+                return False
+        return True
+    
+    def __leq__(self, other_bt: Basetype) -> bool:
+        return self.contains_basetype(other_bt)
 
     def filter_pytypes(self, supported_list: list[type]) -> Basetype | None:
         new_bt = Basetype()
