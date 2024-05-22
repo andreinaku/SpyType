@@ -114,3 +114,31 @@ class BasetypeTests(unittest.TestCase):
         result = bt1.contains_basetype(bt2, True)
         expected_result = False
         self.assertEqual(result, expected_result)
+
+    def test_eq_1(self):
+        bt1 = Translator.translate_basetype('int + float + list< tuple < complex + T1 > + int >')
+        bt2 = Translator.translate_basetype('complex + T2')
+        result = bt1 == bt2
+        expected_result = False
+        self.assertEqual(result, expected_result)
+
+    def test_eq_2(self):
+        bt1 = Translator.translate_basetype('int + float + list< tuple < complex + T1 > + int >')
+        bt2 = Translator.translate_basetype('int + float + list< tuple < complex + T1 > + int >')
+        result = bt1 == bt2
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_eq_3(self):
+        bt1 = Translator.translate_basetype('int')
+        bt2 = Translator.translate_basetype('int')
+        result = bt1 == bt2
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_eq_4(self):
+        bt1 = Translator.translate_basetype('int + float')
+        bt2 = Translator.translate_basetype('float + int')
+        result = bt1 == bt2
+        expected_result = True
+        self.assertEqual(result, expected_result)

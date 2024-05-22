@@ -318,6 +318,9 @@ class Basetype(hset):
     
     def __leq__(self, other_bt: Basetype) -> bool:
         return self.contains_basetype(other_bt)
+    
+    def __eq__(self, other_bt: Basetype) -> bool:
+        return self.contains_basetype(other_bt) and other_bt.contains_basetype(self)
 
     def filter_pytypes(self, supported_list: list[type]) -> Basetype | None:
         new_bt = Basetype()
