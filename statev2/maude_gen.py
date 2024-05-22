@@ -88,11 +88,14 @@ def output_expressions(expr_list: list[str], str_state_set: str,
             f.write(print_str[:-5] + '\n\n')
 
 
-def dump_to_maude(expr: str, str_state_set: str, dump=False) -> str:
-    current = Translator.translate_state_set(str_state_set)
-    applied = get_states(current, expr)
+def apply_spec_on_stateset(expr: str, state_set: StateSet):
+    applied = get_states(state_set, expr)
     applied = applied.replace_superclasses()
-    c_value = get_constraints_string_from_states(applied)
+    return applied
+
+
+def dump_to_maude(state_set: StateSet, dump=False) -> str:
+    c_value = get_constraints_string_from_states(state_set)
     maude_input = mod_generator('tempmod', c_value, dump_to_file=dump)
     return maude_input
 
@@ -108,3 +111,56 @@ def parse_result(maude_result: maude.Term) -> list[Relation]:
         rel = Translator.translate_relation(aux)
         relation_list.append(deepcopy(rel))
     return relation_list
+
+
+def apply_and_solve(current_state_set: StateSet, expr: str, output_file):
+    aux = maude.init()
+    aux = maude.load('init.maude')
+    modulename = 'tempmod'
+    constr_module = maude.getModule('CONSTR')
+    # strat = constr_module.parseStrategy('one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; Step5 ! ; Step6 ! ')
+    strat2 = constr_module.parseStrategy('one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! ')
+    rel_list = None
+    with open(output_file, 'a') as f:
+        # for expr in simple_expr:
+        new_state_set = apply_spec_on_stateset(expr, current_state_set)
+        m_input = dump_to_maude(new_state_set, dump=True)
+        if not maude.input(m_input):
+            raise RuntimeError('Maude input operation failed')
+        mod = maude.getModule(modulename)
+        if mod is None:
+            raise RuntimeError(f'Maude module {modulename} not found')
+        term = mod.parseTerm('c [nil]')
+        f.write(f'{expr}{os.linesep}')
+        # for result, nrew in term.srewrite(strat):
+        #     f.write(f'{result}{os.linesep} in {nrew} rewrites{os.linesep}')
+        srew_2 = term.srewrite(strat2)
+        aux_len = 0
+        for result, nrew in srew_2:
+            if aux_len > 0:
+                raise RuntimeError('Too many maude results')
+            aux_len += 1
+            f.write(f'{result}{os.linesep} in {nrew} rewrites{os.linesep}')
+            rel_list = parse_result(result)
+        f.write(os.linesep)
+    return new_state_set, rel_list
+
+
+def replace_from_relations(state: State, relations: list[Relation]) -> State:
+    new_state = State()
+    new_state.assignment = deepcopy(state.assignment)
+    for rel in relations:
+        if len(rel.bt_left) > 1 or not isinstance(rel.bt_left[0], VarType):
+            raise TypeError(f'{rel.bt_left} should be a VarType')
+        to_replace = rel.bt_left[0]
+        new_state.assignment = new_state.assignment.replace_vartype_with_basetype(to_replace, rel.bt_right)
+    return new_state
+
+
+def get_new_state_set(current_state_set: StateSet, expr: str, output_file: str = 'solver.out') -> StateSet:
+    applied_state_set, rel_list = apply_and_solve(current_state_set, expr, output_file)
+    new_state_set = StateSet()
+    for current_state in applied_state_set:
+        new_state = replace_from_relations(current_state, rel_list)
+        new_state_set.add(new_state)
+    return new_state_set

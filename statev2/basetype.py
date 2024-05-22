@@ -338,6 +338,15 @@ class Assignment(hdict):
             new_bt = bt.replace_vartype(to_replace, replace_with)
             new_assignment[expr] = new_bt
         return new_assignment
+    
+    def replace_vartype_with_basetype(self, to_replace: str, replace_with: Basetype) -> Assignment:
+        new_assignment = Assignment()
+        expr: str
+        bt: Basetype
+        for expr, bt in self.items():
+            new_bt = bt.replace_vartype_with_basetype(to_replace, replace_with)
+            new_assignment[expr] = new_bt
+        return new_assignment
 
     def filter_pytypes(self, supported_list: list[type]) -> Assignment:
         new_assignment = Assignment()
