@@ -324,7 +324,7 @@ class Basetype(hset):
         # replace on first level
         rest_bt = Basetype()
         if self.contains_basetype(to_replace):
-            new_bt = replace_with
+            new_bt = deepcopy(replace_with)
             rest_bt = self - to_replace
         for self_atom in rest_bt:
             if not isinstance(self_atom, PyType):
