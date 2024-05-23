@@ -406,6 +406,19 @@ class Assignment(hdict):
 
     def __hash__(self):
         return super().__hash__()
+    
+    def __eq__(self, other_asig: Assignment) -> bool:
+        for expr in self:
+            if expr not in other_asig:
+                return False
+            if self[expr] != other_asig[expr]:
+                return False
+        for expr in other_asig:
+            if expr not in self:
+                return False
+            if other_asig[expr] != self[expr]:
+                return False
+        return True
 
     def replace_vartype(self, to_replace: str, replace_with: str) -> Assignment:
         new_assignment = Assignment()
@@ -602,6 +615,17 @@ class State:
         retstr = f'T{self.gen_id}'
         self.gen_id = self.gen_id + 1
         return retstr
+
+    def replace_assignment_basetypes(self, to_replace: Basetype, replace_with: Basetype) -> State:
+        new_state = State()
+        new_state.constraints = deepcopy(self.constraints)
+        bt: Basetype
+        for expr, bt in self.assignment.items():
+            new_state.assignment[expr] = bt.replace_basetype(to_replace, replace_with)
+        return new_state
+
+    def __eq__(self, other_state: State) -> bool:
+        return (self.assignment == other_state.assignment) and (self.constraints == other_state.constraints)
 
 
 class StateSet(hset):

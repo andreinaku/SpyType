@@ -182,3 +182,73 @@ class BasetypeTests(unittest.TestCase):
         result = bt.replace_basetype(bt1, bt2)
         expected_result = Translator.translate_basetype('int + list< list< float > > + str + list< float >')
         self.assertEqual(result, expected_result)
+
+    def test_eq_assignment_1(self):
+        asg1 = Translator.translate_assignment('a:int /\\ b:float')
+        asg2 = Translator.translate_assignment('a:int /\\ b:float')
+        result = asg1 == asg2
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_eq_assignment_2(self):
+        asg1 = Translator.translate_assignment('a:int /\\ b:float')
+        asg2 = Translator.translate_assignment('a:int /\\ b:int + float')
+        result = asg1 == asg2
+        expected_result = False
+        self.assertEqual(result, expected_result)
+
+    def test_eq_assignment_3(self):
+        asg1 = Translator.translate_assignment('a:int /\\ c:float')
+        asg2 = Translator.translate_assignment('a:int /\\ b:float')
+        result = asg1 == asg2
+        expected_result = False
+        self.assertEqual(result, expected_result)
+    
+    def test_eq_assignment_4(self):
+        asg1 = Translator.translate_assignment('a:int')
+        asg2 = Translator.translate_assignment('a:int /\\ b:float')
+        result = asg1 == asg2
+        expected_result = False
+        self.assertEqual(result, expected_result)
+
+    def test_eq_state_1(self):
+        state1 = Translator.translate_state(r'a:int /\\ b:float')
+        state2 = Translator.translate_state(r'a:int /\\ b:float')
+        result = state1 == state2
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_eq_state_2(self):
+        state1 = Translator.translate_state(r'((a:int /\\ b:float) ^ (T1 <= int))')
+        state2 = Translator.translate_state(r'a:int /\\ b:float')
+        result = state1 == state2
+        expected_result = False
+        self.assertEqual(result, expected_result)
+
+    def test_eq_state_3(self):
+        state1 = Translator.translate_state(r'((a:int /\\ b:float) ^ (T1 <= int))')
+        state2 = Translator.translate_state(r'((a:int /\\ b:float) ^ (T1 <= int))')
+        result = state1 == state2
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_eq_state_4(self):
+        state1 = Translator.translate_state(r'((a:int /\\ b:float) ^ (T1 <= int))')
+        state2 = Translator.translate_state(r'((a:int /\\ b:float) ^ (T1 <= float))')
+        result = state1 == state2
+        expected_result = False
+        self.assertEqual(result, expected_result)
+
+    def test_eq_state_5(self):
+        state1 = Translator.translate_state(r'((a:int /\\ b:float) ^ (T1 <= int))')
+        state2 = Translator.translate_state(r'((a:int /\\ b:str) ^ (T1 <= int))')
+        result = state1 == state2
+        expected_result = False
+        self.assertEqual(result, expected_result)
+
+    def test_eq_state_6(self):
+        state1 = Translator.translate_state(r'((a:int /\\ b:str /\\ c:complex) ^ (T1 <= int))')
+        state2 = Translator.translate_state(r'((a:int /\\ b:str) ^ (T1 <= int))')
+        result = state1 == state2
+        expected_result = False
+        self.assertEqual(result, expected_result)
