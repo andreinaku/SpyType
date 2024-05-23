@@ -249,6 +249,47 @@ def apply_and_solve(current_state_set: StateSet, expr: str, strategy_str: str, o
     return new_state_set, relation_groups
 
 
+
+def solve_state_constraints(state: State, strategy_str: str) -> State:
+    new_state = State()
+    if not maude.init():
+        raise RuntimeError('Could not properly initialize maude')
+    init_module = 'init.maude'
+    if not maude.load('init.maude'):
+        raise RuntimeError(f'Could not load {init_module}')
+    modulename = 'tempmod'
+    constr_module_name = 'CONSTR'
+    constr_module = maude.getModule(constr_module_name)
+    if constr_module is None:
+        raise RuntimeError(f'Could not get module {constr_module}')
+    relation_groups = None
+    c_value = str(state.constraints)
+    m_input = mod_generator('tempmod', c_value, dump_to_file=True)
+    if not maude.input(m_input):
+        raise RuntimeError('Maude input operation failed')
+    mod = maude.getModule(modulename)
+    if mod is None:
+        raise RuntimeError(f'Maude module {modulename} not found')
+    term_str = 'c [nil]'
+    term = mod.parseTerm(term_str)
+    if term is None:
+        raise RuntimeError(f'Cannot parse term {term_str}')
+    strat = constr_module.parseStrategy(strategy_str)
+    if not strat:
+        raise RuntimeError(f'Cannot parse strategy {strategy_str}')
+    srew = term.srewrite(strat)
+    if srew is None:
+        raise RuntimeError(f'Could not rewrite using {strategy_str}')
+    aux_len = 0
+    for result, nrew in srew:
+        if aux_len > 0:
+            raise RuntimeError('Too many maude results')
+        aux_len += 1
+        relation_groups = parse_result(result)
+    new_state.assignment = deepcopy(state.assignment)
+    return new_state
+
+
 def replace_from_relations(state: State, relations: list[Relation]) -> State:
     new_state = State()
     new_state.assignment = deepcopy(state.assignment)
@@ -271,10 +312,18 @@ def get_new_state_set(current_state_set: StateSet, expr: str, output_file: str =
         if skip_group:
             continue
         for relation in rel_group:
-            if relation.bt
+            if relation.bt_left not in replace_map:
+                replace_map[relation.bt_left] = relation.bt_right
+            else:
+                replace_map[relation.bt_left] |= relation.bt_right
     new_state_set = StateSet()
+    current_state: State
     for current_state in applied_state_set:
-        new_state = replace_from_relations(current_state, rel_groups)
+        # new_state = replace_from_relations(current_state, rel_groups)
+        new_state = State()
+        new_state.assignment = deepcopy(current_state.assignment)
+        for to_replace, replace_with in replace_map.items():
+            new_state = new_state.replace_assignment_basetypes(to_replace, replace_with)
         new_state_set.add(new_state)
     print(f'-------------{os.linesep}Unsolved: {applied_state_set}{os.linesep}-------------{os.linesep}Solved: {new_state_set}')
     return new_state_set

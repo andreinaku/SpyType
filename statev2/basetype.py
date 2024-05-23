@@ -1,9 +1,13 @@
 from __future__ import annotations
+import sys
+import os
+aux = os.getcwd()
+sys.path.append(aux)
 from utils.utils import *
 from enum import Enum
 from copy import deepcopy
 from statev2.supported_types import is_supported_type, builtin_types, builtin_seqs, builtin_dicts, builtins
-
+import maude
 
 class RelOp(Enum):
     LEQ = '<='
@@ -14,68 +18,35 @@ class GenericType:
     pass
 
 
-# def get_builtin_from_pytype(ptip: PyType) -> Basetype:
-#     new_bt = Basetype()
-#     if isinstance(ptip, VarType):
-#         new_bt.add(deepcopy(ptip))
-#         return new_bt
-#     for blist in builtins:
-#         if ptip.ptype in blist:
-#             # if it is already a builtin type, just add it
-#             # only Protocols are replaced
-#             new_bt.add(deepcopy(ptip))
-#             return new_bt
-#     if ptip.keys is None or ptip.keys == Basetype({PyType(TopType)}):
-#         for btype in builtin_types:
-#             try:
-#                 if issubclass(btype, ptip.ptype):
-#                     new_bt.add(PyType(btype))
-#             except TypeError:
-#                 continue
-#     if (ptip.keys is not None and ptip.values is None) or (ptip.keys is None and ptip.values is None):
-#         for btype in builtin_seqs:
-#             contained_keys = Basetype({PyType(TopType)})
-#             if ptip.keys is not None and len(ptip.keys) != 0:
-#                 if len(ptip.keys) == 1:
-#                     # contained_keys = deepcopy(ptip.keys)
-#                     contained_keys = get_builtin_from_bt(ptip.keys)
-#                 else:
-#                     raise TypeError(f'We do not support {ptip} substitution yet')
-#             try:
-#                 if issubclass(btype, ptip.ptype):
-#                     new_bt.add(PyType(btype, contained_keys))
-#             except TypeError as te:
-#                 continue
-#     if (ptip.keys is not None and ptip.values is not None) or (ptip.keys is None and ptip.values is None):
-#         for btype in builtin_dicts:
-#             contained_keys = Basetype({PyType(TopType)})
-#             contained_values = Basetype({PyType(TopType)})
-#             if (ptip.keys is not None and len(ptip.keys) != 0) and (ptip.values is not None and len(ptip.values) != 0):
-#                 if len(ptip.keys) == 1 and len(ptip.values) == 1:
-#                     contained_keys = deepcopy(ptip.keys)
-#                     contained_values = deepcopy(ptip.values)
-#                 else:
-#                     raise TypeError(f'We do not support {ptip} substitution yet')
-#             try:
-#                 if issubclass(btype, ptip.ptype):
-#                     new_bt.add(PyType(btype, contained_keys, contained_values))
-#             except TypeError:
-#                 continue
-#     if len(new_bt) == 0:
-#         new_bt.add(deepcopy(ptip))
-#     return new_bt
+def mod_vartype_generator(maxitems = 20):
+    normals = []
+    specs = []
+    for i in range(0, maxitems):
+        normals.append(f'T{i}')
+        specs.append(f'T?{i}')
+    return normals, specs
 
 
-# def get_builtin_from_bt(bt: Basetype) -> Basetype:
-#     new_bt = Basetype()
-#     for ptip in bt:
-#         if not isinstance(ptip, PyType):
-#             if not isinstance(ptip, VarType):
-#                 raise RuntimeError(f'Type not supported: {ptip}')
-#             new_bt.add(ptip)
-#             continue
-#         new_bt |= get_builtin_from_pytype(ptip)
-#     return new_bt
+def mod_generator(mod_name: str, constraints: str, indent=2, dump_to_file=False) -> str:
+    spaces = ' ' * indent
+    maude_code = (f'mod {mod_name} is {os.linesep}'
+                    f'{spaces}protecting CONSTR .{os.linesep}'
+                    f'{spaces}ops ')
+    normals, specs = mod_vartype_generator()
+    for n in normals:
+        maude_code += f'{n} '
+    maude_code += (f': -> VarType .{os.linesep}'
+                     f'{spaces}ops ')
+    for s in specs:
+        maude_code += f'{s} '
+    maude_code += (f': -> BoundVarType .{os.linesep}'
+                     f'{spaces}op c : -> Disj .{os.linesep}'
+                     f'{os.linesep}{spaces}eq c = {os.linesep}{constraints} .{os.linesep}'
+                     f'{os.linesep}'
+                     f'endm')
+    if dump_to_file:
+        open(mod_name + '.maude', 'w').write(maude_code)
+    return maude_code
 
 
 class PyType(GenericType):
@@ -83,11 +54,6 @@ class PyType(GenericType):
         self.ptype = deepcopy(ptype)
         self.keys = deepcopy(keys)
         self.values = deepcopy(values)
-        # if (ptype in container_ptypes) and (self.keys is None):
-        #     self.keys = Basetype()
-        # if (ptype in mapping_types) and (self.keys is None) and (self.values is None):
-        #     self.keys = Basetype()
-        #     self.values = Basetype()
 
     def __str__(self):
         if self.ptype == BottomType:
@@ -99,18 +65,10 @@ class PyType(GenericType):
         elif isinstance(self.ptype, VarType):
             retstr = self.ptype.varexp
         else:
-            # retstr = str(self.ptype).split("'")[1]
             retstr = self.ptype.__name__
-        # if self.keys is not None:
-        # if self.ptype in container_ptypes:
         if self.keys is not None and len(self.keys) > 0 and self.values is None:
             retstr += '< '
-            # for c_type in self.contains:
-            #     retstr += str(c_type) + ','
             retstr += str(self.keys)
-            # if self.values is not None:
-            #     retstr += ', '
-            #     retstr += str(self.values)
             retstr += ' >'
         elif self.keys is not None and len(self.keys) > 0 and self.values is not None and len(self.values) > 0:
             retstr += '< '
