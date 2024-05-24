@@ -1,14 +1,49 @@
 from __future__ import annotations
 import sys
 import os
-aux = os.getcwd()
-sys.path.append(aux)
+sys.path.append(os.getcwd())
 from utils.utils import *
 from enum import Enum
 from copy import deepcopy
 from statev2.supported_types import is_supported_type, builtin_types, builtin_seqs, builtin_dicts, builtins
 import maude
 import re
+
+
+strat1 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; Step5 ! ; Step6 ! '
+strat2 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! '
+INIT_MAUDE_PATH = os.getcwd() + os.sep + 'init.maude'
+
+
+def maude_vartype_generator(maxitems: int = 20) -> tuple[list[str], list[str]]:
+        normals = []
+        specs = []
+        for i in range(0, maxitems):
+            normals.append(f'T{i}')
+            specs.append(f'T?{i}')
+        return normals, specs
+
+
+def mod_generator(mod_name: str, constraints: str, dump_file: str | None  = None, indent: int = 2) -> str:
+    spaces = ' ' * indent
+    maude_code = (f'mod {mod_name} is {os.linesep}'
+                    f'{spaces}protecting CONSTR .{os.linesep}'
+                    f'{spaces}ops ')
+    normals, specs = maude_vartype_generator()
+    for n in normals:
+        maude_code += f'{n} '
+    maude_code += (f': -> VarType .{os.linesep}'
+                    f'{spaces}ops ')
+    for s in specs:
+        maude_code += f'{s} '
+    maude_code += (f': -> BoundVarType .{os.linesep}'
+                    f'{spaces}op c : -> Disj .{os.linesep}'
+                    f'{os.linesep}{spaces}eq c = {os.linesep}{constraints} .{os.linesep}'
+                    f'{os.linesep}'
+                    f'endm')
+    if dump_file is not None:
+        open(dump_file, 'w').write(maude_code)
+    return maude_code
 
 
 class RelOp(Enum):
@@ -763,9 +798,72 @@ class State:
         for expr, bt in self.assignment.items():
             new_state.assignment[expr] = bt.replace_basetype(to_replace, replace_with)
         return new_state
+        
+    @classmethod
+    def parse_single_result_string(cls, case: str) -> list[Relation]:
+        relations = []
+        m_res = case.replace('[nil]', '')
+        result_list = m_res.split('/\\')
+        for elem in result_list:
+            aux = elem.strip('() ')
+            rel = Relation.from_str(aux)
+            relations.append(deepcopy(rel))
+        return relations
+
+    def solve_constraints(self, strategy_str: str, dump_file: str | None = None) -> State:
+        maude.init()
+        init_module = INIT_MAUDE_PATH
+        if not maude.load(init_module):
+            raise RuntimeError(f'Could not load {init_module}')
+        modulename = 'tempmod'
+        constr_module_name = 'CONSTR'
+        constr_module = maude.getModule(constr_module_name)
+        if constr_module is None:
+            raise RuntimeError(f'Could not get module {constr_module}')
+        if len(self.constraints) == 0:
+            return deepcopy(self)
+        c_value = str(self.constraints)
+        m_input = mod_generator('tempmod', c_value, dump_file)
+        if not maude.input(m_input):
+            raise RuntimeError('Maude input operation failed')
+        mod = maude.getModule(modulename)
+        if mod is None:
+            raise RuntimeError(f'Maude module {modulename} not found')
+        term_str = 'c [nil]'
+        term = mod.parseTerm(term_str)
+        if term is None:
+            raise RuntimeError(f'Cannot parse term {term_str}')
+        strat = constr_module.parseStrategy(strategy_str)
+        if not strat:
+            raise RuntimeError(f'Cannot parse strategy {strategy_str}')
+        srew = term.srewrite(strat)
+        if srew is None:
+            raise RuntimeError(f'Could not rewrite using {strategy_str}')
+        aux_len = 0
+        relations = None
+        for result, nrew in srew:
+            if aux_len > 0:
+                raise RuntimeError('Too many maude results')
+            aux_len += 1
+            relations = self.parse_single_result_string(str(result))
+        new_state = State()
+        new_state.assignment = deepcopy(self.assignment)
+        if relations is None:
+            raise RuntimeError(f'Empty relations for {str(result)}')
+        for rel in relations:
+            if len(rel.bt_left) > 1 or not isinstance(rel.bt_left[0], VarType):
+                raise TypeError(f'{rel.bt_left} should be a VarType')
+            to_replace = rel.bt_left[0]
+            new_state.assignment = new_state.assignment.replace_vartype_with_basetype(to_replace, rel.bt_right)
+        return new_state 
 
     def __eq__(self, other_state: State) -> bool:
         return (self.assignment == other_state.assignment) and (self.constraints == other_state.constraints)
+
+    def is_same(self, other_state: State) -> bool:
+        state1 = self.solve_constraints(strat1)
+        state2 = other_state.solve_constraints(strat1)
+        return state1 == state2
 
 
 class StateSet(hset):
