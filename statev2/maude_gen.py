@@ -110,17 +110,22 @@ def dump_single_state_to_maude(state:State, dump=False) -> str:
     return maude_input
 
 
+def parse_single_result_string(case: str) -> list[Relation]:
+    relations = []
+    m_res = case.replace('[nil]', '')
+    result_list = m_res.split('/\\')
+    for elem in result_list:
+        aux = elem.strip('() ')
+        rel = Translator.translate_relation(aux)
+        relations.append(deepcopy(rel))
+    return relations
+
+
 def parse_result(maude_result: maude.Term) -> list[list[Relation]]:
     relations_list = []
     cases = str(maude_result).split('||')
     for case in cases:
-        relations = []
-        m_res = case.replace('[nil]', '')
-        result_list = m_res.split('/\\')
-        for elem in result_list:
-            aux = elem.strip('() ')
-            rel = Translator.translate_relation(aux)
-            relations.append(deepcopy(rel))
+        relations = parse_single_result_string(case)
         if len(relations) > 0:
             relations_list.append(deepcopy(relations))
     return relations_list
@@ -249,7 +254,6 @@ def apply_and_solve(current_state_set: StateSet, expr: str, strategy_str: str, o
     return new_state_set, relation_groups
 
 
-
 def solve_state_constraints(state: State, strategy_str: str) -> State:
     new_state = State()
     if not maude.init():
@@ -262,7 +266,6 @@ def solve_state_constraints(state: State, strategy_str: str) -> State:
     constr_module = maude.getModule(constr_module_name)
     if constr_module is None:
         raise RuntimeError(f'Could not get module {constr_module}')
-    relation_groups = None
     c_value = str(state.constraints)
     m_input = mod_generator('tempmod', c_value, dump_to_file=True)
     if not maude.input(m_input):
@@ -281,12 +284,21 @@ def solve_state_constraints(state: State, strategy_str: str) -> State:
     if srew is None:
         raise RuntimeError(f'Could not rewrite using {strategy_str}')
     aux_len = 0
+    relations = None
     for result, nrew in srew:
         if aux_len > 0:
             raise RuntimeError('Too many maude results')
         aux_len += 1
-        relation_groups = parse_result(result)
+        # relation_groups = parse_result(result)
+        relations = parse_single_result_string(str(result))
     new_state.assignment = deepcopy(state.assignment)
+    if relations is None:
+        raise RuntimeError(f'Empty relations for {str(result)}')
+    for rel in relations:
+        if len(rel.bt_left) > 1 or not isinstance(rel.bt_left[0], VarType):
+            raise TypeError(f'{rel.bt_left} should be a VarType')
+        to_replace = rel.bt_left[0]
+        new_state.assignment = new_state.assignment.replace_vartype_with_basetype(to_replace, rel.bt_right)
     return new_state
 
 
