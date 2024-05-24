@@ -15,12 +15,12 @@ class TranslatorTestCases(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_vartype_from_str_1(self):
-        result = PyType.from_str('T1')
+        result = VarType.from_str('T1')
         expected_result = VarType('T1')
         self.assertEqual(result, expected_result)
 
     def test_vartype_from_str_2(self):
-        result = PyType.from_str('T?1')
+        result = VarType.from_str('T?1')
         expected_result = VarType('T?1')
         self.assertEqual(result, expected_result)
 
