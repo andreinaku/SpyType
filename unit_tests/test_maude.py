@@ -4,9 +4,10 @@ from statev2.ConstraintSolver import *
 
 def maude_start():
     maude.init()
-    init_module = 'init.maude'
-    if not maude.load('init.maude'):
+    init_module = INIT_MAUDE_PATH
+    if not maude.load(init_module):
         raise RuntimeError(f'Could not load {init_module}')
+MAUDE_DUMP = PROJECT_DIR + os.sep + 'tempmod.maude'
 
 
 class SolverTestCases(unittest.TestCase):
@@ -15,7 +16,7 @@ class SolverTestCases(unittest.TestCase):
         state = Translator.translate_state(
             r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T1 <= int + str /\ T2 <= float /\ T2 <= float + complex))'
         )
-        result = ConstraintSolver(state).solve_state_constraints(strat1)
+        result = ConstraintSolver(state).solve_state_constraints(strat1, MAUDE_DUMP)
         expected_result = Translator.translate_state(r'a:int /\ b:float')
         self.assertEqual(result, expected_result)
 
@@ -27,8 +28,8 @@ class SolverTestCases(unittest.TestCase):
         state2 = Translator.translate_state(
             r'a:int /\ b:float'
         )
-        solved1 = ConstraintSolver(state1).solve_state_constraints(strat1)
-        solved2 = ConstraintSolver(state2).solve_state_constraints(strat1)
+        solved1 = ConstraintSolver(state1).solve_state_constraints(strat1, MAUDE_DUMP)
+        solved2 = ConstraintSolver(state2).solve_state_constraints(strat1, MAUDE_DUMP)
         result = solved1 == solved2
         expected_result = True
         self.assertEqual(result, expected_result)

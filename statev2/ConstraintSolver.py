@@ -24,7 +24,7 @@ class ConstraintSolver:
             specs.append(f'T?{i}')
         return normals, specs
 
-    def mod_generator(self, mod_name: str, constraints: str, indent: int = 2, dump_to_file: bool = False) -> str:
+    def mod_generator(self, mod_name: str, constraints: str, dump_file: str | None  = None, indent: int = 2) -> str:
         spaces = ' ' * indent
         maude_code = (f'mod {mod_name} is {os.linesep}'
                         f'{spaces}protecting CONSTR .{os.linesep}'
@@ -41,8 +41,8 @@ class ConstraintSolver:
                         f'{os.linesep}{spaces}eq c = {os.linesep}{constraints} .{os.linesep}'
                         f'{os.linesep}'
                         f'endm')
-        if dump_to_file:
-            open(mod_name + '.maude', 'w').write(maude_code)
+        if dump_file is not None:
+            open(dump_file, 'w').write(maude_code)
         return maude_code
 
     @staticmethod
@@ -56,7 +56,7 @@ class ConstraintSolver:
             relations.append(deepcopy(rel))
         return relations
 
-    def solve_state_constraints(self, strategy_str: str) -> State:
+    def solve_state_constraints(self, strategy_str: str, dump_file: str | None = None) -> State:
         modulename = 'tempmod'
         constr_module_name = 'CONSTR'
         constr_module = maude.getModule(constr_module_name)
@@ -65,7 +65,7 @@ class ConstraintSolver:
         if len(self.state.constraints) == 0:
             return deepcopy(self.state)
         c_value = str(self.state.constraints)
-        m_input = self.mod_generator('tempmod', c_value, dump_to_file=True)
+        m_input = self.mod_generator('tempmod', c_value, dump_file)
         if not maude.input(m_input):
             raise RuntimeError('Maude input operation failed')
         mod = maude.getModule(modulename)
@@ -97,4 +97,4 @@ class ConstraintSolver:
                 raise TypeError(f'{rel.bt_left} should be a VarType')
             to_replace = rel.bt_left[0]
             new_state.assignment = new_state.assignment.replace_vartype_with_basetype(to_replace, rel.bt_right)
-        return new_state
+        return new_state 
