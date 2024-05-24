@@ -3,7 +3,7 @@ from statev2.maude_gen import *
 
 if __name__ == "__main__":
     str_start_set = r'(a:int + float /\ b:int + float + str)'
-    start_set = Translator.translate_state_set(str_start_set)
+    start_set = StateSet.from_str(str_start_set)
     # simple_expr = ['a+b', 'a/b', 'a>>b', 'a*b', 'a-b']
     simple_expr = ['a+b']
     ofile = 'solver.out'

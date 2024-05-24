@@ -1,15 +1,36 @@
 from testbase import *
-from statev2.Translator import *
+# from statev2.Translator import *
+from statev2.basetype import *
 
 
 class TranslatorTestCases(unittest.TestCase):
+    def test_pytype_from_str_1(self):
+        result = PyType.from_str('list< int >')
+        expected_result = PyType(list, Basetype({PyType(int)}))
+        self.assertEqual(result, expected_result)
+
+    def test_pytype_from_str_2(self):
+        result = PyType.from_str('float')
+        expected_result = PyType(float)
+        self.assertEqual(result, expected_result)
+
+    def test_vartype_from_str_1(self):
+        result = PyType.from_str('T1')
+        expected_result = VarType('T1')
+        self.assertEqual(result, expected_result)
+
+    def test_vartype_from_str_2(self):
+        result = PyType.from_str('T?1')
+        expected_result = VarType('T?1')
+        self.assertEqual(result, expected_result)
+
     def test_translate_basetype_1(self):
-        result = Translator.translate_basetype('int + float + list< T_a >')
+        result = Basetype.from_str('int + float + list< T_a >')
         expected_result = Basetype({PyType(int), PyType(float), PyType(list, Basetype({VarType('T_a')}))})
         self.assertEqual(result, expected_result)
 
     def test_translate_basetype_2(self):
-        result = Translator.translate_basetype('list< int + set< T1 > + list< T2 > >')
+        result = Basetype.from_str('list< int + set< T1 > + list< T2 > >')
         expected_result = Basetype({
             PyType(
                 list, Basetype({
@@ -20,60 +41,48 @@ class TranslatorTestCases(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_translate_basetype_3(self):
-        result = Translator.translate_basetype('Sized')
-        # expected_result = Basetype({
-        #     PyType(memoryview),
-        #     PyType(range), 
-        #     PyType(bytes),
-        #     PyType(str),
-        #     PyType(bytearray),
-        #     PyType(list, Basetype({PyType(TopType)})),
-        #     PyType(set, Basetype({PyType(TopType)})),
-        #     PyType(tuple, Basetype({PyType(TopType)})),
-        #     PyType(frozenset, Basetype({PyType(TopType)})),
-        #     PyType(dict, Basetype({PyType(TopType)}), Basetype({PyType(TopType)})),
-        # })
+        result = Basetype.from_str('Sized')
         expected_result = Basetype({PyType(Sized)})
         self.assertEqual(result, expected_result)
 
     def test_translate_basetype_4(self):
-        result = Translator.translate_basetype('Iterable< T1 >')
+        result = Basetype.from_str('Iterable< T1 >')
         expected_result = Basetype({
             PyType(Iterable, Basetype({VarType('T1')})),
         })
         self.assertEqual(result, expected_result)
 
     def test_translate_basetype_5(self):
-        result = Translator.translate_basetype('Iterable< top >')
+        result = Basetype.from_str('Iterable< top >')
         expected_result = Basetype({
             PyType(Iterable, Basetype({PyType(TopType)})),
         })
         self.assertEqual(result, expected_result)
     
     def test_translate_basetype_6(self):
-        result = Translator.translate_basetype('str')
+        result = Basetype.from_str('str')
         expected_result = Basetype({PyType(str)})
         self.assertEqual(result, expected_result)
 
     def test_translate_assignment(self):
-        result = Translator.translate_assignment(r'(a:int+float /\ b:T_b)')
+        result = Assignment.from_str(r'(a:int+float /\ b:T_b)')
         expected_result = Assignment()
         expected_result['a'] = Basetype({PyType(int), PyType(float)})
         expected_result['b'] = Basetype({VarType('T_b')})
         self.assertEqual(result, expected_result)
 
     def test_translate_relop_1(self):
-        result = Translator.translate_relation(r'T_a <= int')
+        result = Relation.from_str(r'T_a <= int')
         expected_result = Relation(RelOp.LEQ, Basetype({VarType('T_a')}), Basetype({PyType(int)}))
         self.assertEqual(result, expected_result)
 
     def test_translate_relop_2(self):
-        result = Translator.translate_relation(r'T_a == int')
+        result = Relation.from_str(r'T_a == int')
         expected_result = Relation(RelOp.EQ, Basetype({VarType('T_a')}), Basetype({PyType(int)}))
         self.assertEqual(result, expected_result)
 
     def test_translate_relop_3(self):
-        result = Translator.translate_relation(r'T_b` <= int+float')
+        result = Relation.from_str(r'T_b` <= int+float')
         expected_result = Relation(
             RelOp.LEQ,
             Basetype({VarType('T_b`')}),
@@ -82,7 +91,7 @@ class TranslatorTestCases(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_translate_and_constr_1(self):
-        result = Translator.translate_and_constraints(r'((T_a <= int) /\ (T_b == int+T_c+list<T_1>))')
+        result = AndConstraints.from_str(r'((T_a <= int) /\ (T_b == int+T_c+list<T_1>))')
         expected_result = AndConstraints()
         expected_result.add(Relation(RelOp.LEQ, Basetype({VarType('T_a')}), Basetype({PyType(int)})))
         expected_result.add(
@@ -119,11 +128,11 @@ class TranslatorTestCases(unittest.TestCase):
             r'((T_a <= int) /\ (T_a <= float) /\ (T_b <= int+T_c) /\ (T_c == float) /\ (T_c == int))'
             r')'
         )
-        result = Translator.translate_state(str_state)
+        result = State.from_str(str_state)
         self.assertEqual(result, expected_result)
 
     def test_translate_state_2(self):
-        result = Translator.translate_state(r'(a:int /\ b:float)')
+        result = State.from_str(r'(a:int /\ b:float)')
         asgn = Assignment()
         asgn['a'] = Basetype({PyType(int)})
         asgn['b'] = Basetype({PyType(float)})
@@ -131,7 +140,7 @@ class TranslatorTestCases(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_translate_state_3(self):
-        result = Translator.translate_state(
+        result = State.from_str(
             r'((a:T_a` /\ b:T_b`) ^ '
             r'((T_a` <= int+float) /\ (T_a` <= float) /\ (T_b` <= int+float) /\ (T_b` <= int))'
             r')'
@@ -170,7 +179,7 @@ class TranslatorTestCases(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_translate_state_set_1(self):
-        result = Translator.translate_state_set(
+        result = StateSet.from_str(
             r'((a:T_a+float /\ b:T_b+int) ^ (T_b <= float /\ T_a <= str+complex)) \/ '
             r'((a:str /\ b:float))'
         )
@@ -200,7 +209,7 @@ class TranslatorTestCases(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_translate_state_set_2(self):
-        result = Translator.translate_state_set(r'((a:int /\ b:float))')
+        result = StateSet.from_str(r'((a:int /\ b:float))')
         expected_result = StateSet()
         state = State()
         state.assignment['a'] = Basetype({PyType(int)})
@@ -209,7 +218,7 @@ class TranslatorTestCases(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_translate_state_set_3(self):
-        result = Translator.translate_state_set(
+        result = StateSet.from_str(
             r'((self:complex /\ __value:complex /\ return:complex)) \/ '
             r'((self:float /\ __value:float /\ return:float)) \/ '
             r'((self:int /\ __value:int /\ return:float))'
@@ -233,7 +242,7 @@ class TranslatorTestCases(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_translate_spec_1(self):
-        result = Translator.translate_func_spec(r'((a:int /\ b:int) -> ((a+b):int))')
+        result = FuncSpec.from_str(r'((a:int /\ b:int) -> ((a+b):int))')
         expected_result = FuncSpec()
         expected_result.in_state.assignment['a'] = Basetype({PyType(int)})
         expected_result.in_state.assignment['b'] = Basetype({PyType(int)})

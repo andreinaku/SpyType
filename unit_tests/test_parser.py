@@ -114,7 +114,7 @@ class bytearray(MutableSequence[int]):
         funcnode = ast.parse(code).body[0]
         # funcnode = TypeReplacer().visit(funcnode)
         result = ClassdefToBasetypes().parse_funcdef(funcnode)
-        expected_result = Translator.translate_func_spec(
+        expected_result = FuncSpec.from_str(
             r'((__obj:Sized) -> (return:int))'
         )
         self.assertEqual(result, expected_result)
@@ -134,7 +134,7 @@ class bytearray(MutableSequence[int]):
         code = r'def f(a: int, b: bool, c: float = 3.5) -> int: ...'
         funcnode = ast.parse(code).body[0]
         result = ClassdefToBasetypes().parse_funcdef(funcnode)
-        expected_result = Translator.translate_func_spec(
+        expected_result = FuncSpec.from_str(
             r'((a:int /\ b:bool /\ __d_c:float) -> (return:int))'
         )
         self.assertEqual(result, expected_result)
@@ -143,7 +143,7 @@ class bytearray(MutableSequence[int]):
         code = r'def f(a: int, b: bool, c: float = 3.5, * , d: bool = True) -> int: ...'
         funcnode = ast.parse(code).body[0]
         result = ClassdefToBasetypes().parse_funcdef(funcnode)
-        expected_result = Translator.translate_func_spec(
+        expected_result = FuncSpec.from_str(
             r'((a:int /\ b:bool /\ __d_c:float /\ __ko___d_d: bool) -> (return:int))'
         )
         self.assertEqual(result, expected_result)

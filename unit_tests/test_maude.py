@@ -13,19 +13,19 @@ MAUDE_DUMP = PROJECT_DIR + os.sep + 'tempmod.maude'
 class SolverTestCases(unittest.TestCase):
     def test_solve_state_constraints_1(self):
         maude_start()
-        state = Translator.translate_state(
+        state = State.from_str(
             r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T1 <= int + str /\ T2 <= float /\ T2 <= float + complex))'
         )
         result = ConstraintSolver(state).solve_state_constraints(strat1, MAUDE_DUMP)
-        expected_result = Translator.translate_state(r'a:int /\ b:float')
+        expected_result = State.from_str(r'a:int /\ b:float')
         self.assertEqual(result, expected_result)
 
     def test_solved_state_eq_1(self):
         maude_start()
-        state1 = Translator.translate_state(
+        state1 = State.from_str(
             r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T1 <= int + str /\ T2 <= float /\ T2 <= float + complex))'
         )
-        state2 = Translator.translate_state(
+        state2 = State.from_str(
             r'a:int /\ b:float'
         )
         solved1 = ConstraintSolver(state1).solve_state_constraints(strat1, MAUDE_DUMP)

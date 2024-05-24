@@ -3,7 +3,6 @@ import os
 aux = os.getcwd()
 sys.path.append(aux)
 from statev2.basetype import *
-from statev2.Translator import *
 
 
 POSONLY_MARKER = '__po_'

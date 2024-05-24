@@ -4,7 +4,7 @@ import os
 import sys
 sys.path.append(os.getcwd())
 from copy import deepcopy
-from statev2.Translator import *
+from statev2.basetype import *
 
 
 strat1 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; Step5 ! ; Step6 ! '
@@ -52,7 +52,7 @@ class ConstraintSolver:
         result_list = m_res.split('/\\')
         for elem in result_list:
             aux = elem.strip('() ')
-            rel = Translator.translate_relation(aux)
+            rel = Relation.from_str(aux)
             relations.append(deepcopy(rel))
         return relations
 

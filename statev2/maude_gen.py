@@ -68,7 +68,7 @@ def get_constraints_string_from_states(state_set: StateSet) -> str:
 
 def output_expressions(expr_list: list[str], str_state_set: str,
                        outc_file: str = 'out_constraints.txt', outs_file: str = 'out_states.txt'):
-    current = Translator.translate_state_set(str_state_set)
+    current = StateSet.from_str(str_state_set)
     if os.path.exists(outc_file):
         os.remove(outc_file)
     if os.path.exists(outs_file):
@@ -116,7 +116,7 @@ def parse_single_result_string(case: str) -> list[Relation]:
     result_list = m_res.split('/\\')
     for elem in result_list:
         aux = elem.strip('() ')
-        rel = Translator.translate_relation(aux)
+        rel = Relation.from_str(aux)
         relations.append(deepcopy(rel))
     return relations
 

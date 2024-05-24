@@ -2,7 +2,6 @@ from ast import Assign
 from typing import Any
 from statev2.basetype import *
 from united_specs import op_equiv, unitedspecs
-from statev2.Translator import Translator
 from statev2.function_instance import FunctionInstance
 
 
@@ -65,7 +64,7 @@ def get_specset(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
     raw_set = find_spec(node)
     spec_set = hset()
     for str_spec in raw_set:
-        spec = Translator.translate_func_spec(str_spec)
+        spec = FuncSpec.from_str(str_spec)
         # spec_state = spec_to_state(spec)
         # spec = spec.replace_superclasses()
         spec_set.add(deepcopy(spec))
