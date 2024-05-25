@@ -882,8 +882,15 @@ class State:
             raise RuntimeError(f'Empty relations for {str(result)}')
         new_state = deepcopy(self)
         for rel in relations:
+            if len(rel.bt_left) != 1 or not isinstance(rel.bt_left[0], VarType):
+                continue
             new_state = new_state.replace_basetype(rel.bt_left, rel.bt_right)
         new_state = new_state.remove_valid_relations()
+        if len(new_state.constraints) != 0:
+            return BottomState()
+        for expr, bt in new_state.assignment.items():
+            if bt == Basetype({PyType(BottomType)}):
+                return BottomState()
         return new_state
     
     def remove_valid_relations(self):
@@ -914,6 +921,10 @@ class State:
         new_state.assignment = self.assignment.replace_basetype(to_replace, replace_with)
         new_state.constraints = self.constraints.replace_basetype(to_replace, replace_with)
         return new_state 
+    
+
+class BottomState(State):
+    pass
 
 
 class StateSet(hset):
@@ -981,8 +992,9 @@ class StateSet(hset):
         state: State
         for state in self:
             solved_state = state.solve_constraints()
-            solved_state = solved_state.remove_valid_relations()
-            solved_stateset.add(solved_state)
+            # solved_state = solved_state.remove_valid_relations()
+            if solved_state != BottomState():
+                solved_stateset.add(deepcopy(solved_state))
         return solved_stateset
 
 
