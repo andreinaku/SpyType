@@ -1007,6 +1007,12 @@ class FuncSpec:
         new_out = self.out_state.replace_superclasses()
         new_funcspec = FuncSpec(new_in, new_out)
         return new_funcspec
+    
+    def replace_basetype(self, to_replace: Basetype, replace_with: Basetype) -> FuncSpec:
+        new_funcspec = FuncSpec()
+        new_funcspec.in_state = self.in_state.replace_basetype(to_replace, replace_with)
+        new_funcspec.out_state = self.out_state.replace_basetype(to_replace, replace_with)
+        return new_funcspec
 
 
 # for later use, sequences with implicit types contained

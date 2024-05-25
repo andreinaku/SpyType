@@ -305,3 +305,11 @@ class BasetypeTests(unittest.TestCase):
             r'((a:str /\ b:T2) ^ (str <= str /\ T2 <= str))'
         )
         self.assertEqual(result, expected_result)
+
+    def test_funcspec_replace_basetype_1(self):
+        funcspec = FuncSpec.from_str(
+            r'((a:int + float /\ b:int + float) -> (return:float))'
+        )
+        result = funcspec.replace_basetype(Basetype.from_str('int + float'), Basetype.from_str('float'))
+        expected_result = FuncSpec.from_str(r'((a:float /\ b:float) -> (return:float))')
+        self.assertEqual(result, expected_result)
