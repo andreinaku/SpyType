@@ -886,6 +886,12 @@ class State:
         state1 = self.solve_constraints(strat1)
         state2 = other_state.solve_constraints(strat1)
         return state1 == state2
+    
+    def replace_basetype(self, to_replace: Basetype, replace_with: Basetype) -> State:
+        new_state = State()
+        new_state.assignment = self.assignment.replace_basetype(to_replace, replace_with)
+        new_state.constraints = self.constraints.replace_basetype(to_replace, replace_with)
+        return new_state 
 
 
 class StateSet(hset):
@@ -938,6 +944,14 @@ class StateSet(hset):
         for st in self:
             new_state = st.replace_superclasses()
             new_state_set.add(new_state)
+        return new_state_set
+    
+    def replace_basetype(self, to_replace: Basetype, replace_with: Basetype) -> StateSet:
+        new_state_set = StateSet()
+        state: State
+        for state in self:
+            new_state = state.replace_basetype(to_replace, replace_with)
+            new_state_set.add(deepcopy(new_state))
         return new_state_set
 
 

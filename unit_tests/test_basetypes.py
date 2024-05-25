@@ -283,3 +283,25 @@ class BasetypeTests(unittest.TestCase):
         result = andconstr.replace_basetype(Basetype.from_str('T2'), Basetype.from_str('float'))
         expected_result = AndConstraints.from_str(r'((T1 <= int + str) /\ (float <= float))')
         self.assertEqual(result, expected_result)
+
+    def test_state_replace_basetype_1(self):
+        state = State.from_str(
+            r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T1 <= float /\ T2 <= T1 + complex))'
+        )
+        result = state.replace_basetype(Basetype.from_str('T1'), Basetype.from_str('str'))
+        expected_result = State.from_str(
+            r'((a:str /\ b:T2) ^ (str <= int /\ str <= float /\ T2 <= str + complex))'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_stateset_replace_basetype_1(self):
+        stateset = StateSet.from_str(
+            r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T1 <= float /\ T2 <= T1 + complex)) \/ '
+            r'((a:T1 /\ b:T2) ^ (T1 <= str /\ T2 <= str))'
+        )
+        result = stateset.replace_basetype(Basetype.from_str('T1'), Basetype.from_str('str'))
+        expected_result = StateSet.from_str(
+            r'((a:str /\ b:T2) ^ (str <= int /\ str <= float /\ T2 <= str + complex)) \/ '
+            r'((a:str /\ b:T2) ^ (str <= str /\ T2 <= str))'
+        )
+        self.assertEqual(result, expected_result)
