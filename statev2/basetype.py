@@ -701,6 +701,14 @@ class AndConstraints(hset):
             new_andconstr.add(new_rel)
         return new_andconstr
 
+    def replace_basetype(self, to_replace: Basetype, replace_with: Basetype) -> AndConstraints:
+        new_andconstr = AndConstraints()
+        rel: Relation
+        for rel in self:
+            new_rel = rel.replace_basetype(to_replace, replace_with)
+            new_andconstr.add(new_rel)
+        return new_andconstr
+
 
 class OrConstraints(hset):
     def __str__(self):

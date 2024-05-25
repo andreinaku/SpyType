@@ -278,3 +278,8 @@ class BasetypeTests(unittest.TestCase):
         expected_result = Assignment.from_str(r'a:int + str + complex /\ b:str + float /\ c:T2')
         self.assertEqual(result, expected_result)
     
+    def test_andconstraints_replace_basetype_1(self):
+        andconstr = AndConstraints.from_str(r'((T1 <= int + str) /\ (T2 <= float))')
+        result = andconstr.replace_basetype(Basetype.from_str('T2'), Basetype.from_str('float'))
+        expected_result = AndConstraints.from_str(r'((T1 <= int + str) /\ (float <= float))')
+        self.assertEqual(result, expected_result)
