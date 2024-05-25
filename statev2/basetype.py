@@ -840,7 +840,7 @@ class State:
             relations.append(deepcopy(rel))
         return relations
 
-    def solve_constraints(self, strategy_str: str, dump_file: str | None = None) -> State:
+    def solve_constraints(self, strategy_str: str = strat1, dump_file: str | None = None) -> State:
         maude.init()
         init_module = INIT_MAUDE_PATH
         if not maude.load(init_module):
@@ -975,6 +975,15 @@ class StateSet(hset):
             new_state = state.replace_basetype(to_replace, replace_with)
             new_state_set.add(deepcopy(new_state))
         return new_state_set
+
+    def solve_states(self):
+        solved_stateset = StateSet()
+        state: State
+        for state in self:
+            solved_state = state.solve_constraints()
+            solved_state = solved_state.remove_valid_relations()
+            solved_stateset.add(solved_state)
+        return solved_stateset
 
 
 class FuncSpec:
