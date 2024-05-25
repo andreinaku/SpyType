@@ -213,43 +213,56 @@ class BasetypeTests(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_eq_state_1(self):
-        state1 = State.from_str(r'a:int /\\ b:float')
-        state2 = State.from_str(r'a:int /\\ b:float')
+        state1 = State.from_str('a:int /\\ b:float')
+        state2 = State.from_str('a:int /\\ b:float')
         result = state1 == state2
         expected_result = True
         self.assertEqual(result, expected_result)
 
     def test_eq_state_2(self):
-        state1 = State.from_str(r'((a:int /\\ b:float) ^ (T1 <= int))')
-        state2 = State.from_str(r'a:int /\\ b:float')
+        state1 = State.from_str('((a:int /\\ b:float) ^ (T1 <= int))')
+        state2 = State.from_str('a:int /\\ b:float')
         result = state1 == state2
         expected_result = False
         self.assertEqual(result, expected_result)
 
     def test_eq_state_3(self):
-        state1 = State.from_str(r'((a:int /\\ b:float) ^ (T1 <= int))')
-        state2 = State.from_str(r'((a:int /\\ b:float) ^ (T1 <= int))')
+        state1 = State.from_str('((a:int /\\ b:float) ^ (T1 <= int))')
+        state2 = State.from_str('((a:int /\\ b:float) ^ (T1 <= int))')
         result = state1 == state2
         expected_result = True
         self.assertEqual(result, expected_result)
 
     def test_eq_state_4(self):
-        state1 = State.from_str(r'((a:int /\\ b:float) ^ (T1 <= int))')
-        state2 = State.from_str(r'((a:int /\\ b:float) ^ (T1 <= float))')
+        state1 = State.from_str('((a:int /\\ b:float) ^ (T1 <= int))')
+        state2 = State.from_str('((a:int /\\ b:float) ^ (T1 <= float))')
         result = state1 == state2
         expected_result = False
         self.assertEqual(result, expected_result)
 
     def test_eq_state_5(self):
-        state1 = State.from_str(r'((a:int /\\ b:float) ^ (T1 <= int))')
-        state2 = State.from_str(r'((a:int /\\ b:str) ^ (T1 <= int))')
+        state1 = State.from_str('((a:int /\\ b:float) ^ (T1 <= int))')
+        state2 = State.from_str('((a:int /\\ b:str) ^ (T1 <= int))')
         result = state1 == state2
         expected_result = False
         self.assertEqual(result, expected_result)
 
     def test_eq_state_6(self):
-        state1 = State.from_str(r'((a:int /\\ b:str /\\ c:complex) ^ (T1 <= int))')
-        state2 = State.from_str(r'((a:int /\\ b:str) ^ (T1 <= int))')
+        state1 = State.from_str(r'((a:int /\ b:str /\ c:complex) ^ (T1 <= int))')
+        state2 = State.from_str(r'((a:int /\ b:str) ^ (T1 <= int))')
         result = state1 == state2
         expected_result = False
         self.assertEqual(result, expected_result)
+
+    def test_relation_replace_basetype(self):
+        rel = Relation.from_str('T1 <= int + str')
+        result = rel.replace_basetype(Basetype.from_str('T1'), Basetype.from_str('str + complex'))
+        expected_result = Relation.from_str('str + complex <= int + str')
+        self.assertEqual(result, expected_result)
+
+    def test_assignment_replace_basetype_1(self):
+        assig = Assignment.from_str(r'a:int + T1 /\ b:str + float /\ c:T2')
+        result = assig.replace_basetype(Basetype.from_str('T1'), Basetype.from_str('str + complex'))
+        expected_result = Assignment.from_str(r'a:int + str + complex /\ b:str + float /\ c:T2')
+        self.assertEqual(result, expected_result)
+    

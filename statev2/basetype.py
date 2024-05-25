@@ -521,6 +521,13 @@ class Assignment(hdict):
                 return False
         return True
 
+    def replace_basetype(self, to_replace: Basetype, replace_with: Basetype) -> Assignment:
+        new_assign = Assignment()
+        bt: Basetype
+        for expr, bt in self.items():
+            new_assign[expr] = bt.replace_basetype(to_replace, replace_with)
+        return new_assign
+
     @classmethod
     def from_str(cls, input_str: str) -> Assignment:
         # (a:bt_a /\ b:bt_b /\ ...)
@@ -571,7 +578,7 @@ class Assignment(hdict):
 
 
 class Relation:
-    def __init__(self, relop: RelOp, bt_left: Basetype, bt_right: Basetype):
+    def __init__(self, relop: RelOp = None, bt_left: Basetype = None, bt_right: Basetype = None):
         self.relop = relop
         self.bt_left = deepcopy(bt_left)
         self.bt_right = deepcopy(bt_right)
@@ -630,6 +637,13 @@ class Relation:
         new_bt_left = self.bt_left.get_builtin_from_bt()
         new_bt_right = self.bt_right.get_builtin_from_bt()
         new_rel = Relation(self.relop, new_bt_left, new_bt_right)
+        return new_rel
+    
+    def replace_basetype(self, to_replace: Basetype, replace_with: Basetype) -> Relation:
+        new_rel = Relation()
+        new_rel.relop = deepcopy(self.relop)
+        new_rel.bt_left = self.bt_left.replace_basetype(to_replace, replace_with)
+        new_rel.bt_right = self.bt_right.replace_basetype(to_replace, replace_with)
         return new_rel
 
 
