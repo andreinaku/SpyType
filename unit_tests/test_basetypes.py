@@ -80,7 +80,7 @@ class BasetypeTests(unittest.TestCase):
         result = bt1.contains_basetype(bt2) and (bt2 <= bt1)
         expected_result = True
         self.assertEqual(result, expected_result)
-
+    
     def test_contains_basetype_4(self):
         bt1 = Basetype.from_str('int + float + list< int + float + str >')
         bt2 = Basetype.from_str('int + float + str')
@@ -114,6 +114,20 @@ class BasetypeTests(unittest.TestCase):
         bt2 = Basetype.from_str('complex + T2')
         result = bt1.contains_basetype(bt2, True)
         expected_result = False
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_le_1(self):
+        bt1 = Basetype.from_str('int + float + str')
+        bt2 = Basetype.from_str('int + float')
+        result = bt1 <= bt2
+        expected_result = False
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_le_2(self):
+        bt1 = Basetype.from_str('int + float + str')
+        bt2 = Basetype.from_str('int + float')
+        result = bt2 <= bt1
+        expected_result = True
         self.assertEqual(result, expected_result)
 
     def test_eq_1(self):
@@ -254,6 +268,22 @@ class BasetypeTests(unittest.TestCase):
         expected_result = False
         self.assertEqual(result, expected_result)
 
+    def test_leq_from_rel_1(self):
+        rel = Relation.from_str(r'int <= int + float')
+        if rel.relop != RelOp.LEQ:
+            raise RuntimeError('Relation not ok')
+        result = rel.bt_left <= rel.bt_right
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_leq_from_rel_2(self):
+        rel = Relation.from_str(r'int + T1 <= int + float')
+        if rel.relop != RelOp.LEQ:
+            raise RuntimeError('Relation not ok')
+        result = rel.bt_left <= rel.bt_right
+        expected_result = False
+        self.assertEqual(result, expected_result)
+
     def test_relation_replace_basetype_1(self):
         rel = Relation.from_str('T1 <= int + str')
         result = rel.replace_basetype(Basetype.from_str('T1'), Basetype.from_str('str + complex'))
@@ -312,4 +342,28 @@ class BasetypeTests(unittest.TestCase):
         )
         result = funcspec.replace_basetype(Basetype.from_str('int + float'), Basetype.from_str('float'))
         expected_result = FuncSpec.from_str(r'((a:float /\ b:float) -> (return:float))')
+        self.assertEqual(result, expected_result)
+
+    def test_state_remove_valid_relations_1(self):
+        state = State.from_str(r'((a:int /\ b:float) ^ (int <= int + str /\ int + float <= int + float + complex))')
+        result= state.remove_valid_relations()
+        expected_result = State.from_str(r'(a:int /\ b:float)')
+        self.assertEqual(result, expected_result)
+
+    def test_state_remove_valid_relations_2(self):
+        state = State.from_str(r'((a:int /\ b:float) ^ (int <= int + str /\ int + float <= float + complex))')
+        result= state.remove_valid_relations()
+        expected_result = State.from_str(r'((a:int /\ b:float) ^ (int + float <= float + complex))')
+        self.assertEqual(result, expected_result)
+
+    def test_state_remove_valid_relations_3(self):
+        state = State.from_str(r'((a:int /\ b:float) ^ (int <= int + str /\ int + T1 <= int))')
+        result= state.remove_valid_relations()
+        expected_result = State.from_str(r'((a:int /\ b:float) ^ (int + T1 <= int))')
+        self.assertEqual(result, expected_result)
+
+    def test_state_remove_valid_relations_4(self):
+        state = State.from_str(r'((a:int /\ b:float) ^ (int <= int + str /\ int + float <= int))')
+        result= state.remove_valid_relations()
+        expected_result = State.from_str(r'((a:int /\ b:float) ^ (int + float <= int))')
         self.assertEqual(result, expected_result)

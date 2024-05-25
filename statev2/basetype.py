@@ -442,8 +442,14 @@ class Basetype(hset):
             new_bt.add(aux_pytype)
         return new_bt
     
-    def __leq__(self, other_bt: Basetype) -> bool:
-        return self.contains_basetype(other_bt)
+    def __contains__(self, o: Basetype) -> bool:
+        return self.contains_basetype(o)
+
+    def __lt__(self, other_bt: Basetype) -> bool:
+        return other_bt.contains_basetype(self) and not self.contains_basetype(other_bt)
+        
+    def __le__(self, other_bt: Basetype) -> bool:
+        return other_bt.contains_basetype(self)
 
     def __sub__(self, other_bt: Basetype) -> bool:
         new_bt = Basetype()
@@ -869,15 +875,29 @@ class State:
             aux_len += 1
             relations = self.parse_single_result_string(str(result))
         new_state = State()
-        new_state.assignment = deepcopy(self.assignment)
+        # new_state.assignment = deepcopy(self.assignment)
         if relations is None:
             raise RuntimeError(f'Empty relations for {str(result)}')
+        new_state = deepcopy(self)
         for rel in relations:
-            if len(rel.bt_left) > 1 or not isinstance(rel.bt_left[0], VarType):
-                raise TypeError(f'{rel.bt_left} should be a VarType')
-            to_replace = rel.bt_left[0]
-            new_state.assignment = new_state.assignment.replace_vartype_with_basetype(to_replace, rel.bt_right)
-        return new_state 
+            new_state = new_state.replace_basetype(rel.bt_left, rel.bt_right)
+        new_state = new_state.remove_valid_relations()
+        return new_state
+    
+    def remove_valid_relations(self):
+        new_state = State()
+        new_state.assignment = deepcopy(self.assignment)
+        rel: Relation
+        for rel in self.constraints:
+            if rel.relop == RelOp.LEQ:
+                comparator = rel.bt_left.__le__
+            elif rel.relop == RelOp.EQ:
+                comparator = rel.bt_left.__eq__
+            else:
+                raise RuntimeError(f'Relation {rel} has invalida comparator {rel.relop}')
+            if not comparator(rel.bt_right):
+                new_state.constraints.add(deepcopy(rel))
+        return new_state
 
     def __eq__(self, other_state: State) -> bool:
         return (self.assignment == other_state.assignment) and (self.constraints == other_state.constraints)
