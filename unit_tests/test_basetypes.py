@@ -254,10 +254,22 @@ class BasetypeTests(unittest.TestCase):
         expected_result = False
         self.assertEqual(result, expected_result)
 
-    def test_relation_replace_basetype(self):
+    def test_relation_replace_basetype_1(self):
         rel = Relation.from_str('T1 <= int + str')
         result = rel.replace_basetype(Basetype.from_str('T1'), Basetype.from_str('str + complex'))
         expected_result = Relation.from_str('str + complex <= int + str')
+        self.assertEqual(result, expected_result)
+
+    def test_relation_replace_basetype_2(self):
+        rel = Relation.from_str('T1 <= int + str')
+        result = rel.replace_basetype(Basetype.from_str('int + str'), Basetype.from_str('str + int'))
+        # expected_result = Relation.from_str('str + complex <= int + str')
+        self.assertEqual(result, rel)
+
+    def test_relation_replace_basetype_3(self):
+        rel = Relation.from_str('T1 <= int + str')
+        result = rel.replace_basetype(Basetype.from_str('int + str'), Basetype.from_str('list< str + int >'))
+        expected_result = Relation.from_str('T1 <= list< int + str >')
         self.assertEqual(result, expected_result)
 
     def test_assignment_replace_basetype_1(self):
