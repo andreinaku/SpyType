@@ -886,11 +886,11 @@ class State:
                 continue
             new_state = new_state.replace_basetype(rel.bt_left, rel.bt_right)
         new_state = new_state.remove_valid_relations()
-        if len(new_state.constraints) != 0:
-            return BottomState()
-        for expr, bt in new_state.assignment.items():
-            if bt == Basetype({PyType(BottomType)}):
-                return BottomState()
+        # if len(new_state.constraints) != 0:
+        #     return BottomState()
+        # for expr, bt in new_state.assignment.items():
+        #     if bt == Basetype({PyType(BottomType)}):
+        #         return BottomState()
         return new_state
     
     def remove_valid_relations(self):
@@ -996,6 +996,12 @@ class StateSet(hset):
             if solved_state != BottomState():
                 solved_stateset.add(deepcopy(solved_state))
         return solved_stateset
+
+    def __or__(self, other_set: StateSet) -> StateSet:
+        new_stateset = deepcopy(self)
+        for other_state in other_set:
+            new_stateset.add(deepcopy(other_state))
+        return new_stateset
 
 
 class FuncSpec:

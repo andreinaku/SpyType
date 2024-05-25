@@ -367,3 +367,15 @@ class BasetypeTests(unittest.TestCase):
         result= state.remove_valid_relations()
         expected_result = State.from_str(r'((a:int /\ b:float) ^ (int + float <= int))')
         self.assertEqual(result, expected_result)
+
+    def test_stateset_lub_1(self):
+        set1 = StateSet.from_str(r'((a:Ta /\ b:Tb) ^ (Ta <= int /\ Tb <= float))')
+        set2 = StateSet.from_str(r'((a:T1 /\ b:T2 /\ c:T3) ^ (T1 <= float /\ T2 <= str /\ T3 <= int))')
+        result = set1 | set2
+        expected_result = StateSet.from_str(
+            r'((a:Ta /\ b:Tb) ^ (Ta <= int /\ Tb <= float)) \/ '
+            r'((a:T1 /\ b:T2 /\ c:T3) ^ (T1 <= float /\ T2 <= str /\ T3 <= int))'
+        )
+        self.assertEqual(result, expected_result)
+
+    
