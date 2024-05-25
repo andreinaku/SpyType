@@ -64,6 +64,11 @@ class TranslatorTestCases(unittest.TestCase):
         expected_result = Basetype({PyType(str)})
         self.assertEqual(result, expected_result)
 
+    def test_translate_basetype_7(self):
+        result = Basetype.from_str('bot')
+        expected_result = Basetype({PyType(BottomType)})
+        self.assertEqual(result, expected_result)
+
     def test_translate_assignment(self):
         result = Assignment.from_str(r'(a:int+float /\ b:T_b)')
         expected_result = Assignment()

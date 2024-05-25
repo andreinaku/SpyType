@@ -449,6 +449,8 @@ class Basetype(hset):
         return other_bt.contains_basetype(self) and not self.contains_basetype(other_bt)
         
     def __le__(self, other_bt: Basetype) -> bool:
+        if len(self) == 1 and self[0] == PyType(BottomType):
+            return True
         return other_bt.contains_basetype(self)
 
     def __sub__(self, other_bt: Basetype) -> bool:

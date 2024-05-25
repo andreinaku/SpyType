@@ -3,7 +3,8 @@ fmod TYPE is
   subsort BoundVarType  VarType ConstType < Type .
   --- ops NoneType AnyType bool int float str complex memoryview bytearray bytes SupportsIndex : -> ConstType [ctor]. 
   --- ops NoneType AnyType bool int float str complex memoryview bytearray bytes : -> ConstType [ctor]. 
-  ops NoneType top bool int float str complex memoryview bytearray bytes range : -> ConstType [ctor]. 
+  --- ops NoneType top bool int float str complex memoryview bytearray bytes range : -> ConstType [ctor]. 
+  ops NoneType top bot bool int float str complex memoryview bytearray bytes range : -> ConstType [ctor]. 
   op tuple<_> : Type -> Type [ctor].
   op list<_> : Type -> Type [ctor]. 
   op set<_> : Type -> Type [ctor]. 
@@ -32,7 +33,8 @@ fmod TYPE is
   var CT : ConstType .
 
   op leq : Type Type -> Bool [strat(1 2 0)] .
-  eq leq(NoneType, T) = true .
+  --- eq leq(NoneType, T) = true .
+  eq leq(bot, T) = true .
   eq leq(T, top) = true .
   eq leq(T, T) = true .
   eq leq(tuple< T1 >, tuple< T2 >) = leq(T1, T2) . 
@@ -80,7 +82,8 @@ fmod TYPE is
   /\ [ T' ; S'' ] := glb(T1', T2', S').
   eq glb(X?, T, S) = [ T ; (S, X? |-> T) ] . 
   eq glb(T, Y?, S) = [ T ; (S, Y? |-> T) ] . 
-  eq glb(T1, T2, S) = [ NoneType ; S ] [owise].
+  --- eq glb(T1, T2, S) = [ NoneType ; S ] [owise].
+  eq glb(T1, T2, S) = [ bot ; S ] [owise].
 
 endfm
 
