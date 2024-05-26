@@ -307,6 +307,30 @@ class Basetype(hset):
 
     def __hash__(self):
         return super().__hash__()
+    
+    @classmethod
+    def lub(cls, bt1: Basetype, bt2: Basetype) -> Basetype:
+        new_basetype = Basetype()
+        already_added = set()
+        for atom1 in bt1:
+            if isinstance(atom1, VarType) or (isinstance(atom1, PyType) and atom1.keys is None):
+                new_basetype.add(deepcopy(atom1))
+                continue
+            same_container = False
+            for atom2 in bt2:
+                if atom1.ptype == atom2.ptype:
+                    same_container = True
+                    break
+            if same_container:
+                new_atom = PyType(atom1.ptype, cls.lub(atom1.keys, atom2.keys))
+                new_basetype.add(deepcopy(new_atom))
+                already_added.add(atom2)
+            else:
+                new_basetype.add(deepcopy(atom1))
+        for atom2 in bt2:
+            if atom2 not in already_added:
+                new_basetype.add(deepcopy(atom2))
+        return new_basetype
 
     @classmethod
     def from_str(cls, input_str: str) -> Basetype:

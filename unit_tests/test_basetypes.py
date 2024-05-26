@@ -378,4 +378,37 @@ class BasetypeTests(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
 
+    def test_basetype_lub_1(self):
+        bt1 = Basetype.from_str(r'int + float')
+        bt2 = Basetype.from_str(r'str + int')
+        result = Basetype.lub(bt1, bt2)
+        expected_result = Basetype.from_str(r'int + str + float')
+        self.assertEqual(result, expected_result)
     
+    def test_basetype_lub_2(self):
+        bt1 = Basetype.from_str(r'int + float + list< int >')
+        bt2 = Basetype.from_str(r'list< str > + int')
+        result = Basetype.lub(bt1, bt2)
+        expected_result = Basetype.from_str(r'int + float + list< int + str >')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_lub_3(self):
+        bt1 = Basetype.from_str(r'int + set< float > + list< int >')
+        bt2 = Basetype.from_str(r'list< str > + set< int > + complex')
+        result = Basetype.lub(bt1, bt2)
+        expected_result = Basetype.from_str(r'int + set< int + float > + list< int + str > + complex')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_lub_4(self):
+        bt1 = Basetype.from_str(r'int + set< list< float > >')
+        bt2 = Basetype.from_str(r'set< list< int > > + complex')
+        result = Basetype.lub(bt1, bt2)
+        expected_result = Basetype.from_str(r'int + complex + set< list< int + float > >')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_lub_5(self):
+        bt1 = Basetype.from_str(r'int + set< list< float + T1 > >')
+        bt2 = Basetype.from_str(r'set< T2 + list< int > > + complex')
+        result = Basetype.lub(bt1, bt2)
+        expected_result = Basetype.from_str(r'int + complex + set< T2 + list< T1 + float + int > >')
+        self.assertEqual(result, expected_result)
