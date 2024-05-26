@@ -68,6 +68,13 @@ class SolverTestCases(unittest.TestCase):
         expected_result = None
         self.assertEqual(result, expected_result)
 
+    def test_solve_state_constraints_7(self):
+        state = State.from_str(
+            r'((a:T1 /\ b:T2) ^ (T1 <= T2 /\ T2 <= T1))'
+        )
+        result = state.solve_constraints(strat1, MAUDE_DUMP)
+        expected_result = None
+        self.assertEqual(result, expected_result)
 
     def test_solved_state_eq_1(self):
         state1 = State.from_str(
