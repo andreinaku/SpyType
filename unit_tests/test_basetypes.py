@@ -412,3 +412,11 @@ class BasetypeTests(unittest.TestCase):
         result = Basetype.lub(bt1, bt2)
         expected_result = Basetype.from_str(r'int + complex + set< T2 + list< T1 + float + int > >')
         self.assertEqual(result, expected_result)
+
+    def test_state_lub_1(self):
+        state1 = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= float))')
+        state2 = State.from_str(r'((a:T3 /\ b:T4) ^ (T1 <= str /\ T2 <= str))')
+        result = State.lub(state1, state2)
+        expected_result = State.from_str(
+            r'((a:T1 + T3 /\ b:T2 + T4) ^ (T1 <= int))'
+        )

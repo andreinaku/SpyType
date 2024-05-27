@@ -73,7 +73,23 @@ class SolverTestCases(unittest.TestCase):
             r'((a:T1 /\ b:T2) ^ (T1 <= T2 /\ T2 <= T1))'
         )
         result = state.solve_constraints(strat1, MAUDE_DUMP)
-        expected_result = None
+        expected_result = State.from_str(r'(a:T1 /\ b:T1)')
+        self.assertEqual(result, expected_result)
+
+    def test_solve_state_constraint_8(self):
+        state = State.from_str(
+            r'((a:T1 /\ b:T2) ^ (T3 <= T1 + T2))'
+        )
+        result = state.solve_constraints()
+        expected_result = State.from_str(r'(a:T1 /\ b:T2)')
+        self.assertEqual(result, expected_result)
+
+    def test_solve_state_constraint_9(self):
+        state = State.from_str(
+            r'((a:T1 /\ b:T2) ^ (T1 <= list< T3 > /\ T2 <= list< T4 >))'
+        )
+        result = state.solve_constraints()
+        expected_result = State.from_str(r'(a:list< T3 > /\ b:list< T4 >)')
         self.assertEqual(result, expected_result)
 
     def test_solved_state_eq_1(self):

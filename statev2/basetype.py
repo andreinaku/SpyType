@@ -13,6 +13,7 @@ import re
 strat1 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; Step5 ! ; Step6 ! '
 strat2 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! '
 INIT_MAUDE_PATH = os.getcwd() + os.sep + 'init.maude'
+DEFAULT_SOLVER_OUT = os.getcwd() + os.sep + 'solver.out'
 
 
 def maude_vartype_generator(maxitems: int = 20) -> tuple[list[str], list[str]]:
@@ -608,6 +609,21 @@ class Assignment(hdict):
             new_assignment[expr] = new_bt
         return new_assignment
 
+    @classmethod
+    def lub(cls, assign1: Assignment, assign2: Assignment) -> Assignment:
+        new_assign = Assignment()
+        visited = set()
+        for expr, bt1 in assign1.items():
+            if expr not in assign2:
+                new_assign[expr] = deepcopy(bt1)
+            else:
+                new_assign[expr] = Basetype.lub(bt1, assign2[expr])
+                visited.add(deepcopy(expr))
+        for expr, bt2 in assign2.items():
+            if expr not in visited:
+                new_assign[expr] = deepcopy(bt2)
+        return new_assign
+
 
 class Relation:
     def __init__(self, relop: RelOp = None, bt_left: Basetype = None, bt_right: Basetype = None):
@@ -740,6 +756,10 @@ class AndConstraints(hset):
             new_rel = rel.replace_basetype(to_replace, replace_with)
             new_andconstr.add(new_rel)
         return new_andconstr
+    
+    @classmethod
+    def lub(cls, andc1: AndConstraints, andc2: AndConstraints) -> AndConstraints:
+        pass
 
 
 class OrConstraints(hset):
@@ -864,7 +884,7 @@ class State:
             relations.append(deepcopy(rel))
         return relations
 
-    def solve_constraints(self, strategy_str: str = strat1, dump_file: str | None = None) -> State:
+    def solve_constraints(self, strategy_str: str = strat1, dump_file: str | None = None, ofile: str = DEFAULT_SOLVER_OUT) -> State:
         maude.init()
         init_module = INIT_MAUDE_PATH
         if not maude.load(init_module):
@@ -899,6 +919,7 @@ class State:
             if aux_len > 0:
                 raise RuntimeError('Too many maude results')
             aux_len += 1
+            open(ofile, 'w').write(f'{result}')
             relations = self.parse_single_result_string(str(result))
         new_state = State()
         # new_state.assignment = deepcopy(self.assignment)
@@ -945,7 +966,14 @@ class State:
         new_state.assignment = self.assignment.replace_basetype(to_replace, replace_with)
         new_state.constraints = self.constraints.replace_basetype(to_replace, replace_with)
         return new_state 
-    
+
+    @classmethod
+    def lub(cls, state1: State, state2: State) -> State:
+        new_state = State()
+        new_state.assignment = Assignment.lub(state1.assignment, state2. assignment)
+        new_state.constraints = AndConstraints.lub(state1.constraints, state2.constraints)
+        return new_state    
+
 
 class BottomState(State):
     pass
