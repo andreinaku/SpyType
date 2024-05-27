@@ -319,7 +319,7 @@ class Basetype(hset):
                 continue
             same_container = False
             for atom2 in bt2:
-                if atom1.ptype == atom2.ptype:
+                if isinstance(atom2, PyType) and atom1.ptype == atom2.ptype:
                     same_container = True
                     break
             if same_container:
