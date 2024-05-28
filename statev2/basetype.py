@@ -8,6 +8,7 @@ from copy import deepcopy
 from statev2.supported_types import is_supported_type, builtin_types, builtin_seqs, builtin_dicts, builtins
 import maude
 import re
+import itertools
 
 
 strat1 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; Step5 ! ; Step6 ! '
@@ -523,6 +524,120 @@ class Basetype(hset):
                 continue
             new_bt |= ptip.get_builtin_from_pytype()
         return new_bt
+
+    @classmethod
+    def check_all_levels(cls, bt1: Basetype, bt2: Basetype) -> bool:
+        vt1 = []
+        vt2 = []
+        for atom in bt1:
+            if isinstance(atom, VarType):
+                vt1.append(deepcopy(atom))
+        for atom in bt2:
+            if isinstance(atom, VarType):
+                vt2.append(deepcopy(atom))
+        if len(vt1) != len(vt2):
+            return False
+        for atom1 in bt1:
+            if isinstance(atom1, PyType) and atom1.keys is not None:
+                for atom2 in bt2:
+                    if isinstance(atom2, PyType) and atom2.ptype == atom1.ptype:
+                        keys_flag = cls.check_all_levels(atom1.keys, atom2.keys)
+                        values_flag = True
+                        if atom1.values is not None and atom2.values is not None:
+                            values_flag = cls.check_all_levels(atom1.values, atom2.values)
+                        return keys_flag and values_flag
+        return True
+    
+    @classmethod
+    def get_all_vartypes(cls, bt: Basetype) -> list[VarType]:
+        vt_set = set()
+        for atom in bt:
+            if isinstance(atom, VarType):
+                if atom not in vt_set:
+                    vt_set.add(deepcopy(atom))
+            elif atom.keys is not None:
+                vt_from_keys = cls.get_all_vartypes(atom.keys)
+                vt_set |= deepcopy(vt_from_keys)
+                if atom.values is not None:
+                    vt_from_values = cls.get_all_vartypes(atom.values)
+                    vt_set |= deepcopy(vt_from_values)
+        return vt_set
+
+    @classmethod
+    def get_level_pairs(cls, bt1: Basetype, bt2: Basetype) -> None | list[tuple[VarType]]:
+        vt1 = []
+        vt2 = []
+        for atom in bt1:
+            if isinstance(atom, VarType):
+                vt1.append(deepcopy(atom))
+        for atom in bt2:
+            if isinstance(atom, VarType):
+                vt2.append(deepcopy(atom))
+        pairs = itertools.product(vt1, vt2)
+        return set(pairs)
+
+    @classmethod
+    def get_basetype_pairs(cls, bt1: Basetype, bt2: Basetype):
+        pairs = cls.get_level_pairs(bt1, bt2)
+        for atom1 in bt1:
+            if isinstance(atom1, PyType) and atom1.keys is not None:
+                for atom2 in bt2:
+                    if isinstance(atom2, PyType) and atom2.ptype == atom1.ptype and atom2.keys is not None:
+                        new_pairs = cls.get_basetype_pairs(atom1.keys, atom2.keys)
+                        if atom1.values is not None and atom2.values is not None:
+                            new_pairs += cls.get_basetype_pairs(atom1.values, atom2.values)
+                        old_pairs = deepcopy(pairs)
+                        pairs = old_pairs & new_pairs
+                        visited = []
+                        for pair in pairs:
+                            visited.append(deepcopy(pair[0]))
+                        for old_pair in old_pairs:
+                            if old_pair[0] not in visited:
+                                pairs.add(deepcopy(old_pair))
+                        for new_pair in new_pairs:
+                            if new_pair[0] not in visited:
+                                pairs.add(deepcopy(new_pair))
+        return pairs
+    
+    @classmethod
+    def get_basetype_solutions(cls, bt1: Basetype, bt2: Basetype):
+        if not cls.check_all_levels(bt1, bt2):
+            return None
+        all_vt1 = cls.get_all_vartypes(bt1)
+        all_vt2 = cls.get_all_vartypes(bt2)    
+        if len(all_vt1) != len(all_vt2):
+            return None
+        pairs = cls.get_basetype_pairs(bt1, bt2)
+        solution_len = len(all_vt1)  # every vartype in one bt needs a match in the other
+        combis = list(itertools.combinations(pairs, solution_len))
+        solutions = set()
+        for comb in combis:
+            aux_vt1 = deepcopy(all_vt1)
+            aux_vt2 = deepcopy(all_vt2)
+            for pair in comb:
+                if pair[0] in aux_vt1:
+                    aux_vt1.remove(pair[0])
+                if pair[1] in aux_vt2:
+                    aux_vt2.remove(pair[1])
+                if len(aux_vt1) == 0 and len(aux_vt2) == 0:
+                    solutions.add(deepcopy(comb))
+        return solutions
+
+    @classmethod
+    def replace_from_solution(cls, bt1: Basetype, bt2: Basetype, solution: tuple[VarType]) -> tuple[Basetype]:
+        index = 0
+
+        def temp_id():
+            nonlocal index
+            temp_vt = f'T`{index}'
+            index += 1
+            return temp_vt
+        
+        for pair in solution:
+            temp_varexp = temp_id()
+            bt1 = bt1.replace_vartype(pair[0].varexp, temp_varexp)
+            bt2 = bt2.replace_vartype(pair[1].varexp, temp_varexp)
+        return bt1, bt2
 
 
 class Assignment(hdict):

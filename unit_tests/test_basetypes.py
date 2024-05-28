@@ -420,3 +420,64 @@ class BasetypeTests(unittest.TestCase):
         expected_result = State.from_str(
             r'((a:T1 + T3 /\ b:T2 + T4) ^ (T1 <= int))'
         )
+
+    def test_basetypes_solutions_1(self):
+        bt1 = Basetype.from_str(r'T1 + T2 + list< T1 >')
+        bt2 = Basetype.from_str(r'T3 + T4 + list< T4 >')
+        sols = Basetype.get_basetype_solutions(bt1, bt2)
+        result = set()
+        for sol in sols:
+            result.add(frozenset(sol))
+        expected_result = {frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T3'))})}
+        self.assertEqual(result, expected_result)
+
+    def test_basetypes_solutions_2(self):
+        bt1 = Basetype.from_str(r'T1 + T2 + T5 + list< T1 >')
+        bt2 = Basetype.from_str(r'T3 + T4 + T6 + list< T4 >')
+        sols = Basetype.get_basetype_solutions(bt1, bt2)
+        result = set()
+        for sol in sols:
+            result.add(frozenset(sol))
+        expected_result = {
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T3')), (VarType('T5'), VarType('T6'))}), 
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T6')), (VarType('T5'), VarType('T3'))}), 
+        }
+        self.assertEqual(result, expected_result)
+
+    def test_basetypes_solutions_3(self):
+        bt1 = Basetype.from_str(r'T1 + T2 + T5 + list< T1 + T7 >')
+        bt2 = Basetype.from_str(r'T3 + T4 + T6 + list< T4 + T8 >')
+        sols = Basetype.get_basetype_solutions(bt1, bt2)
+        result = set()
+        for sol in sols:
+            result.add(frozenset(sol))
+        expected_result = {
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T7'), VarType('T8')), (VarType('T2'), VarType('T3')), (VarType('T5'), VarType('T6'))}), 
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T7'), VarType('T8')), (VarType('T2'), VarType('T6')), (VarType('T5'), VarType('T3'))}), 
+        }
+        self.assertEqual(result, expected_result)
+
+    def test_basetypes_solutions_4(self):
+        bt1 = Basetype.from_str(r'T1 + T2 + T5 + list< T1 + set< T7 > >')
+        bt2 = Basetype.from_str(r'T3 + T4 + T6 + list< T4 + set< T8 > >')
+        sols = Basetype.get_basetype_solutions(bt1, bt2)
+        result = set()
+        for sol in sols:
+            result.add(frozenset(sol))
+        expected_result = {
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T7'), VarType('T8')), (VarType('T2'), VarType('T3')), (VarType('T5'), VarType('T6'))}), 
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T7'), VarType('T8')), (VarType('T2'), VarType('T6')), (VarType('T5'), VarType('T3'))}), 
+        }
+        self.assertEqual(result, expected_result)
+
+    def test_basetypes_solutions_5(self):
+        bt1 = Basetype.from_str(r'T1 + T2 + T5 + list< T1 + set< T2 > >')
+        bt2 = Basetype.from_str(r'T3 + T4 + T6 + list< T4 + set< T3 > >')
+        sols = Basetype.get_basetype_solutions(bt1, bt2)
+        result = set()
+        for sol in sols:
+            result.add(frozenset(sol))
+        expected_result = {
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T3')), (VarType('T5'), VarType('T6'))}), 
+        }
+        self.assertEqual(result, expected_result)
