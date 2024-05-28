@@ -536,3 +536,73 @@ class BasetypeTests(unittest.TestCase):
             result = result and (new_bt1 == new_bt2)
         expected_result = True
         self.assertEqual(result, expected_result)
+
+    def test_assignment_get_vartype_pairs_1(self):
+        assign1 = Assignment.from_str(r'a:T1 + T2 /\ b:T1')
+        assign2 = Assignment.from_str(r'a:T3 + T4 /\ b:T4')
+        result = Assignment.get_vartype_pairs(assign1, assign2)
+        expected_result = {(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T4')), (VarType('T2'), VarType('T3'))}
+        self.assertEqual(result, expected_result)
+    
+    def test_assignment_get_vartype_pairs_2(self):
+        assign1 = Assignment.from_str(r'a:T1 + T2 /\ b:T3')
+        assign2 = Assignment.from_str(r'a:T4 + T5 /\ b:T6')
+        result = Assignment.get_vartype_pairs(assign1, assign2)
+        expected_result = {
+            (VarType('T1'), VarType('T4')), (VarType('T1'), VarType('T5')), (VarType('T2'), VarType('T4')),
+            (VarType('T2'), VarType('T5')), (VarType('T3'), VarType('T6'))
+        }
+        self.assertEqual(result, expected_result)
+
+    def test_assignment_get_solutions_1(self):
+        assign1 = Assignment.from_str(r'a:T1 + T2 /\ b:T1')
+        assign2 = Assignment.from_str(r'a:T3 + T4 /\ b:T4')
+        sols = Assignment.get_vartype_solutions(assign1, assign2)
+        result = set()
+        for sol in sols:
+            result.add(frozenset(sol))
+        expected_result = {frozenset({
+            (VarType('T1'), VarType('T4')),
+            (VarType('T2'), VarType('T3')),
+        })}
+        self.assertEqual(result, expected_result)
+
+    def test_assignment_get_solutions_2(self):
+        assign1 = Assignment.from_str(r'a:T1 + T2 /\ b:T3')
+        assign2 = Assignment.from_str(r'a:T4 + T5 /\ b:T6')
+        sols = Assignment.get_vartype_solutions(assign1, assign2)
+        result = set()
+        for sol in sols:
+            result.add(frozenset(sol))
+        expected_result = {
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T5')), (VarType('T3'), VarType('T6'))}),
+            frozenset({(VarType('T1'), VarType('T5')), (VarType('T2'), VarType('T4')), (VarType('T3'), VarType('T6'))}),
+        }
+        self.assertEqual(result, expected_result)
+
+    def test_assignment_replace_from_solution_1(self):
+        assign1 = Assignment.from_str(r'a:T1 + T2 /\ b:T1')
+        assign2 = Assignment.from_str(r'a:T3 + T4 /\ b:T4')
+        sols = Assignment.get_vartype_solutions(assign1, assign2)
+        result = True
+        for sol in sols:
+            pass
+            result.add(frozenset(sol))
+        expected_result = {frozenset({
+            (VarType('T1'), VarType('T4')),
+            (VarType('T2'), VarType('T3')),
+        })}
+        self.assertEqual(result, expected_result)
+
+    def test_assignment_replace_from_solution_2(self):
+        assign1 = Assignment.from_str(r'a:T1 + T2 /\ b:T3')
+        assign2 = Assignment.from_str(r'a:T4 + T5 /\ b:T6')
+        sols = Assignment.get_vartype_solutions(assign1, assign2)
+        result = set()
+        for sol in sols:
+            result.add(frozenset(sol))
+        expected_result = {
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T5')), (VarType('T3'), VarType('T6'))}),
+            frozenset({(VarType('T1'), VarType('T5')), (VarType('T2'), VarType('T4')), (VarType('T3'), VarType('T6'))}),
+        }
+        self.assertEqual(result, expected_result)

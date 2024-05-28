@@ -17,6 +17,23 @@ INIT_MAUDE_PATH = os.getcwd() + os.sep + 'init.maude'
 DEFAULT_SOLVER_OUT = os.getcwd() + os.sep + 'solver.out'
 
 
+def get_solutions_from_pairs(solution_len: int, pairs: set[tuple[Any]], domain_1: set[Any], domain_2: set[Any]):
+    # solution_len = len(all_vt1)  # every vartype in one bt needs a match in the other
+    combis = list(itertools.combinations(pairs, solution_len))
+    solutions = set()
+    for comb in combis:
+        aux_vt1 = deepcopy(domain_1)
+        aux_vt2 = deepcopy(domain_2)
+        for pair in comb:
+            if pair[0] in aux_vt1:
+                aux_vt1.remove(pair[0])
+            if pair[1] in aux_vt2:
+                aux_vt2.remove(pair[1])
+            if len(aux_vt1) == 0 and len(aux_vt2) == 0:
+                solutions.add(deepcopy(comb))
+    return solutions
+
+
 def maude_vartype_generator(maxitems: int = 20) -> tuple[list[str], list[str]]:
         normals = []
         specs = []
@@ -548,23 +565,22 @@ class Basetype(hset):
                         return keys_flag and values_flag
         return True
     
-    @classmethod
-    def get_all_vartypes(cls, bt: Basetype) -> list[VarType]:
+    def get_all_vartypes(self) -> set[VarType]:
         vt_set = set()
-        for atom in bt:
+        for atom in self:
             if isinstance(atom, VarType):
                 if atom not in vt_set:
                     vt_set.add(deepcopy(atom))
             elif atom.keys is not None:
-                vt_from_keys = cls.get_all_vartypes(atom.keys)
+                vt_from_keys = atom.keys.get_all_vartypes()
                 vt_set |= deepcopy(vt_from_keys)
                 if atom.values is not None:
-                    vt_from_values = cls.get_all_vartypes(atom.values)
+                    vt_from_values = atom.values.get_all_vartypes()
                     vt_set |= deepcopy(vt_from_values)
         return vt_set
 
     @classmethod
-    def get_level_pairs(cls, bt1: Basetype, bt2: Basetype) -> None | list[tuple[VarType]]:
+    def get_level_pairs(cls, bt1: Basetype, bt2: Basetype) -> None | set[tuple[VarType]]:
         vt1 = []
         vt2 = []
         for atom in bt1:
@@ -577,15 +593,15 @@ class Basetype(hset):
         return set(pairs)
 
     @classmethod
-    def get_basetype_pairs(cls, bt1: Basetype, bt2: Basetype):
+    def get_vartype_pairs(cls, bt1: Basetype, bt2: Basetype) -> set[tuple[VarType]]:
         pairs = cls.get_level_pairs(bt1, bt2)
         for atom1 in bt1:
             if isinstance(atom1, PyType) and atom1.keys is not None:
                 for atom2 in bt2:
                     if isinstance(atom2, PyType) and atom2.ptype == atom1.ptype and atom2.keys is not None:
-                        new_pairs = cls.get_basetype_pairs(atom1.keys, atom2.keys)
+                        new_pairs = cls.get_vartype_pairs(atom1.keys, atom2.keys)
                         if atom1.values is not None and atom2.values is not None:
-                            new_pairs += cls.get_basetype_pairs(atom1.values, atom2.values)
+                            new_pairs += cls.get_vartype_pairs(atom1.values, atom2.values)
                         old_pairs = deepcopy(pairs)
                         pairs = old_pairs & new_pairs
                         visited = []
@@ -600,41 +616,29 @@ class Basetype(hset):
         return pairs
     
     @classmethod
-    def get_basetype_solutions(cls, bt1: Basetype, bt2: Basetype):
+    def get_basetype_solutions(cls, bt1: Basetype, bt2: Basetype) -> set[tuple[tuple[VarType]]]:
         if not cls.check_all_levels(bt1, bt2):
             return None
-        all_vt1 = cls.get_all_vartypes(bt1)
-        all_vt2 = cls.get_all_vartypes(bt2)    
+        all_vt1 = bt1.get_all_vartypes()
+        all_vt2 = bt2.get_all_vartypes()    
         if len(all_vt1) != len(all_vt2):
             return None
-        pairs = cls.get_basetype_pairs(bt1, bt2)
+        pairs = cls.get_vartype_pairs(bt1, bt2)
         solution_len = len(all_vt1)  # every vartype in one bt needs a match in the other
-        combis = list(itertools.combinations(pairs, solution_len))
-        solutions = set()
-        for comb in combis:
-            aux_vt1 = deepcopy(all_vt1)
-            aux_vt2 = deepcopy(all_vt2)
-            for pair in comb:
-                if pair[0] in aux_vt1:
-                    aux_vt1.remove(pair[0])
-                if pair[1] in aux_vt2:
-                    aux_vt2.remove(pair[1])
-                if len(aux_vt1) == 0 and len(aux_vt2) == 0:
-                    solutions.add(deepcopy(comb))
+        solutions = get_solutions_from_pairs(solution_len, pairs, all_vt1, all_vt2)
         return solutions
 
     @classmethod
-    def replace_from_solution(cls, bt1: Basetype, bt2: Basetype, solution: tuple[VarType]) -> tuple[Basetype]:
-        index = 0
-
-        def temp_id():
-            nonlocal index
+    def replace_from_solution(cls, bt1: Basetype, bt2: Basetype, solution: tuple[VarType], index = 0) -> tuple[Basetype]:
+        
+        def temp_id(index: int) -> str:
             temp_vt = f'T`{index}'
             index += 1
             return temp_vt
         
         for pair in solution:
-            temp_varexp = temp_id()
+            temp_varexp = temp_id(index)
+            index += 1
             bt1 = bt1.replace_vartype(pair[0].varexp, temp_varexp)
             bt2 = bt2.replace_vartype(pair[1].varexp, temp_varexp)
         return bt1, bt2
@@ -738,6 +742,67 @@ class Assignment(hdict):
             if expr not in visited:
                 new_assign[expr] = deepcopy(bt2)
         return new_assign
+    
+    def get_all_vartypes(self) -> set[VarType]:
+        all_vt = set()
+        bt: Basetype
+        for expr, bt in self.items():
+            all_vt |= bt.get_all_vartypes()
+        return all_vt
+
+    @classmethod
+    def get_vartype_pairs(cls, assign1: Assignment, assign2: Assignment) -> set[tuple[VarType]]:
+        pairs = set()
+        expr_set1 = set(assign1)
+        expr_set2 = set(assign2)
+        if expr_set1 != expr_set2:
+            just1 = expr_set1 - expr_set2
+            just2 = expr_set2 - expr_set1
+            raise RuntimeError(f'Different expressions between assignments. {just1} in first and {just2} in second')
+        for expr, bt1 in assign1.items():
+            bt2 = assign2[expr]
+            new_pairs = Basetype.get_vartype_pairs(bt1, bt2)
+            old_pairs = deepcopy(pairs)
+            pairs = old_pairs & new_pairs
+            visited = []
+            for pair in pairs:
+                visited.append(deepcopy(pair[0]))
+            for old_pair in old_pairs:
+                if old_pair[0] not in visited:
+                    pairs.add(deepcopy(old_pair))
+            for new_pair in new_pairs:
+                if new_pair[0] not in visited:
+                    pairs.add(deepcopy(new_pair))
+        return pairs
+
+    @classmethod
+    def get_vartype_solutions(cls, assign1: Assignment, assign2: Assignment) -> set[tuple[tuple[VarType]]]:
+        all_vt1 = assign1.get_all_vartypes()
+        all_vt2 = assign2.get_all_vartypes()
+        if len(all_vt1) != len(all_vt2):
+            return None
+        pairs = cls.get_vartype_pairs(assign1, assign2)
+        solution_len = len(all_vt1)  # every vartype in one bt needs a match in the other
+        solutions = get_solutions_from_pairs(solution_len, pairs, all_vt1, all_vt2)
+        return solutions
+    
+    @classmethod
+    def replace_from_solution(assign1: Assignment, assign2: Assignment, solution: tuple[VarType], index = 0) -> tuple[Assignment]:
+        # def temp_id(index):
+        #     # nonlocal index
+        #     temp_vt = f'T`{index}'
+        #     index += 1
+        #     return temp_vt
+        
+        bt: Basetype
+        index = 0
+        for expr, bt in 
+        for pair in solution:
+            temp_varexp = temp_id()
+            
+            bt1 = bt1.replace_vartype(pair[0].varexp, temp_varexp)
+            bt2 = bt2.replace_vartype(pair[1].varexp, temp_varexp)
+        return bt1, bt2
 
 
 class Relation:
@@ -1075,7 +1140,7 @@ class State:
         state1 = self.solve_constraints(strat1)
         state2 = other_state.solve_constraints(strat1)
         return state1 == state2
-    
+        
     def replace_basetype(self, to_replace: Basetype, replace_with: Basetype) -> State:
         new_state = State()
         new_state.assignment = self.assignment.replace_basetype(to_replace, replace_with)
