@@ -488,7 +488,7 @@ class BasetypeTests(unittest.TestCase):
         sols = Basetype.get_basetype_solutions(bt1, bt2)
         result = True
         for sol in sols:
-            new_bt1, new_bt2 = Basetype.replace_from_solution(bt1, bt2, sol)
+            new_bt1, new_bt2, index = Basetype.replace_from_solution(bt1, bt2, sol)
             result = result and (new_bt1 == new_bt2)
         expected_result = True
         self.assertEqual(result, expected_result)
@@ -499,7 +499,7 @@ class BasetypeTests(unittest.TestCase):
         sols = Basetype.get_basetype_solutions(bt1, bt2)
         result = True
         for sol in sols:
-            new_bt1, new_bt2 = Basetype.replace_from_solution(bt1, bt2, sol)
+            new_bt1, new_bt2, index = Basetype.replace_from_solution(bt1, bt2, sol)
             result = result and (new_bt1 == new_bt2)
         expected_result = True
         self.assertEqual(result, expected_result)
@@ -510,7 +510,7 @@ class BasetypeTests(unittest.TestCase):
         sols = Basetype.get_basetype_solutions(bt1, bt2)
         result = True
         for sol in sols:
-            new_bt1, new_bt2 = Basetype.replace_from_solution(bt1, bt2, sol)
+            new_bt1, new_bt2, index = Basetype.replace_from_solution(bt1, bt2, sol)
             result = result and (new_bt1 == new_bt2)
         expected_result = True
         self.assertEqual(result, expected_result)
@@ -521,7 +521,7 @@ class BasetypeTests(unittest.TestCase):
         sols = Basetype.get_basetype_solutions(bt1, bt2)
         result = True
         for sol in sols:
-            new_bt1, new_bt2 = Basetype.replace_from_solution(bt1, bt2, sol)
+            new_bt1, new_bt2, index = Basetype.replace_from_solution(bt1, bt2, sol)
             result = result and (new_bt1 == new_bt2)
         expected_result = True
         self.assertEqual(result, expected_result)
@@ -532,7 +532,7 @@ class BasetypeTests(unittest.TestCase):
         sols = Basetype.get_basetype_solutions(bt1, bt2)
         result = True
         for sol in sols:
-            new_bt1, new_bt2 = Basetype.replace_from_solution(bt1, bt2, sol)
+            new_bt1, new_bt2, index = Basetype.replace_from_solution(bt1, bt2, sol)
             result = result and (new_bt1 == new_bt2)
         expected_result = True
         self.assertEqual(result, expected_result)
@@ -585,24 +585,21 @@ class BasetypeTests(unittest.TestCase):
         assign2 = Assignment.from_str(r'a:T3 + T4 /\ b:T4')
         sols = Assignment.get_vartype_solutions(assign1, assign2)
         result = True
+        index = 0
         for sol in sols:
-            pass
-            result.add(frozenset(sol))
-        expected_result = {frozenset({
-            (VarType('T1'), VarType('T4')),
-            (VarType('T2'), VarType('T3')),
-        })}
+            new_assign1, new_assign2, index = Assignment.replace_from_solution(assign1, assign2, sol, index)
+            result = result and (new_assign1 == new_assign2)
+        expected_result = True
         self.assertEqual(result, expected_result)
 
     def test_assignment_replace_from_solution_2(self):
         assign1 = Assignment.from_str(r'a:T1 + T2 /\ b:T3')
         assign2 = Assignment.from_str(r'a:T4 + T5 /\ b:T6')
         sols = Assignment.get_vartype_solutions(assign1, assign2)
-        result = set()
+        result = True
+        index = 0
         for sol in sols:
-            result.add(frozenset(sol))
-        expected_result = {
-            frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T5')), (VarType('T3'), VarType('T6'))}),
-            frozenset({(VarType('T1'), VarType('T5')), (VarType('T2'), VarType('T4')), (VarType('T3'), VarType('T6'))}),
-        }
+            new_assign1, new_assign2, index = Assignment.replace_from_solution(assign1, assign2, sol, index)
+            result = result and (new_assign1 == new_assign2)
+        expected_result = True
         self.assertEqual(result, expected_result)

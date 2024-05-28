@@ -633,7 +633,6 @@ class Basetype(hset):
         
         def temp_id(index: int) -> str:
             temp_vt = f'T`{index}'
-            index += 1
             return temp_vt
         
         for pair in solution:
@@ -641,7 +640,7 @@ class Basetype(hset):
             index += 1
             bt1 = bt1.replace_vartype(pair[0].varexp, temp_varexp)
             bt2 = bt2.replace_vartype(pair[1].varexp, temp_varexp)
-        return bt1, bt2
+        return bt1, bt2, index
 
 
 class Assignment(hdict):
@@ -787,22 +786,21 @@ class Assignment(hdict):
         return solutions
     
     @classmethod
-    def replace_from_solution(assign1: Assignment, assign2: Assignment, solution: tuple[VarType], index = 0) -> tuple[Assignment]:
+    def replace_from_solution(cls, assign1: Assignment, assign2: Assignment, solution: tuple[VarType], index: int = 0) -> tuple[Assignment]:
         # def temp_id(index):
         #     # nonlocal index
         #     temp_vt = f'T`{index}'
         #     index += 1
         #     return temp_vt
         
+        new_assign1 = Assignment()
+        new_assign2 = Assignment()
         bt: Basetype
-        index = 0
-        for expr, bt in 
-        for pair in solution:
-            temp_varexp = temp_id()
-            
-            bt1 = bt1.replace_vartype(pair[0].varexp, temp_varexp)
-            bt2 = bt2.replace_vartype(pair[1].varexp, temp_varexp)
-        return bt1, bt2
+        for expr in assign1:
+            new_bt1, new_bt2, index = Basetype.replace_from_solution(assign1[expr], assign2[expr], solution, index)
+            new_assign1[expr] = deepcopy(new_bt1)
+            new_assign2[expr] = deepcopy(new_bt2)
+        return new_assign1, new_assign2, index
 
 
 class Relation:
