@@ -485,10 +485,11 @@ class BasetypeTests(unittest.TestCase):
     def test_basetypes_solutions_replace_1(self):
         bt1 = Basetype.from_str(r'T1 + T2 + list< T1 >')
         bt2 = Basetype.from_str(r'T3 + T4 + list< T4 >')
-        sols = Basetype.get_basetype_solutions(bt1, bt2)
+        sols = Basetype.get_solution_replacements(bt1, bt2)
         result = True
-        for sol in sols:
-            new_bt1, new_bt2, index = Basetype.replace_from_solution(bt1, bt2, sol)
+        for dict_pair in sols:
+            new_bt1 = bt1.replace_vartype_from_solution(dict_pair[0])
+            new_bt2 = bt2.replace_vartype_from_solution(dict_pair[1])
             result = result and (new_bt1 == new_bt2)
         expected_result = True
         self.assertEqual(result, expected_result)

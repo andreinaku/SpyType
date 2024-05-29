@@ -17,7 +17,12 @@ INIT_MAUDE_PATH = os.getcwd() + os.sep + 'init.maude'
 DEFAULT_SOLVER_OUT = os.getcwd() + os.sep + 'solver.out'
 
 
-def get_solutions_from_pairs(solution_len: int, pairs: set[tuple[Any]], domain_1: set[Any], domain_2: set[Any]):
+def get_solutions_from_pairs(solution_len: int, pairs: set[tuple[Any]], domain_1: set[Any], 
+                             domain_2: set[Any], index: int = 0):
+    def temp_id(index: int) -> str:
+            temp_vt = f'T`{index}'
+            return temp_vt
+
     # solution_len = len(all_vt1)  # every vartype in one bt needs a match in the other
     combis = list(itertools.combinations(pairs, solution_len))
     solutions = set()
@@ -31,7 +36,17 @@ def get_solutions_from_pairs(solution_len: int, pairs: set[tuple[Any]], domain_1
                 aux_vt2.remove(pair[1])
             if len(aux_vt1) == 0 and len(aux_vt2) == 0:
                 solutions.add(deepcopy(comb))
-    return solutions
+    sol_dicts = []
+    for sol in solutions:
+        sol_dict1 = dict()
+        sol_dict2 = dict()
+        new_vt = VarType(temp_id(index))
+        index += 1
+        for pair in sol:
+            sol_dict1[pair[0]] = deepcopy(new_vt)
+            sol_dict2[pair[1]] = deepcopy(new_vt)
+        sol_dicts.append((deepcopy(sol_dict1), deepcopy(sol_dict2)))
+    return sol_dicts
 
 
 def maude_vartype_generator(maxitems: int = 20) -> tuple[list[str], list[str]]:
@@ -627,9 +642,28 @@ class Basetype(hset):
         solution_len = len(all_vt1)  # every vartype in one bt needs a match in the other
         solutions = get_solutions_from_pairs(solution_len, pairs, all_vt1, all_vt2)
         return solutions
+    
+    @classmethod
+    def get_solution_replacements(cls, bt1: Basetype, bt2: Basetype, index = 0) -> list[tuple[dict[VarType, VarType]]]:
+        if not cls.check_all_levels(bt1, bt2):
+            return None
+        all_vt1 = bt1.get_all_vartypes()
+        all_vt2 = bt2.get_all_vartypes()    
+        if len(all_vt1) != len(all_vt2):
+            return None
+        pairs = cls.get_vartype_pairs(bt1, bt2)
+        solution_len = len(all_vt1)  # every vartype in one bt needs a match in the other
+        sol_dicts = get_solutions_from_pairs(solution_len, pairs, all_vt1, all_vt2, index)
+        return sol_dicts
+
+    def replace_vartype_from_solution(self, solution_dict: dict[VarType, VarType]):
+        new_bt = deepcopy(self)
+        for vt1, vt2 in solution_dict.items():
+            new_bt = new_bt.replace_vartype(vt1.varexp, vt2.varexp)
+        return new_bt
 
     @classmethod
-    def replace_from_solution(cls, bt1: Basetype, bt2: Basetype, solution: tuple[VarType], index = 0) -> tuple[Basetype]:
+    def _replace_from_solution(cls, bt1: Basetype, bt2: Basetype, solution, index = 0) -> tuple[Basetype]:
         
         def temp_id(index: int) -> str:
             temp_vt = f'T`{index}'
@@ -1151,6 +1185,32 @@ class State:
         new_state.assignment = Assignment.lub(state1.assignment, state2. assignment)
         new_state.constraints = AndConstraints.lub(state1.constraints, state2.constraints)
         return new_state    
+
+    @classmethod
+    def get_vartype_pairs(cls, state1: State, state2: State) -> set[tuple[VarType]]:
+        return Assignment.get_vartype_pairs(state1.assignment, state2.assignment)
+    
+    @classmethod
+    def get_vartype_solutions(cls, state1: State, state2: State) -> set[tuple[tuple[VarType]]]:
+        return Assignment.get_vartype_solutions(state1.assignment, state2.assignment)
+    
+    @classmethod
+    #def replace_from_solution(cls, assign1: Assignment, assign2: Assignment, solution: tuple[VarType], index: int = 0) -> tuple[Assignment]:
+    def replace_from_solution(cls, state1: State, state2: State, solution: tuple[VarType], index: int = 0) -> tuple[State]:
+        state1 = State()
+        state2 = State()
+        bt: Basetype
+        for expr in state1.assignment:
+            new_bt1, new_bt2, index = Basetype.replace_from_solution(state1.assignment[expr], 
+                                                                     state2.assignment[expr], 
+                                                                     solution, 
+                                                                     index)
+            state1.constraints = state1.constraints.replace_vartype(state1.assignment[expr], new_bt1)
+            state2.constraints = state2.constraints.replace_vartype(state2.assignment[expr], new_bt2)
+            state1.assignment[expr] = deepcopy(new_bt1)
+            state2.assignment[expr] = deepcopy(new_bt2)
+        return state1, state2, index
+
 
 
 class BottomState(State):
