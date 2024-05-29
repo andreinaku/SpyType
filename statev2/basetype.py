@@ -832,23 +832,6 @@ class Assignment(hdict):
         solutions, sol_dicts = get_solution_dicts(solution_len, pairs, all_vt1, all_vt2, index)
         return solutions, sol_dicts
 
-    # @classmethod
-    # def replace_from_solution(cls, assign1: Assignment, assign2: Assignment, solution: tuple[VarType], index: int = 0) -> tuple[Assignment]:
-    #     # def temp_id(index):
-    #     #     # nonlocal index
-    #     #     temp_vt = f'T`{index}'
-    #     #     index += 1
-    #     #     return temp_vt
-        
-    #     new_assign1 = Assignment()
-    #     new_assign2 = Assignment()
-    #     bt: Basetype
-    #     for expr in assign1:
-    #         new_bt1, new_bt2, index = Basetype.replace_from_solution(assign1[expr], assign2[expr], solution, index)
-    #         new_assign1[expr] = deepcopy(new_bt1)
-    #         new_assign2[expr] = deepcopy(new_bt2)
-    #     return new_assign1, new_assign2, index
-
 
 class Relation:
     def __init__(self, relop: RelOp = None, bt_left: Basetype = None, bt_right: Basetype = None):
@@ -919,6 +902,12 @@ class Relation:
         new_rel.bt_right = self.bt_right.replace_basetype(to_replace, replace_with)
         return new_rel
 
+    def replace_vartype_from_solution(self, solution_dict: dict[VarType, VarType]) -> Relation:
+        new_rel = Relation()
+        new_rel.bt_left = self.bt_left.replace_vartype_from_solution(solution_dict)
+        new_rel.bt_right = self.bt_right.replace_vartype_from_solution(solution_dict)
+        return new_rel
+
 
 class AndConstraints(hset):
     def __str__(self):
@@ -986,6 +975,15 @@ class AndConstraints(hset):
     def lub(cls, andc1: AndConstraints, andc2: AndConstraints) -> AndConstraints:
         pass
 
+    def replace_vartype_from_solution(self, solution_dict: dict[VarType, VarType]) -> AndConstraints:
+        new_andconstr = AndConstraints()
+        rel: Relation
+        for rel in self:
+            new_rel = Relation()
+            new_rel.bt_left = rel.bt_left.replace_vartype_from_solution(solution_dict)
+            new_rel.bt_right = rel.bt_right.replace_vartype_from_solution(solution_dict)
+            new_andconstr.add(deepcopy(new_rel))
+        return new_andconstr
 
 class OrConstraints(hset):
     def __str__(self):
@@ -1198,6 +1196,17 @@ class State:
         new_state.assignment = Assignment.lub(state1.assignment, state2. assignment)
         new_state.constraints = AndConstraints.lub(state1.constraints, state2.constraints)
         return new_state    
+
+    def replace_vartype_from_solution(self, solution_dict: dict[VarType, VarType]) -> State:
+        new_state = State()
+        new_state.assignment = self.assignment.replace_vartype_from_solution(solution_dict)
+        new_state.constraints = self.constraints.replace_vartype_from_solution(solution_dict)
+        return new_state
+
+    @classmethod
+    def get_solution_replacements(cls, state1: State, state2: State, 
+                                  index = 0) -> list[tuple[dict[VarType, VarType]]]:
+        return Assignment.get_solution_replacements(state1.assignment, state2.assignment, index)
 
     @classmethod
     def get_vartype_pairs(cls, state1: State, state2: State) -> set[tuple[VarType]]:
