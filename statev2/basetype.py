@@ -35,7 +35,7 @@ def get_all_solutions(solution_len: int, pairs: set[tuple[Any]],
 
 
 def get_solution_dicts(solution_len: int, pairs: set[tuple[Any]], domain_1: set[Any], 
-                             domain_2: set[Any], index: int = 0) -> list[tuple[dict[VarType, VarType]]]:
+                             domain_2: set[Any], index: int = 0) -> tuple[set[tuple[tuple[VarType]]], list[tuple[dict[VarType, VarType]]]]:
     def temp_id(index: int) -> str:
             temp_vt = f'T`{index}'
             return temp_vt
@@ -52,7 +52,7 @@ def get_solution_dicts(solution_len: int, pairs: set[tuple[Any]], domain_1: set[
             sol_dict1[pair[0]] = deepcopy(new_vt)
             sol_dict2[pair[1]] = deepcopy(new_vt)
         sol_dicts.append((deepcopy(sol_dict1), deepcopy(sol_dict2)))
-    return sol_dicts
+    return solutions, sol_dicts
 
 
 def maude_vartype_generator(maxitems: int = 20) -> tuple[list[str], list[str]]:
@@ -650,17 +650,6 @@ class Basetype(hset):
     #     return solutions
     
     @classmethod
-    def get_solutions(cls, bt1: Basetype, bt2: Basetype):
-        all_vt1 = bt1.get_all_vartypes()
-        all_vt2 = bt2.get_all_vartypes()    
-        if len(all_vt1) != len(all_vt2):
-            return None
-        pairs = cls.get_vartype_pairs(bt1, bt2)
-        solution_len = len(all_vt1)
-        solutions = get_all_solutions(solution_len, pairs, all_vt1, all_vt2)
-        return solutions
-
-    @classmethod
     def get_solution_replacements(cls, bt1: Basetype, bt2: Basetype, index = 0) -> list[tuple[dict[VarType, VarType]]]:
         if not cls.check_all_levels(bt1, bt2):
             return None
@@ -670,8 +659,8 @@ class Basetype(hset):
             return None
         pairs = cls.get_vartype_pairs(bt1, bt2)
         solution_len = len(all_vt1)  # every vartype in one bt needs a match in the other
-        sol_dicts = get_solution_dicts(solution_len, pairs, all_vt1, all_vt2, index)
-        return sol_dicts
+        solutions, sol_dicts = get_solution_dicts(solution_len, pairs, all_vt1, all_vt2, index)
+        return solutions, sol_dicts
 
     def replace_vartype_from_solution(self, solution_dict: dict[VarType, VarType]):
         new_bt = deepcopy(self)
@@ -824,17 +813,6 @@ class Assignment(hdict):
                 if new_pair[0] not in visited:
                     pairs.add(deepcopy(new_pair))
         return pairs
-
-    @classmethod
-    def get_vartype_solutions(cls, assign1: Assignment, assign2: Assignment) -> set[tuple[tuple[VarType]]]:
-        all_vt1 = assign1.get_all_vartypes()
-        all_vt2 = assign2.get_all_vartypes()
-        if len(all_vt1) != len(all_vt2):
-            return None
-        pairs = cls.get_vartype_pairs(assign1, assign2)
-        solution_len = len(all_vt1)  # every vartype in one bt needs a match in the other
-        sol_dicts = get_solution_dicts(solution_len, pairs, all_vt1, all_vt2)
-        return sol_dicts
     
     def replace_vartype_from_solution(self, solution_dict: dict[VarType, VarType]):
         new_assign = deepcopy(self)
@@ -843,17 +821,16 @@ class Assignment(hdict):
         return new_assign
     
     @classmethod
-    def get_solution_replacements(cls, bt1: Basetype, bt2: Basetype, index = 0) -> list[tuple[dict[VarType, VarType]]]:
-        if not cls.check_all_levels(bt1, bt2):
-            return None
-        all_vt1 = bt1.get_all_vartypes()
-        all_vt2 = bt2.get_all_vartypes()    
+    def get_solution_replacements(cls, assign1: Assignment, assign2: Assignment, 
+                                  index = 0) -> list[tuple[dict[VarType, VarType]]]:
+        all_vt1 = assign1.get_all_vartypes()
+        all_vt2 = assign2.get_all_vartypes()    
         if len(all_vt1) != len(all_vt2):
             return None
-        pairs = cls.get_vartype_pairs(bt1, bt2)
+        pairs = cls.get_vartype_pairs(assign1, assign2)
         solution_len = len(all_vt1)  # every vartype in one bt needs a match in the other
-        sol_dicts = get_solution_dicts(solution_len, pairs, all_vt1, all_vt2, index)
-        return sol_dicts
+        solutions, sol_dicts = get_solution_dicts(solution_len, pairs, all_vt1, all_vt2, index)
+        return solutions, sol_dicts
 
     # @classmethod
     # def replace_from_solution(cls, assign1: Assignment, assign2: Assignment, solution: tuple[VarType], index: int = 0) -> tuple[Assignment]:

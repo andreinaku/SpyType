@@ -424,30 +424,30 @@ class BasetypeTests(unittest.TestCase):
     def test_basetypes_solutions_1(self):
         bt1 = Basetype.from_str(r'T1 + T2 + list< T1 >')
         bt2 = Basetype.from_str(r'T3 + T4 + list< T4 >')
-        sols = Basetype.get_solution_replacements(bt1, bt2)
+        sols, sol_dicts = Basetype.get_solution_replacements(bt1, bt2)
         result = []
         for sol in sols:
-            result.append(frozenset(sol))
-        expected_result = {frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T3'))})}
+            result.append(list(sol))
+        expected_result = [ [(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T3'))] ]
         self.assertEqual(result, expected_result)
 
     def test_basetypes_solutions_2(self):
         bt1 = Basetype.from_str(r'T1 + T2 + T5 + list< T1 >')
         bt2 = Basetype.from_str(r'T3 + T4 + T6 + list< T4 >')
-        sols = Basetype.get_solution_replacements(bt1, bt2)
+        sols, sol_dicts = Basetype.get_solution_replacements(bt1, bt2)
         result = set()
         for sol in sols:
             result.add(frozenset(sol))
         expected_result = {
-            frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T3')), (VarType('T5'), VarType('T6'))}), 
-            frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T6')), (VarType('T5'), VarType('T3'))}), 
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T3')), (VarType('T5'), VarType('T6'))}),
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T6')), (VarType('T5'), VarType('T3'))}),
         }
         self.assertEqual(result, expected_result)
 
     def test_basetypes_solutions_3(self):
         bt1 = Basetype.from_str(r'T1 + T2 + T5 + list< T1 + T7 >')
         bt2 = Basetype.from_str(r'T3 + T4 + T6 + list< T4 + T8 >')
-        sols = Basetype.get_basetype_solutions(bt1, bt2)
+        sols, sol_dicts = Basetype.get_solution_replacements(bt1, bt2)
         result = set()
         for sol in sols:
             result.add(frozenset(sol))
@@ -460,7 +460,7 @@ class BasetypeTests(unittest.TestCase):
     def test_basetypes_solutions_4(self):
         bt1 = Basetype.from_str(r'T1 + T2 + T5 + list< T1 + set< T7 > >')
         bt2 = Basetype.from_str(r'T3 + T4 + T6 + list< T4 + set< T8 > >')
-        sols = Basetype.get_basetype_solutions(bt1, bt2)
+        sols, sol_dicts = Basetype.get_solution_replacements(bt1, bt2)
         result = set()
         for sol in sols:
             result.add(frozenset(sol))
@@ -473,7 +473,7 @@ class BasetypeTests(unittest.TestCase):
     def test_basetypes_solutions_5(self):
         bt1 = Basetype.from_str(r'T1 + T2 + T5 + list< T1 + set< T2 > >')
         bt2 = Basetype.from_str(r'T3 + T4 + T6 + list< T4 + set< T3 > >')
-        sols = Basetype.get_basetype_solutions(bt1, bt2)
+        sols, sol_dicts = Basetype.get_solution_replacements(bt1, bt2)
         result = set()
         for sol in sols:
             result.add(frozenset(sol))
@@ -485,9 +485,9 @@ class BasetypeTests(unittest.TestCase):
     def test_basetypes_solutions_replace_1(self):
         bt1 = Basetype.from_str(r'T1 + T2 + list< T1 >')
         bt2 = Basetype.from_str(r'T3 + T4 + list< T4 >')
-        sols = Basetype.get_solution_replacements(bt1, bt2)
+        sols, sol_dicts = Basetype.get_solution_replacements(bt1, bt2)
         result = True
-        for dict_pair in sols:
+        for dict_pair in sol_dicts:
             new_bt1 = bt1.replace_vartype_from_solution(dict_pair[0])
             new_bt2 = bt2.replace_vartype_from_solution(dict_pair[1])
             result = result and (new_bt1 == new_bt2)
@@ -497,9 +497,9 @@ class BasetypeTests(unittest.TestCase):
     def test_basetypes_solutions_replace_2(self):
         bt1 = Basetype.from_str(r'T1 + T2 + T5 + list< T1 >')
         bt2 = Basetype.from_str(r'T3 + T4 + T6 + list< T4 >')
-        sols = Basetype.get_solution_replacements(bt1, bt2)
+        sols, sol_dicts = Basetype.get_solution_replacements(bt1, bt2)
         result = True
-        for dict_pair in sols:
+        for dict_pair in sol_dicts:
             new_bt1 = bt1.replace_vartype_from_solution(dict_pair[0])
             new_bt2 = bt2.replace_vartype_from_solution(dict_pair[1])
             result = result and (new_bt1 == new_bt2)
@@ -509,9 +509,9 @@ class BasetypeTests(unittest.TestCase):
     def test_basetypes_solutions_replace_3(self):
         bt1 = Basetype.from_str(r'T1 + T2 + T5 + list< T1 + T7 >')
         bt2 = Basetype.from_str(r'T3 + T4 + T6 + list< T4 + T8 >')
-        sols = Basetype.get_solution_replacements(bt1, bt2)
+        sols, sol_dicts = Basetype.get_solution_replacements(bt1, bt2)
         result = True
-        for dict_pair in sols:
+        for dict_pair in sol_dicts:
             new_bt1 = bt1.replace_vartype_from_solution(dict_pair[0])
             new_bt2 = bt2.replace_vartype_from_solution(dict_pair[1])
             result = result and (new_bt1 == new_bt2)
@@ -521,9 +521,9 @@ class BasetypeTests(unittest.TestCase):
     def test_basetypes_solutions_replace_4(self):
         bt1 = Basetype.from_str(r'T1 + T2 + T5 + list< T1 + set< T7 > >')
         bt2 = Basetype.from_str(r'T3 + T4 + T6 + list< T4 + set< T8 > >')
-        sols = Basetype.get_solution_replacements(bt1, bt2)
+        sols, sol_dicts = Basetype.get_solution_replacements(bt1, bt2)
         result = True
-        for dict_pair in sols:
+        for dict_pair in sol_dicts:
             new_bt1 = bt1.replace_vartype_from_solution(dict_pair[0])
             new_bt2 = bt2.replace_vartype_from_solution(dict_pair[1])
             result = result and (new_bt1 == new_bt2)
@@ -533,9 +533,9 @@ class BasetypeTests(unittest.TestCase):
     def test_basetypes_solutions_replace_5(self):
         bt1 = Basetype.from_str(r'T1 + T2 + T5 + list< T1 + set< T2 > >')
         bt2 = Basetype.from_str(r'T3 + T4 + T6 + list< T4 + set< T3 > >')
-        sols = Basetype.get_solution_replacements(bt1, bt2)
+        sols, sol_dicts = Basetype.get_solution_replacements(bt1, bt2)
         result = True
-        for dict_pair in sols:
+        for dict_pair in sol_dicts:
             new_bt1 = bt1.replace_vartype_from_solution(dict_pair[0])
             new_bt2 = bt2.replace_vartype_from_solution(dict_pair[1])
             result = result and (new_bt1 == new_bt2)
@@ -545,54 +545,36 @@ class BasetypeTests(unittest.TestCase):
     def test_assignment_get_vartype_pairs_1(self):
         assign1 = Assignment.from_str(r'a:T1 + T2 /\ b:T1')
         assign2 = Assignment.from_str(r'a:T3 + T4 /\ b:T4')
-        result = Assignment.get_vartype_pairs(assign1, assign2)
-        expected_result = {(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T4')), (VarType('T2'), VarType('T3'))}
+        sols, sol_dicts = Assignment.get_solution_replacements(assign1, assign2)
+        result = set()
+        for sol in sols:
+            result.add(frozenset(sol))
+        expected_result = {
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T3'))})
+        }
         self.assertEqual(result, expected_result)
     
     def test_assignment_get_vartype_pairs_2(self):
         assign1 = Assignment.from_str(r'a:T1 + T2 /\ b:T3')
         assign2 = Assignment.from_str(r'a:T4 + T5 /\ b:T6')
-        result = Assignment.get_vartype_pairs(assign1, assign2)
-        expected_result = {
-            (VarType('T1'), VarType('T4')), (VarType('T1'), VarType('T5')), (VarType('T2'), VarType('T4')),
-            (VarType('T2'), VarType('T5')), (VarType('T3'), VarType('T6'))
-        }
-        self.assertEqual(result, expected_result)
-
-    def test_assignment_get_solutions_1(self):
-        assign1 = Assignment.from_str(r'a:T1 + T2 /\ b:T1')
-        assign2 = Assignment.from_str(r'a:T3 + T4 /\ b:T4')
-        sols = Assignment.get_vartype_solutions(assign1, assign2)
-        result = set()
-        for sol in sols:
-            result.add(frozenset(sol))
-        expected_result = {frozenset({
-            (VarType('T1'), VarType('T4')),
-            (VarType('T2'), VarType('T3')),
-        })}
-        self.assertEqual(result, expected_result)
-
-    def test_assignment_get_solutions_2(self):
-        assign1 = Assignment.from_str(r'a:T1 + T2 /\ b:T3')
-        assign2 = Assignment.from_str(r'a:T4 + T5 /\ b:T6')
-        sols = Assignment.get_vartype_solutions(assign1, assign2)
+        sols, sol_dicts = Assignment.get_solution_replacements(assign1, assign2)
         result = set()
         for sol in sols:
             result.add(frozenset(sol))
         expected_result = {
             frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T5')), (VarType('T3'), VarType('T6'))}),
-            frozenset({(VarType('T1'), VarType('T5')), (VarType('T2'), VarType('T4')), (VarType('T3'), VarType('T6'))}),
+            frozenset({(VarType('T1'), VarType('T5')), (VarType('T2'), VarType('T4')), (VarType('T3'), VarType('T6'))})
         }
         self.assertEqual(result, expected_result)
 
     def test_assignment_replace_from_solution_1(self):
         assign1 = Assignment.from_str(r'a:T1 + T2 /\ b:T1')
         assign2 = Assignment.from_str(r'a:T3 + T4 /\ b:T4')
-        sols = Assignment.get_vartype_solutions(assign1, assign2)
+        sols, sol_dicts = Assignment.get_solution_replacements(assign1, assign2)
         result = True
-        index = 0
-        for sol in sols:
-            new_assign1, new_assign2, index = Assignment.replace_from_solution(assign1, assign2, sol, index)
+        for dict_pair in sol_dicts:
+            new_assign1 = assign1.replace_vartype_from_solution(dict_pair[0])
+            new_assign2 = assign2.replace_vartype_from_solution(dict_pair[1])
             result = result and (new_assign1 == new_assign2)
         expected_result = True
         self.assertEqual(result, expected_result)
@@ -600,11 +582,11 @@ class BasetypeTests(unittest.TestCase):
     def test_assignment_replace_from_solution_2(self):
         assign1 = Assignment.from_str(r'a:T1 + T2 /\ b:T3')
         assign2 = Assignment.from_str(r'a:T4 + T5 /\ b:T6')
-        sols = Assignment.get_vartype_solutions(assign1, assign2)
+        sols, sol_dicts = Assignment.get_solution_replacements(assign1, assign2)
         result = True
-        index = 0
-        for sol in sols:
-            new_assign1, new_assign2, index = Assignment.replace_from_solution(assign1, assign2, sol, index)
+        for dict_pair in sol_dicts:
+            new_assign1 = assign1.replace_vartype_from_solution(dict_pair[0])
+            new_assign2 = assign2.replace_vartype_from_solution(dict_pair[1])
             result = result and (new_assign1 == new_assign2)
         expected_result = True
         self.assertEqual(result, expected_result)
