@@ -425,10 +425,12 @@ class BasetypeTests(unittest.TestCase):
         bt1 = Basetype.from_str(r'T1 + T2 + list< T1 >')
         bt2 = Basetype.from_str(r'T3 + T4 + list< T4 >')
         sols, sol_dicts = Basetype.get_solution_replacements(bt1, bt2)
-        result = []
+        result = set()
         for sol in sols:
-            result.append(list(sol))
-        expected_result = [ [(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T3'))] ]
+            result.add(frozenset(sol))
+        expected_result = {
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T3'))})
+        }
         self.assertEqual(result, expected_result)
 
     def test_basetypes_solutions_2(self):
