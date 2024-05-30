@@ -980,6 +980,7 @@ class AndConstraints(hset):
         rel: Relation
         for rel in self:
             new_rel = Relation()
+            new_rel.relop = RelOp.LEQ
             new_rel.bt_left = rel.bt_left.replace_vartype_from_solution(solution_dict)
             new_rel.bt_right = rel.bt_right.replace_vartype_from_solution(solution_dict)
             new_andconstr.add(deepcopy(new_rel))

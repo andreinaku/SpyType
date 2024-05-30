@@ -425,10 +425,12 @@ class BasetypeTests(unittest.TestCase):
         bt1 = Basetype.from_str(r'T1 + T2 + list< T1 >')
         bt2 = Basetype.from_str(r'T3 + T4 + list< T4 >')
         sols, sol_dicts = Basetype.get_solution_replacements(bt1, bt2)
-        result = []
+        result = set()
         for sol in sols:
-            result.append(list(sol))
-        expected_result = [ [(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T3'))] ]
+            result.add(frozenset(sol))
+        expected_result = {
+            frozenset({(VarType('T1'), VarType('T4')), (VarType('T2'), VarType('T3'))})
+        }
         self.assertEqual(result, expected_result)
 
     def test_basetypes_solutions_2(self):
@@ -588,5 +590,29 @@ class BasetypeTests(unittest.TestCase):
             new_assign1 = assign1.replace_vartype_from_solution(dict_pair[0])
             new_assign2 = assign2.replace_vartype_from_solution(dict_pair[1])
             result = result and (new_assign1 == new_assign2)
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_state_replace_from_solution_1(self):
+        state1 = State.from_str(r'((a:T1 + T2 /\ b:T1) ^ (T1 <= T2))')
+        state2 = State.from_str(r'((a:T3 + T4 /\ b:T4) ^ (T4 <= T3))')
+        sols, sol_dicts = State.get_solution_replacements(state1, state2)
+        result = True
+        for dict_pair in sol_dicts:
+            new_state1 = state1.replace_vartype_from_solution(dict_pair[0])
+            new_state2 = state2.replace_vartype_from_solution(dict_pair[1])
+            result = result and (new_state1 == new_state2)
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_state_replace_from_solution_2(self):
+        state1 = State.from_str(r'((a:T1 + T2 /\ b:T3) ^ (T3 <= T1))')
+        state2 = State.from_str(r'((a:T4 + T5 /\ b:T6) ^ (T6 <= T5))')
+        sols, sol_dicts = State.get_solution_replacements(state1, state2)
+        result = False
+        for dict_pair in sol_dicts:
+            new_state1 = state1.replace_vartype_from_solution(dict_pair[0])
+            new_state2 = state2.replace_vartype_from_solution(dict_pair[1])
+            result = result or (new_state1 == new_state2)
         expected_result = True
         self.assertEqual(result, expected_result)
