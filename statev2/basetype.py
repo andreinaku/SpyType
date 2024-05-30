@@ -1178,7 +1178,18 @@ class State:
         return new_state
 
     def __eq__(self, other_state: State) -> bool:
-        return (self.assignment == other_state.assignment) and (self.constraints == other_state.constraints)
+        if (self.assignment == other_state.assignment) and (self.constraints == other_state.constraints):
+            return True
+        try:
+            sols, sol_dicts = State.get_solution_replacements(self, other_state)
+        except RuntimeError:
+            return False
+        for dict_pair in sol_dicts:
+            new_state1 = self.replace_vartype_from_solution(dict_pair[0])
+            new_state2 = other_state.replace_vartype_from_solution(dict_pair[1])
+            if new_state1 == new_state2:
+                return True
+        return False
 
     def is_same(self, other_state: State) -> bool:
         state1 = self.solve_constraints(strat1)
