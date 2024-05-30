@@ -268,6 +268,41 @@ class BasetypeTests(unittest.TestCase):
         expected_result = False
         self.assertEqual(result, expected_result)
 
+    def test_eq_state_7(self):
+        state1 = State.from_str(r'((a:T1 + T2 /\ b:T1) ^ (T1 <= T2))')
+        state2 = State.from_str(r'((a:T3 + T4 /\ b:T4) ^ (T4 <= T3))')
+        result = state1 == state2
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_eq_state_8(self):
+        state1 = State.from_str(r'((a:T1 + T2 /\ b:T3) ^ (T3 <= T1))')
+        state2 = State.from_str(r'((a:T4 + T5 /\ b:T6) ^ (T6 <= T5))')
+        result = state1 == state2
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_eq_stateset_1(self):
+        stateset1 = StateSet.from_str(r'((a:T1 + T2 /\ b:T3) ^ (T3 <= T1))')
+        stateset2 = StateSet.from_str(r'((a:T4 + T5 /\ b:T6) ^ (T6 <= T5))')
+        result = stateset1 == stateset2
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_eq_stateset_2(self):
+        stateset1 = StateSet.from_str(r'((a:T1 + T2 /\ b:T3) ^ (T3 <= T1)) \/ (a:int /\ b:int)')
+        stateset2 = StateSet.from_str(r'((a:T4 + T5 /\ b:T6) ^ (T6 <= T5)) \/ (a:int /\ b:int)')
+        result = stateset1 == stateset2
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_eq_stateset_3(self):
+        stateset1 = StateSet.from_str(r'((a:T1 + T2 /\ b:T3) ^ (T3 <= T1)) \/ (a:int /\ b:int)')
+        stateset2 = StateSet.from_str(r'((a:T4 + T5 /\ b:T6) ^ (T6 <= T5)) \/ (a:float /\ b:str)')
+        result = stateset1 == stateset2
+        expected_result = False
+        self.assertEqual(result, expected_result)
+
     def test_leq_from_rel_1(self):
         rel = Relation.from_str(r'int <= int + float')
         if rel.relop != RelOp.LEQ:

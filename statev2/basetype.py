@@ -1042,8 +1042,8 @@ class State:
     def __hash__(self):
         return hash((hash(self.assignment), hash(self.constraints)))
 
-    def __eq__(self, other: State):
-        return hash(self) == hash(other)
+    # def __eq__(self, other: State):
+    #     return hash(self) == hash(other)
 
     @classmethod
     def from_str(cls, input_str: str) -> State:
@@ -1181,14 +1181,16 @@ class State:
         if (self.assignment == other_state.assignment) and (self.constraints == other_state.constraints):
             return True
         try:
-            sols, sol_dicts = State.get_solution_replacements(self, other_state)
+            to_unpack = State.get_solution_replacements(self, other_state)
         except RuntimeError:
             return False
-        for dict_pair in sol_dicts:
-            new_state1 = self.replace_vartype_from_solution(dict_pair[0])
-            new_state2 = other_state.replace_vartype_from_solution(dict_pair[1])
-            if new_state1 == new_state2:
-                return True
+        if to_unpack is not None:
+            sols, sol_dicts = to_unpack
+            for dict_pair in sol_dicts:
+                new_state1 = self.replace_vartype_from_solution(dict_pair[0])
+                new_state2 = other_state.replace_vartype_from_solution(dict_pair[1])
+                if (new_state1.assignment == new_state2.assignment) and (new_state1.constraints == new_state2.constraints):
+                    return True
         return False
 
     def is_same(self, other_state: State) -> bool:
@@ -1266,6 +1268,25 @@ class StateSet(hset):
 
     def __hash__(self):
         return super().__hash__()
+
+    def __eq__(self, other_stateset: StateSet) -> bool:
+        for self_state in self:
+            found = False
+            for other_state in other_stateset:
+                if self_state == other_state:
+                    found = True
+                    break
+            if not found:
+                return False
+        for other_state in other_stateset:
+            found = False
+            for self_state in self:
+                if other_state == self_state:
+                    found = True
+                    break
+            if not found:
+                return False
+        return True
 
     @classmethod
     def from_str(cls, input_str: str) -> StateSet:
