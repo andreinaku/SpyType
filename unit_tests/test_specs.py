@@ -436,6 +436,18 @@ class SpecTestCases(unittest.TestCase):
             r'(a:Ta /\ b:Tb /\ {a, b}: set< Ta + Tb >) \/ (a:int /\ b:int /\ {a, b}: set< int >)'
         )
         self.assertEqual(result, expected_result)
+    
+    def test_visit_add_1(self):
+        expr = 'a + b'
+        state_set = StateSet.from_str(
+            r'(a:Ta /\ b:Tb)'
+        )
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, False)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = None
+        self.assertEqual(result, expected_result)
 
     def test_replace_superclasses_1(self):
         state_set = StateSet.from_str(r'__obj:Sized')

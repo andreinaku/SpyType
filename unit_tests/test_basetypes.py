@@ -651,3 +651,17 @@ class BasetypeTests(unittest.TestCase):
             result = result or (new_state1 == new_state2)
         expected_result = True
         self.assertEqual(result, expected_result)
+
+    def test_state_generate_fresh_vartypes(self):
+        state = State.from_str(r'((a:T1 /\ b:T2 /\ c:T?1 /\ d:set< T?2 >) ^ (T2 <= list< T?1 > /\ T2 <= T?2))')
+        state.gen_id = 3
+        result = state.generate_fresh_vartypes()
+        expected_result_1 = State.from_str(
+            r'((a:T1 /\ b:T2 /\ c:T3 /\ d:set< T4 >) ^ (T2 <= list< T3 > /\ T2 <= T4))'
+        )
+        expected_result_2 = State.from_str(
+            r'((a:T1 /\ b:T2 /\ c:T4 /\ d:set< T3 >) ^ (T2 <= list< T4 > /\ T2 <= T3))'
+        )
+        cond1 = (result.assignment == expected_result_1.assignment) or (result.assignment == expected_result_2.assignment)
+        cond2 = (result.constraints == expected_result_1.constraints) or (result.constraints == expected_result_2.constraints)
+        self.assertEqual(cond1 and cond2, True)

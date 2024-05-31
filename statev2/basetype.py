@@ -985,6 +985,15 @@ class AndConstraints(hset):
             new_rel.bt_right = rel.bt_right.replace_vartype_from_solution(solution_dict)
             new_andconstr.add(deepcopy(new_rel))
         return new_andconstr
+    
+    def get_all_vartypes(self):
+        all_vt = set()
+        rel: Relation
+        for rel in self:
+            all_vt |= rel.bt_left.get_all_vartypes()
+            all_vt |= rel.bt_right.get_all_vartypes()
+        return all_vt
+    
 
 class OrConstraints(hset):
     def __str__(self):
@@ -1247,6 +1256,26 @@ class State:
             state2.assignment[expr] = deepcopy(new_bt2)
         return state1, state2, index
 
+    def get_all_vartypes(self):
+        all_vt = set()
+        all_vt |= self.assignment.get_all_vartypes()
+        all_vt |= self.constraints.get_all_vartypes()
+        return all_vt
+
+    def generate_fresh_vartypes(self):
+        new_state = deepcopy(self)
+        all_vts = self.get_all_vartypes()
+        fresh_dict = dict()
+        for vt in all_vts:
+            if SPECTYPE_MARKER not in vt.varexp:
+                continue
+            if vt in fresh_dict:
+                continue
+            new_vt = VarType(self.generate_id())
+            fresh_dict[vt] = deepcopy(new_vt)
+        for old_vt, new_vt in fresh_dict.items():
+            new_state = new_state.replace_vartype(old_vt.varexp, new_vt.varexp)
+        return new_state
 
 
 class BottomState(State):
