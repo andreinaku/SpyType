@@ -1347,6 +1347,13 @@ class StateSet(hset):
         for other_state in other_set:
             new_stateset.add(deepcopy(other_state))
         return new_stateset
+    
+    @classmethod
+    def lub(cls, set1: StateSet, set2: StateSet) -> StateSet:
+        new_stateset = deepcopy(set1)
+        for state in set2:
+            new_stateset.add(deepcopy(state))
+        return new_stateset
 
 
 class FuncSpec:
