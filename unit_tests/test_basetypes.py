@@ -662,6 +662,7 @@ class BasetypeTests(unittest.TestCase):
         expected_result_2 = State.from_str(
             r'((a:T1 /\ b:T2 /\ c:T4 /\ d:set< T3 >) ^ (T2 <= list< T4 > /\ T2 <= T3))'
         )
+        # the order in which type variables are found can go either way
         cond1 = (result.assignment == expected_result_1.assignment) or (result.assignment == expected_result_2.assignment)
         cond2 = (result.constraints == expected_result_1.constraints) or (result.constraints == expected_result_2.constraints)
         self.assertEqual(cond1 and cond2, True)
