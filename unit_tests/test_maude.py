@@ -125,3 +125,19 @@ class SolverTestCases(unittest.TestCase):
             r'((a:float /\ b:float) ^ (int <= str))'
         )
         self.assertEqual(result, expected_result)
+
+    def test_solve_state_constraint_10(self):
+        state = State.from_str(
+            r'((a:T1 /\ b:list< T3 >) ^ ((T1 <= list< T3 >) /\ (T1 <= T4) /\ (T2 <= list< T3 >) /\ (T2 <= T5)))'
+        )
+        result = state.solve_constraints()
+        expected_result = State.from_str(r'(a:list< T3 > /\ b:list< T4 >)')
+        self.assertEqual(result, expected_result)
+
+    def test_solve_state_constraint_11(self):
+        state = State.from_str(
+            r'((a:T1 /\ b:list< T3 >) ^ ((T1 <= list< T3 >) /\ (T2 <= list< T3 >)))'
+        )
+        result = state.solve_constraints()
+        expected_result = State.from_str(r'(a:list< T3 > /\ b:list< T4 >)')
+        self.assertEqual(result, expected_result)

@@ -1186,8 +1186,14 @@ class State:
                 new_state.constraints.add(deepcopy(rel))
         return new_state
 
+    @classmethod
+    def raw_eq(cls, state1: State, state2: State) -> bool:
+        if (state1.assignment == state2.assignment) and (state1.constraints == state2.constraints):
+            return True
+        return False
+
     def __eq__(self, other_state: State) -> bool:
-        if (self.assignment == other_state.assignment) and (self.constraints == other_state.constraints):
+        if State.raw_eq(self, other_state):
             return True
         try:
             to_unpack = State.get_solution_replacements(self, other_state)
@@ -1297,6 +1303,26 @@ class StateSet(hset):
 
     def __hash__(self):
         return super().__hash__()
+
+    @classmethod
+    def raw_eq(cls, set1: StateSet, set2: StateSet) -> bool:
+        for state1 in set1:
+            found = False
+            for state2 in set2:
+                if State.raw_eq(state1, state2):
+                    found = True
+                    break
+            if not found:
+                return False
+        for state2 in set2:
+            found = False
+            for state1 in set1:
+                if State.raw_eq(state2, state1):
+                    found = True
+                    break
+            if not found:
+                return False
+        return True
 
     def __eq__(self, other_stateset: StateSet) -> bool:
         for self_state in self:

@@ -10,20 +10,26 @@ def state_apply_spec(state: State, spec: State, testmode=False) -> State:
     new_state.gen_id = state.gen_id
     new_state.constraints = deepcopy(state.constraints)
     for expr in spec.assignment:
-        if testmode is False:
-            new_basetype = Basetype({VarType(new_state.generate_id())})
+        skip_new = False
+        state_bt = state.assignment[expr]
+        if len(state_bt) == 1 and isinstance(state_bt[0], VarType):
+            skip_new = True
+        if not skip_new:
+            if testmode is False:
+                new_basetype = Basetype({VarType(new_state.generate_id())})
+            else:
+                new_varname = f'T{expr}`'
+                new_basetype = Basetype({VarType(new_varname)})
+                if new_basetype == spec.assignment[expr]:
+                    new_basetype = Basetype({VarType(new_varname + '`')})
+            new_state.assignment[expr] = new_basetype
         else:
-            new_varname = f'T{expr}`'
-            new_basetype = Basetype({VarType(new_varname)})
-            if new_basetype == spec.assignment[expr]:
-                new_basetype = Basetype({VarType(new_varname + '`')})
-        new_state.assignment[expr] = new_basetype
-        rel1 = Relation(RelOp.LEQ, new_basetype, deepcopy(state.assignment[expr]))
-        rel2 = Relation(RelOp.LEQ, new_basetype, deepcopy(spec.assignment[expr]))
-        andconstr = AndConstraints()
-        andconstr.add(rel1)
-        andconstr.add(rel2)
-        new_state.constraints |= deepcopy(andconstr)
+            new_basetype = deepcopy(state_bt)
+        if not skip_new:
+            new_rel = Relation(RelOp.LEQ, new_basetype, deepcopy(state.assignment[expr]))
+            new_state.constraints.add(deepcopy(new_rel))
+        new_rel = Relation(RelOp.LEQ, new_basetype, deepcopy(spec.assignment[expr]))
+        new_state.constraints.add(deepcopy(new_rel))
     for expr in state.assignment:
         if expr not in new_state.assignment:
             new_state.assignment[expr] = deepcopy(state.assignment[expr])

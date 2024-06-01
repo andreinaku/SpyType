@@ -1,3 +1,8 @@
+def d(a):
+    c = len(a)
+    return c
+
+
 def e(a, b):
     c = a >> b
     return c
