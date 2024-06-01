@@ -114,7 +114,7 @@ class SolverTestCases(unittest.TestCase):
         )
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
 
-    def _test_solve_state_constraint_10(self):
+    def test_solve_state_constraint_10(self):
         state = State.from_str(
             r'((a:T1 /\ b:list< T3 >) ^ ((T1 <= list< T3 >) /\ (T1 <= T4) /\ (T2 <= list< T3 >) /\ (T2 <= T5)))'
         )

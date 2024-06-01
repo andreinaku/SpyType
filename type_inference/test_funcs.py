@@ -103,3 +103,12 @@ def issue_64_1(source, pos, maxline):
 
     source.reverse()
     return first, source
+
+
+def test_if(b):
+    if True:
+        a = 3
+    else:
+        a = 3.5
+    b = a >> 10
+    return b
