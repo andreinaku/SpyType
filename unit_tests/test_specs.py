@@ -452,7 +452,7 @@ class SpecTestCases(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
     
-    def _test_visit_add_1(self):
+    def test_visit_add_1(self):
         expr = 'a + b'
         state_set = StateSet.from_str(
             r'(a:Ta /\ b:Tb)'
@@ -461,8 +461,20 @@ class SpecTestCases(unittest.TestCase):
         tf = TransferFunc(state_set, False)
         tf.visit(node)
         result = tf.state_set
-        expected_result = None
+        expected_result = StateSet.from_str(
+            r'((a:Ta /\ b:Tb /\ (a + b):int) ^ (Ta <= int /\ Tb <= int)) \/ '
+            r'((a:Ta /\ b:Tb /\ (a + b):tuple< T1 >) ^ (Ta <= tuple< T1 > /\ Tb <= tuple< T1 >)) \/ '
+            r'((a:Ta /\ b:Tb /\ (a + b):bytearray) ^ (Ta <= bytearray /\ Tb <= bytearray + bytes + memoryview)) \/ '
+            r'((a:Ta /\ b:Tb /\ (a + b):float) ^ (Ta <= float /\ Tb <= float)) \/ '
+            r'((a:Ta /\ b:Tb /\ (a + b):bytes) ^ (Ta <= bytes /\ Tb <= bytearray + bytes + memoryview)) \/ '
+            r'((a:Ta /\ b:Tb /\ (a + b):tuple< T1 + T2 >) ^ (Ta <= tuple< T1 > /\ Tb <= tuple< T2 >)) \/ '
+            r'((a:Ta /\ b:Tb /\ (a + b):list< T1 + T2 >) ^ (Ta <= list< T1 > /\ Tb <= list< T2 >)) \/ '
+            r'((a:Ta /\ b:Tb /\ (a + b):str) ^ (Ta <= str /\ Tb <= str)) \/ '
+            r'((a:Ta /\ b:Tb /\ (a + b):complex) ^ (Ta <= complex /\ Tb <= complex)) \/ '
+            r'((a:Ta /\ b:Tb /\ (a + b):list< T1 >) ^ (Ta <= list< T1 > /\ Tb <= list< T1 >))'
+        )
         self.assertEqual(result, expected_result)
+        # self.assertEqual(StateSet.raw_eq(result, expected_result), True)
 
     def test_replace_superclasses_1(self):
         state_set = StateSet.from_str(r'__obj:Sized')
