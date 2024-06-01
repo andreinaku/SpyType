@@ -119,7 +119,10 @@ def run_infer(filepath, funcname):
 
 
 if __name__ == "__main__":
-    (rounds, final_ss) = run_infer(sys.argv[1], sys.argv[2])
-    # (rounds, final_ss) = run_infer('type_inference/test_funcs.py', 'g')
+    # (rounds, final_ss) = run_infer(sys.argv[1], sys.argv[2])
+    (rounds, final_ss) = run_infer('type_inference/test_funcs.py', 'test_if_2')
     for state in final_ss:
+        print(f'{state}')
+    foo = final_ss.solve_states()
+    for state in foo:
         print(f'{state}')

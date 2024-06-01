@@ -238,3 +238,15 @@ class TransferFunc(ast.NodeVisitor):
             new_state = self.state_apply_assign(state, node)
             new_state_set.add(new_state)
         self.state_set = deepcopy(new_state_set)
+
+    def visit_return(self, node: ast.Return):
+        new_set = StateSet()
+        self.visit(node.value)
+        value_expr = astor.to_source(node.value).strip()
+        return_expr = 'return'
+        state: State
+        for state in self.state_set:
+            new_state = deepcopy(state)
+            new_state.assignment[return_expr] = deepcopy(new_state.assignment[value_expr])
+            new_set.add(new_state)
+        self.state_set = deepcopy(new_set)

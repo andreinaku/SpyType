@@ -28,7 +28,8 @@ class NameReplacer(ast.NodeTransformer):
             if isinstance(target, ast.Name):
                 if target.id in self.params:
                     # self.replacement[target.id] = target.id + '_' + str(uuid4()).replace('-', '')
-                    self.replacement[target.id] = target.id + '`'
+                    # self.replacement[target.id] = target.id + '`'
+                    self.replacement[target.id] = '_' + target.id
                     target.id = self.replacement[target.id]
         # self.generic_visit(node)
         return node

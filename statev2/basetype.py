@@ -1393,10 +1393,23 @@ class StateSet(hset):
     def solve_states(self):
         solved_stateset = StateSet()
         state: State
+        bottom_bt = Basetype({PyType(BottomType)})
         for state in self:
             solved_state = state.solve_constraints()
-            if solved_state != BottomState():
-                solved_stateset.add(deepcopy(solved_state))
+            invalid = False
+            for expr, bt in solved_state.assignment.items():
+                if len(bt) == 1 and bt == bottom_bt:
+                    invalid = True
+                    break
+            if invalid:
+                continue
+            for rel in solved_state.constraints:
+                if rel.bt_right == bottom_bt:
+                    invalid = True
+                    break
+            if invalid:
+                continue
+            solved_stateset.add(deepcopy(solved_state))
         return solved_stateset
 
     def __or__(self, other_set: StateSet) -> StateSet:

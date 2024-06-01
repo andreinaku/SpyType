@@ -52,7 +52,9 @@ def analyze(blockinfo: dict, init: StateSet, dataclass, cfg: CFG, dbg=False):
         for b in blocks:
             parent_ids = blockinfo[b]['parents']
             nodecode = blockinfo[b]['statements'][0]
-            nodesrc = '\ncode:\n```\n' + tosrc(nodecode).strip() + '\n```\n'
+            # nodesrc = '\ncode:\n```\n' + tosrc(nodecode).strip() + '\n```\n'
+            nodesrc = '\ncode:\n```\n' + astor.to_source(nodecode).strip() + '\n```\n'
+            print(nodesrc)
             #
             auxcnt = 0
             for p in parent_ids:

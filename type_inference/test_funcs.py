@@ -112,3 +112,12 @@ def test_if(b):
         a = 3.5
     b = a >> 10
     return b
+
+
+def test_if_2(b):
+    if True:
+        a = 3
+    else:
+        a = 3.5
+    b = a + 10
+    return b
