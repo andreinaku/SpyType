@@ -888,3 +888,14 @@ class SpecTestCases(unittest.TestCase):
         )
         # self.assertEqual(result, expected_result)
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+
+    def test_stateset_remove_no_names_1(self):
+        state_set = StateSet.from_str(
+            r'a:int /\ b:int /\ (a + b): float /\ (a * b):int'
+        )
+        result = state_set.remove_no_names()
+        expected_result = StateSet.from_str(
+            r'a:int /\ b:int'
+        )
+        self.assertEqual(result, expected_result)
+

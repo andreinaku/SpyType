@@ -70,6 +70,7 @@ def analyze(blockinfo: dict, init: StateSet, dataclass, cfg: CFG, dbg=False):
             current_TI[b] = NodeInfer(_in, nodesrc)
             try:
                 newout = dataclass.transfer(nodecode, _in)
+                newout = newout.remove_no_names()
             except RuntimeError as rerr:
                 dump_trounds(Trounds)
                 dump_roundineqs(round_ineqs)

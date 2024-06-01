@@ -1282,6 +1282,16 @@ class State:
         for old_vt, new_vt in fresh_dict.items():
             new_state = new_state.replace_vartype(old_vt.varexp, new_vt.varexp)
         return new_state
+    
+    def remove_no_names(self) -> State:
+        new_state = State()
+        new_state.constraints = deepcopy(self.constraints)
+        for expr, bt in self.assignment.items():
+            expr_ast = ast.parse(expr).body[0].value
+            if not isinstance(expr_ast, ast.Name):
+                continue
+            new_state.assignment[expr] = deepcopy(bt)
+        return new_state
 
 
 class BottomState(State):
@@ -1408,6 +1418,14 @@ class StateSet(hset):
         new_stateset = deepcopy(set1)
         for state in set2:
             new_stateset.add(deepcopy(state))
+        return new_stateset
+
+    def remove_no_names(self) -> StateSet:
+        new_stateset = StateSet()
+        state: State
+        for state in self:
+            new_state = state.remove_no_names()
+            new_stateset.add(deepcopy(new_state))
         return new_stateset
 
 
