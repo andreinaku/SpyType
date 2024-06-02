@@ -114,6 +114,23 @@ class SolverTestCases(unittest.TestCase):
         )
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
 
+    def test_solve_stateset_3(self):
+        stateset = StateSet.from_str(
+            r'((b:Tb /\ a:int) ^ (T1 <= int /\ Tb <= int)) \/ '
+            r'((b:Tb /\ a:float) ^ ((Tb <= float) /\ (T1 <= float) /\ (T1 <= int))) \/ '
+            r'((b:Tb /\ a:bytearray) ^ ((T1 <= bytearray + bytes + memoryview) /\ (Tb <= bytearray) /\ (T1 <= int))) \/ '
+            r'((b:Tb /\ a:tuple< T3 + T2 >) ^ ((Tb <= tuple< T3 >) /\ (T1 <= tuple< T2 >) /\ (T1 <= int))) \/ '
+            r'((b:Tb /\ a:bytes) ^ ((Tb <= bytes) /\ (T1 <= bytearray + bytes + memoryview) /\ (T1 <= int))) \/ '
+            r'((b:Tb /\ a:str) ^ ((T1 <= str) /\ (Tb <= str) /\ (T1 <= int))) \/ '
+            r'((b:Tb /\ a:complex) ^ ((T1 <= complex) /\ (Tb <= complex) /\ (T1 <= int))) \/ '
+            r'((b:Tb /\ a:list< T3 + T2 >) ^ ((Tb <= list< T3 >) /\ (T1 <= int) /\ (T1 <= list< T2 >))) \/ '
+            r'((b:Tb /\ a:tuple< T2 >) ^ ((T1 <= tuple< T2 >) /\ (Tb <= tuple< T2 >) /\ (T1 <= int))) \/ '
+            r'((b:Tb /\ a:list< T2 >) ^ ((T1 <= list< T2 >) /\ (T1 <= int) /\ (Tb <= list< T2 >)))'
+        )
+        result = stateset.solve_states()
+        expected_result = None
+        self.assertEqual(result, expected_result)
+
     def test_solve_state_constraint_10(self):
         state = State.from_str(
             r'((a:T1 /\ b:list< T3 >) ^ ((T1 <= list< T3 >) /\ (T1 <= T4) /\ (T2 <= list< T3 >) /\ (T2 <= T5)))'

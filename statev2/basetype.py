@@ -190,7 +190,7 @@ class GenericType:
         # for containers: list[int, float, set[T_2, complex], bool] etc.
         container_patt = r'^([a-zA-Z_][a-zA-Z0-9_]*)\<([a-zA-Z0-9\+ ,_\<\?`\.\>]*)\>$'
         # container_patt = r'^([a-zA-Z_][a-zA-Z0-9_]*)\[([a-zA-Z0-9\{} _\{}\{}]+)\]$'.format(start_br, end_br, sep)
-        foundlist = re.findall(container_patt, strtype)
+        foundlist = re.findall(container_patt, strtype) 
         if len(foundlist) != 1:
             raise RuntimeError('Type {} does not represent a valid container type'.format(strtype))
         foundtuple = foundlist[0]
