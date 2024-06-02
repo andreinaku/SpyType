@@ -66,14 +66,16 @@ def analyze(blockinfo: dict, init: StateSet, dataclass, cfg: CFG, dbg=False):
                 _in = prev_TI[parent_ids[0]].out_as
                 for p in parent_ids:
                     # print(_out[p])
-                    _in = dataclass.merge(_in, prev_TI[p].out_as)
+                    with open('merges.txt', 'a') as f:
+                        f.write(f'merging {_in} with {prev_TI[p].out_as}\n')
+                        _in = dataclass.merge(_in, prev_TI[p].out_as)
+                        f.write(f'result is {_in}\n\n')
             else:
                 _in = init
             current_TI[b] = NodeInfer(_in, nodesrc)
             try:
                 newout = dataclass.transfer(nodecode, _in)
                 newout = newout.remove_no_names()
-                print(f'newout = {newout}')
             except RuntimeError as rerr:
                 dump_trounds(Trounds)
                 dump_roundineqs(round_ineqs)
