@@ -1097,6 +1097,9 @@ class State:
         retstr = f'T{self.gen_id}'
         self.gen_id = self.gen_id + 1
         return retstr
+    
+    def generate_vartype_bt(self):
+        return Basetype({VarType(self.generate_id())})
 
     def replace_assignment_basetypes(self, to_replace: Basetype, replace_with: Basetype) -> State:
         new_state = State()

@@ -101,7 +101,7 @@ def run_infer(filepath, funcname):
     functree = cfg.func_asts[funcname]
     names = get_variable_names(functree)
     for varname in func_cfg.params:
-        new_state.assignment[varname] = Basetype.from_str(f'T{varname}')
+        new_state.assignment[varname] = new_state.generate_vartype_bt()
     for varname in names:
         new_state.assignment[varname] = Basetype.from_str('bot')
     init_ss.add(deepcopy(new_state))
@@ -123,7 +123,3 @@ if __name__ == "__main__":
     (rounds, final_ss) = run_infer('type_inference/test_funcs.py', 'test_while_1')
     for state in final_ss:
         print(f'{state}')
-    # foo = final_ss.solve_states()
-    # print('solved:')
-    # for state in foo:
-    #     print(f'{state}')
