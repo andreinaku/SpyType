@@ -121,3 +121,15 @@ def test_if_2(b):
         a = 3.5
     b = a + 10
     return b
+
+
+def test_while_1(b):
+    while True:
+        a = b + 3
+    return a
+
+
+def test_while_2(b):
+    while True:
+        a = b >> 3
+    return a

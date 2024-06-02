@@ -4,7 +4,7 @@ from statev2.basetype import *
 from crackedcfg import CFG
 
 
-MAXROUNDS = 20
+MAXROUNDS = 3
 
 
 class NodeInfer:
@@ -73,6 +73,7 @@ def analyze(blockinfo: dict, init: StateSet, dataclass, cfg: CFG, dbg=False):
             try:
                 newout = dataclass.transfer(nodecode, _in)
                 newout = newout.remove_no_names()
+                print(f'newout = {newout}')
             except RuntimeError as rerr:
                 dump_trounds(Trounds)
                 dump_roundineqs(round_ineqs)

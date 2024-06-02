@@ -1281,7 +1281,7 @@ class State:
         new_state.constraints = deepcopy(self.constraints)
         for expr, bt in self.assignment.items():
             expr_ast = ast.parse(expr).body[0].value
-            if not isinstance(expr_ast, ast.Name):
+            if not isinstance(expr_ast, ast.Name) and expr != RETURN_NAME:
                 continue
             new_state.assignment[expr] = deepcopy(bt)
         return new_state
