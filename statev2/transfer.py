@@ -1,4 +1,4 @@
-from ast import Assign
+from ast import Assign, If, While
 from typing import Any
 from statev2.basetype import *
 from united_specs import op_equiv, unitedspecs
@@ -250,3 +250,9 @@ class TransferFunc(ast.NodeVisitor):
             new_state.assignment[return_expr] = deepcopy(new_state.assignment[value_expr])
             new_set.add(new_state)
         self.state_set = deepcopy(new_set)
+
+    def visit_While(self, node: While):
+        pass
+
+    def visit_If(self, node: If):
+        pass

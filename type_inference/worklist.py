@@ -1,3 +1,8 @@
+'''
+Worklist algorithm implementation
+Based on description from "Principles of Program Analysis" by Flemming N. et al.
+'''
+
 import os, sys
 sys.path.append(os.getcwd())
 from statev2.basetype import *
@@ -25,15 +30,14 @@ class WorklistAnalyzer:
  
     def f(self, l: int):
         node_code = self.blockinfo[l]['statements'][0]
-        if l == self.entryblock:
-            input_ss = self.init_ss
-        else:
-            input_ss = StateSet()
-            for parent_id in self.blockinfo[l]['parents']:
-                input_ss = input_ss | self.Analysis[parent_id]
+        input_ss = self.Analysis[l]
         tf = TransferFunc(input_ss)
         tf.visit(node_code)
-        return deepcopy(tf.state_set)
+        # newout = newout.remove_no_names()
+        # newout = newout.solve_states()
+        ret_set = tf.state_set.remove_no_names()
+        ret_set = ret_set.solve_states() 
+        return deepcopy(ret_set)
 
     def Iteration(self):
         while len(self.W):
@@ -44,7 +48,7 @@ class WorklistAnalyzer:
             if not (l1_analyzed <= self.Analysis[l2]):
                 self.Analysis[l2] = self.merge(self.Analysis[l2], l1_analyzed)
                 for child in self.blockinfo[l2]['successors']:
-                    to_add = (id, child)
+                    to_add = (l2, child)
                     if to_add not in self.W:
                         self.W.append(deepcopy(to_add))
 

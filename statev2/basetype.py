@@ -1400,8 +1400,9 @@ class StateSet(hset):
         for state in self:
             solved_state = state.solve_constraints()
             invalid = False
-            for expr, bt in solved_state.assignment.items():
-                if len(bt) == 1 and bt == bottom_bt:
+            # considered invalid if bottom appears as a solution for a constraint
+            for rel in solved_state.constraints:
+                if rel.bt_left == Basetype.from_str('bot'):
                     invalid = True
                     break
             if invalid:

@@ -106,24 +106,20 @@ def run_infer(filepath, funcname):
     for varname in names:
         new_state.assignment[varname] = Basetype.from_str('bot')
     init_ss.add(deepcopy(new_state))
-    # run the fixpoint algorithm
-    # entryblock = func_cfg.entryblock
-    finalid = func_cfg.finalblocks[0].id
     aux = worklist.WorklistAnalyzer(func_cfg, init_ss)
     aux.Iteration()
     mfp_in, mfp_out = aux.mfp_solution()
-    _rounds = simple_fixpoint.analyze(func_cfg.cfgdict, init_ss, SSFlow, func_cfg, dbg=True)
-    # get the final abstract state
-    _out = _rounds[len(_rounds) - 1]
-    if len(func_cfg.finalblocks) != 1:
-        raise RuntimeError('Multiple exit blocks not supported yet')
-    final_state: StateSet
-    final_state = _out[finalid].out_as
-    return _rounds, final_state
+    return mfp_in, mfp_out
 
 
 if __name__ == "__main__":
-    # (rounds, final_ss) = run_infer(sys.argv[1], sys.argv[2])
-    (rounds, final_ss) = run_infer('type_inference/test_funcs.py', 'e')
-    for state in final_ss:
-        print(f'{state}')
+    mfp_in, mfp_out = run_infer('type_inference/test_funcs.py', 'test_while_1')
+    print('---------------')
+    print('MFP in' + os.linesep + '---------------')
+    for id, ss in mfp_in.items():
+        print(f'{id}: {ss}')
+    print('---------------')
+    print('MFP out' + os.linesep + '---------------')
+    for id, ss in mfp_out.items():
+        print(f'{id}: {ss}')
+    print('---------------')
