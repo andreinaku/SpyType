@@ -113,7 +113,8 @@ def run_infer(filepath, funcname):
 
 
 if __name__ == "__main__":
-    mfp_in, mfp_out = run_infer('type_inference/test_funcs.py', 'test_if')
+    mfp_in, mfp_out = run_infer('type_inference/test_funcs.py', 'test_add')
+    # mfp_in, mfp_out = run_infer(sys.argv[1], sys.argv[2])
     print('---------------')
     print('MFP in' + os.linesep + '---------------')
     for id, ss in mfp_in.items():

@@ -133,3 +133,7 @@ def test_while_2(b):
     while True:
         a = b >> 3
     return a
+
+
+def test_add(a, b, c):
+    return a + b + c
