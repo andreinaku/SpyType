@@ -1436,6 +1436,18 @@ class StateSet(hset):
             new_stateset.add(deepcopy(new_state))
         return new_stateset
 
+    def __contains__(self, state: State) -> bool:
+        for self_state in self:
+            if state == self_state:
+                return True
+        return False
+    
+    def __le__(self, other_ss: StateSet) -> bool:
+        for self_state in self:
+            if self_state not in other_ss:
+                return False
+        return True
+
 
 class FuncSpec:
     def __init__(self, _in: State = None, _out: State = None):

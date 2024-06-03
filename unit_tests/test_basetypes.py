@@ -666,3 +666,71 @@ class BasetypeTests(unittest.TestCase):
         cond1 = (result.assignment == expected_result_1.assignment) or (result.assignment == expected_result_2.assignment)
         cond2 = (result.constraints == expected_result_1.constraints) or (result.constraints == expected_result_2.constraints)
         self.assertEqual(cond1 and cond2, True)
+
+    def test_stateset_contains_1(self):
+        stateset = StateSet.from_str(
+            r'(a:int /\ b:int) \/ (a:float /\ b:float)'
+        )
+        state1 = State.from_str(r'(a:int /\ b:int)')
+        state2 = State.from_str(r'(a:float /\ b:float)')
+        result = (state1 in stateset) and (state2 in stateset)
+        expected_result = True
+        self.assertEqual(result, expected_result)
+ 
+    def test_stateset_contains_2(self):
+        stateset = StateSet.from_str(
+            r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= int)) \/ '
+            r'(a:float /\ b:float)'
+        )
+        state1 = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= int))')
+        state2 = State.from_str(r'(a:float /\ b:float)')
+        result = (state1 in stateset) and (state2 in stateset)
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_stateset_contains_3(self):
+        stateset = StateSet.from_str(
+            r'((a:T3 /\ b:T4) ^ (T3 <= int /\ T4 <= int)) \/ '
+            r'(a:float /\ b:float)'
+        )
+        state1 = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= int))')
+        state2 = State.from_str(r'(a:float /\ b:float)')
+        result = (state1 in stateset) and (state2 in stateset)
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_stateset_le_1(self):
+        ss1 = StateSet.from_str(
+            r'(a:int /\ b:int) \/ (a:float /\ b:float)'
+        )
+        ss2 = StateSet.from_str(
+            r'(a:int /\ b:int)'
+        )
+        result = ss2 <= ss1
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_stateset_le_2(self):
+        ss1 = StateSet.from_str(
+            r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= int)) \/ '
+            r'(a:float /\ b:float)'
+        )
+        ss2 = StateSet.from_str(
+            r'((a:T3 /\ b:T4) ^ (T3 <= int /\ T4 <= int))'
+        )
+        result = ss2 <= ss1
+        expected_result = True
+        self.assertEqual(result, expected_result)
+
+    def test_stateset_le_3(self):
+        ss1 = StateSet.from_str(
+            r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= int)) \/ '
+            r'(a:float /\ b:float)'
+        )
+        ss2 = StateSet.from_str(
+            r'((a:T3 /\ b:T4) ^ (T3 <= int /\ T4 <= int)) \/ '
+            r'(b:float /\ a:float)'
+        )
+        result = (ss2 <= ss1) and (ss1 <= ss2)
+        expected_result = True
+        self.assertEqual(result, expected_result)
