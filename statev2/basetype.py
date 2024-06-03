@@ -1287,7 +1287,7 @@ class State:
                 continue
             if vt in fresh_dict:
                 continue
-            new_vt = VarType(self.generate_id())
+            new_vt = VarType(new_state.generate_id())
             fresh_dict[vt] = deepcopy(new_vt)
         for old_vt, new_vt in fresh_dict.items():
             new_state = new_state.replace_vartype(old_vt.varexp, new_vt.varexp)
