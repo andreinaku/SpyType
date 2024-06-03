@@ -33,8 +33,6 @@ class WorklistAnalyzer:
         input_ss = self.Analysis[l]
         tf = TransferFunc(input_ss)
         tf.visit(node_code)
-        # newout = newout.remove_no_names()
-        # newout = newout.solve_states()
         ret_set = tf.state_set.remove_no_names()
         ret_set = ret_set.solve_states() 
         return deepcopy(ret_set)

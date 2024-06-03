@@ -183,6 +183,14 @@ class TranslatorTestCases(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
 
+    def test_translate_state_4(self):
+        state = State.from_str(
+            r'((a:int /\ b:T1 /\ c:T2) ^ (T1 <= T10 /\ T2 <= T68))'
+        )
+        result = state.gen_id
+        expected_result = 69
+        self.assertEqual(result, expected_result)
+
     def test_translate_state_set_1(self):
         result = StateSet.from_str(
             r'((a:T_a+float /\ b:T_b+int) ^ (T_b <= float /\ T_a <= str+complex)) \/ '

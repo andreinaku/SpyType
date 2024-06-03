@@ -1027,8 +1027,8 @@ class OrConstraints(hset):
 
 
 class State:
-    def __init__(self, assignment: Assignment = None, constraints: AndConstraints = None):
-        self.gen_id = 1
+    def __init__(self, assignment: Assignment = None, constraints: AndConstraints = None, gen_id: int = 1):
+        self.gen_id = gen_id
         if assignment is None:
             self.assignment = Assignment()
         else:
@@ -1072,25 +1072,33 @@ class State:
         else:
             constr = None
         st = State(asgn, constr)
+        all_vt = st.get_all_vartypes()
+        numeric_list = []
+        for vt in all_vt:
+            after_t = vt.varexp[1:]
+            if not after_t.isnumeric():
+                continue
+            numeric_list.append(int(after_t))
+        if len(numeric_list):
+            st.gen_id = max(numeric_list) + 1
         return st
-
 
     def replace_vartype(self, to_replace: str, replace_with: str) -> State:
         new_assignment = self.assignment.replace_vartype(to_replace, replace_with)
         new_constraints = self.constraints.replace_vartype(to_replace, replace_with)
-        new_state = State(new_assignment, new_constraints)
+        new_state = State(new_assignment, new_constraints, self.gen_id)
         return new_state
 
     def filter_pytypes(self, supported_list: list[type]) -> State:
         new_assignment = self.assignment.filter_pytypes(supported_list)
         new_constraints = self.constraints.filter_pytypes(supported_list)
-        new_state = State(new_assignment, new_constraints)
+        new_state = State(new_assignment, new_constraints, self.gen_id)
         return new_state
     
     def replace_superclasses(self) -> State:
         new_assignment = self.assignment.replace_superclasses()
         new_constraints = self.constraints.replace_superclasses()
-        new_state = State(new_assignment, new_constraints)
+        new_state = State(new_assignment, new_constraints, self.gen_id)
         return new_state
 
     def generate_id(self):
@@ -1103,6 +1111,7 @@ class State:
 
     def replace_assignment_basetypes(self, to_replace: Basetype, replace_with: Basetype) -> State:
         new_state = State()
+        new_state.gen_id = self.gen_id
         new_state.constraints = deepcopy(self.constraints)
         bt: Basetype
         for expr, bt in self.assignment.items():
@@ -1158,6 +1167,7 @@ class State:
             open(ofile, 'w').write(f'{result}')
             relations = self.parse_single_result_string(str(result))
         new_state = State()
+        new_state.gen_id = self.gen_id
         # new_state.assignment = deepcopy(self.assignment)
         if relations is None:
             raise RuntimeError(f'Empty relations for {str(result)}')
@@ -1169,6 +1179,7 @@ class State:
     
     def remove_valid_relations(self):
         new_state = State()
+        new_state.gen_id = self.gen_id
         new_state.assignment = deepcopy(self.assignment)
         rel: Relation
         for rel in self.constraints:
@@ -1211,6 +1222,7 @@ class State:
         
     def replace_basetype(self, to_replace: Basetype, replace_with: Basetype) -> State:
         new_state = State()
+        new_state.gen_id = self.gen_id
         new_state.assignment = self.assignment.replace_basetype(to_replace, replace_with)
         new_state.constraints = self.constraints.replace_basetype(to_replace, replace_with)
         return new_state 
@@ -1218,12 +1230,14 @@ class State:
     @classmethod
     def lub(cls, state1: State, state2: State) -> State:
         new_state = State()
+        new_state.gen_id = max(state1.gen_id, state2.gen_id)
         new_state.assignment = Assignment.lub(state1.assignment, state2. assignment)
         new_state.constraints = AndConstraints.lub(state1.constraints, state2.constraints)
         return new_state    
 
     def replace_vartype_from_solution(self, solution_dict: dict[VarType, VarType]) -> State:
         new_state = State()
+        new_state.gen_id = self.gen_id
         new_state.assignment = self.assignment.replace_vartype_from_solution(solution_dict)
         new_state.constraints = self.constraints.replace_vartype_from_solution(solution_dict)
         return new_state
@@ -1241,22 +1255,22 @@ class State:
     def get_vartype_solutions(cls, state1: State, state2: State) -> set[tuple[tuple[VarType]]]:
         return Assignment.get_vartype_solutions(state1.assignment, state2.assignment)
     
-    @classmethod
-    #def replace_from_solution(cls, assign1: Assignment, assign2: Assignment, solution: tuple[VarType], index: int = 0) -> tuple[Assignment]:
-    def replace_from_solution(cls, state1: State, state2: State, solution: tuple[VarType], index: int = 0) -> tuple[State]:
-        state1 = State()
-        state2 = State()
-        bt: Basetype
-        for expr in state1.assignment:
-            new_bt1, new_bt2, index = Basetype.replace_from_solution(state1.assignment[expr], 
-                                                                     state2.assignment[expr], 
-                                                                     solution, 
-                                                                     index)
-            state1.constraints = state1.constraints.replace_vartype(state1.assignment[expr], new_bt1)
-            state2.constraints = state2.constraints.replace_vartype(state2.assignment[expr], new_bt2)
-            state1.assignment[expr] = deepcopy(new_bt1)
-            state2.assignment[expr] = deepcopy(new_bt2)
-        return state1, state2, index
+    # @classmethod
+    # #def replace_from_solution(cls, assign1: Assignment, assign2: Assignment, solution: tuple[VarType], index: int = 0) -> tuple[Assignment]:
+    # def replace_from_solution(cls, state1: State, state2: State, solution: tuple[VarType], index: int = 0) -> tuple[State]:
+    #     state1 = State()
+    #     state2 = State()
+    #     bt: Basetype
+    #     for expr in state1.assignment:
+    #         new_bt1, new_bt2, index = Basetype.replace_from_solution(state1.assignment[expr], 
+    #                                                                  state2.assignment[expr], 
+    #                                                                  solution, 
+    #                                                                  index)
+    #         state1.constraints = state1.constraints.replace_vartype(state1.assignment[expr], new_bt1)
+    #         state2.constraints = state2.constraints.replace_vartype(state2.assignment[expr], new_bt2)
+    #         state1.assignment[expr] = deepcopy(new_bt1)
+    #         state2.assignment[expr] = deepcopy(new_bt2)
+    #     return state1, state2, index
 
     def get_all_vartypes(self):
         all_vt = set()
@@ -1281,6 +1295,7 @@ class State:
     
     def remove_no_names(self) -> State:
         new_state = State()
+        new_state.gen_id = self.gen_id
         new_state.constraints = deepcopy(self.constraints)
         for expr, bt in self.assignment.items():
             expr_ast = ast.parse(expr).body[0].value
