@@ -652,6 +652,17 @@ class BasetypeTests(unittest.TestCase):
         expected_result = True
         self.assertEqual(result, expected_result)
 
+    def test_state_replace_from_solution_3(self):
+        state1 = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= T2))')
+        state2 = State.from_str(r'((a:T?0 /\ b:T?1) ^ (T?1 <= T?0))')
+        sols, sol_dicts = Assignment.get_solution_replacements(state1.assignment, state2.assignment)
+        result = deepcopy(state2)
+        self.assertEqual(len(sols), 1)
+        for pair in list(sols)[0]:
+            result = result.replace_vartype(pair[1].varexp, pair[0].varexp)
+        expected_result = State.from_str(r'((a:T1 /\ b:T2) ^ (T2 <= T1))')
+        self.assertEqual(result, expected_result)
+
     def test_state_generate_fresh_vartypes(self):
         state = State.from_str(r'((a:T1 /\ b:T2 /\ c:T?1 /\ d:set< T?2 >) ^ (T2 <= list< T?1 > /\ T2 <= T?2))')
         state.gen_id = 3

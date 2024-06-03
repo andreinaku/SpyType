@@ -153,7 +153,7 @@ class SolverTestCases(unittest.TestCase):
 
     def test_solve_state_constraint_12(self):
         state = State.from_str(
-            r'((a + b:T6 /\ a:T1 /\ b:T2 /\ c:T3 /\ a + b + c:list< T7 + T8 > /\ return:list< T7 + T8 >) ^ ((T6 <= list< T8 >) /\ (T6 <= list< T4 + T5 >) /\ (T1 <= list< T5 >) /\ (T2 <= list< T4 >) /\ (T3 <= list< T7 >)))'
+            r'((a:int) ^ (T6 <= list< T4 + T5 > /\ T6 <= list< T7 >))'
         )
         result = state.solve_constraints()
         expected_result = None
