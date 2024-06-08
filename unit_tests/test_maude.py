@@ -158,3 +158,9 @@ class SolverTestCases(unittest.TestCase):
         result = state.solve_constraints()
         expected_result = None
         self.assertEqual(result, expected_result)
+
+    def test_parse_single_result_string_1(self):
+        to_search = r'((T1 <= int + float) /\ T2 <= complex)[(T?0 |-> int + float), T?1 |-> complex]'
+        aux, result = State.parse_single_result_string(to_search)
+        expected_result = None
+        self.assertEqual(result, expected_result)

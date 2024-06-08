@@ -85,7 +85,7 @@ def substitute_state_arguments(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
     spec_set = get_specset(node)
     for spec in spec_set:
         fi = FunctionInstance(node, spec)
-        interim_spec = fi.instantiate_spec(astor.to_source(node).strip())
+        interim_spec = fi.instantiate_spec(tosrc(node))
         interim_spec_set.add(deepcopy(interim_spec))
     return interim_spec_set
 
@@ -100,6 +100,7 @@ def set_apply_specset(state_set: StateSet, node: ast.BinOp | ast.Call, testmode:
             new_state = state_apply_spec(state, spec.in_state, testmode)
             for expr, bt in spec.out_state.assignment.items():
                 new_state.assignment[expr] = deepcopy(bt)
+            new_state = new_state.solve_constraints()
             new_state = new_state.generate_fresh_vartypes()
             new_set.add(deepcopy(new_state))
     return new_set
@@ -121,13 +122,19 @@ class TransferFunc(ast.NodeVisitor):
 
     def visit_BinOp(self, node: ast.BinOp):
         self.visit(node.left)
+        self.state_set = self.state_set.solve_states()
         self.visit(node.right)
-        self.state_set = set_apply_specset(self.state_set, node, self.testmode)
+        self.state_set = self.state_set.solve_states()
+        new_state_set = set_apply_specset(self.state_set, node, self.testmode)
+        # new_state_set = new_state_set.solve_states()
+        self.state_set = deepcopy(new_state_set)
 
     def visit_Call(self, node: ast.Call):
         for _arg in node.args:
             self.visit(_arg)
-        self.state_set = set_apply_specset(self.state_set, node, self.testmode)
+        new_state_set = set_apply_specset(self.state_set, node, self.testmode)
+        # new_state_set = new_state_set.solve_states()
+        self.state_set = deepcopy(new_state_set)
 
     def container_visit(self, node):
         if not hasattr(node, 'elts'):
@@ -237,6 +244,7 @@ class TransferFunc(ast.NodeVisitor):
         for state in self.state_set:
             new_state = self.state_apply_assign(state, node)
             new_state_set.add(new_state)
+        new_state_set = new_state_set.solve_states()
         self.state_set = deepcopy(new_state_set)
 
     def visit_Return(self, node: ast.Return):

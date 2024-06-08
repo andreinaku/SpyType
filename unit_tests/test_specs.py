@@ -243,6 +243,42 @@ class SpecTestCases(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
 
+    def test_visit_BinOp_4(self):
+        state = State.from_str(r'(a:list< T1 + T2 > /\ b:list< T3 >)')
+        state.gen_id = 3
+        state_set = StateSet()
+        state_set.add(deepcopy(state))
+        code = 'a + b'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = None
+        self.assertEqual(result, expected_result)
+
+    def test_visit_BinOp_5(self):
+        state = State.from_str(r'(a:T1 /\ b:T2 /\ c:T3)')
+        state.gen_id = 3
+        state_set = StateSet()
+        state_set.add(deepcopy(state))
+        code = 'a + b + c'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = None
+        self.assertEqual(result, expected_result)
+
+    def test_visit_BinOp_6(self):
+        state_set = StateSet.from_str(r'(a:T1 /\ b:T2)')
+        code = 'a + b'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = None
+        self.assertEqual(result, expected_result)
+
     def test_visit_Constant_1(self):
         expr = '3'
         state_set = StateSet.from_str(

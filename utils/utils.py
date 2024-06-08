@@ -4,6 +4,7 @@ import ast
 import astor
 import string
 from typing import *
+import os
 
 
 id_index = 0
@@ -33,6 +34,10 @@ class TopType:
 
 
 class ErrorType:
+    pass
+
+
+class SpecMatchError(Exception):
     pass
 
 
@@ -141,15 +146,13 @@ class hdict(dict):
 
 
 def tosrc(node: ast.AST):
-    try:
+    if hasattr(node, '_pp'):
         delattr(node, '_pp')
-    except AttributeError:
-        pass
     if isinstance(node, ast.While):
         ret_string = 'while {}'.format(astor.to_source(node.test).strip())
     else:
         ret_string = astor.to_source(node).strip()
-    ret_string.replace('\n', '')
+    # ret_string.replace(os.linesep, '')
     ret_string = elim_paren(ret_string)
     return ret_string
 

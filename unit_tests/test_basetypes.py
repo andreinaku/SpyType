@@ -745,3 +745,28 @@ class BasetypeTests(unittest.TestCase):
         result = (ss2 <= ss1) and (ss1 <= ss2)
         expected_result = True
         self.assertEqual(result, expected_result)
+
+    def _test_get_spectype_substitutions_1(self):
+        bt = Basetype.from_str(r'int + list< set< T1 + int > >')
+        specbt = Basetype.from_str(r'int + float + list< T?0 >')
+        result = Basetype.get_spectype_substitutions(bt, specbt)
+        expected_result = {
+            Basetype.from_str('T?0'): { Basetype.from_str(r'set< T1 + int >') }
+        }
+        self.assertEqual(result, expected_result)
+
+    def _test_get_spectype_substitutions_2(self):
+        bt = Basetype.from_str(r'int + list< T1 + int >')
+        specbt = Basetype.from_str(r'int + float + list< T?0 >')
+        result = Basetype.get_spectype_substitutions(bt, specbt)
+        expected_result = {
+            Basetype.from_str('T?0'): { Basetype.from_str(r'T1 + int') }
+        }
+        self.assertEqual(result, expected_result)
+
+    def _test_get_spectype_substitutions_3(self):
+        bt = Basetype.from_str(r'int + set< T1 + int >')
+        specbt = Basetype.from_str(r'int + float + list< T?0 >')
+        result = Basetype.get_spectype_substitutions(bt, specbt)
+        expected_result = dict()
+        self.assertEqual(result, expected_result)

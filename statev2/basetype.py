@@ -682,6 +682,39 @@ class Basetype(hset):
             bt2 = bt2.replace_vartype(pair[1].varexp, temp_varexp)
         return bt1, bt2, index
 
+    # @classmethod
+    # def get_spectype_substitutions(cls, bt: Basetype, specbt: Basetype) -> dict[Basetype, Basetype]:
+    #     spec_replace = dict()
+    #     if len(specbt) == 1 and isinstance(specbt[0], VarType) and SPECTYPE_MARKER in specbt[0].varexp:
+    #         spec_replace[specbt] = {deepcopy(bt)}
+    #         return spec_replace
+    #     for spec_atom in specbt:
+    #         if isinstance(spec_atom, VarType):
+    #             continue
+    #         if spec_atom.keys is not None:
+    #             for bt_atom in bt:
+    #                 if isinstance(bt_atom, VarType):
+    #                     continue
+    #                 if spec_atom.ptype != bt_atom.ptype:
+    #                     continue
+    #                 key_replace = dict()
+    #                 values_replace = dict()
+    #                 if bt_atom.keys is not None:
+    #                     key_replace = cls.get_spectype_substitutions(bt_atom.keys, spec_atom.keys)
+    #                 if spec_atom.values is not None and bt_atom.values is not None:
+    #                     values_replace = cls.get_spectype_substitutions(spec_atom.values, bt_atom.values)
+    #                 for newbt, newsubst in key_replace.items():
+    #                     if newbt in spec_replace:
+    #                         spec_replace[newbt] |= deepcopy(newsubst)
+    #                     else:
+    #                         spec_replace[newbt] = deepcopy(newsubst)
+    #                 for newbt, newsubst in values_replace.items():
+    #                     if newbt in spec_replace:
+    #                         spec_replace[newbt] |= deepcopy(newsubst)
+    #                     else:
+    #                         spec_replace[newbt] = deepcopy(newsubst)
+    #     return spec_replace
+                    
 
 class Assignment(hdict):
     def __str__(self):
@@ -1119,17 +1152,28 @@ class State:
         return new_state
         
     @classmethod
-    def parse_single_result_string(cls, case: str) -> list[Relation]:
+    def parse_single_result_string(cls, case: str) -> tuple[list[Relation], dict[Basetype, Basetype]]:
         relations = []
-        m_res = case.replace('[nil]', '')
+        replacements = dict()
+        repl_list = re.findall(r'\[(.*)\]', case)
+        if len(repl_list) != 1:
+            raise RuntimeError(f'Substitution string not found for {case}')
+        repl_strings = repl_list[0].split(',')
+        for repl_str in repl_strings:
+            to_parse = repl_str.strip('() ')
+            bt_list = to_parse.split(r'|->')
+            replacements[Basetype.from_str(bt_list[0].strip())] = Basetype.from_str(bt_list[1].strip())    
+        # m_res = case.replace('[nil]', '')
+        m_res = case.replace(repl_list[0], '').strip('[]')
         result_list = m_res.split('/\\')
         for elem in result_list:
             aux = elem.strip('() ')
             rel = Relation.from_str(aux)
             relations.append(deepcopy(rel))
-        return relations
+        return relations, replacements
 
-    def solve_constraints(self, strategy_str: str = strat1, dump_file: str | None = None, ofile: str = DEFAULT_SOLVER_OUT) -> State:
+    def solve_constraints(self, strategy_str: str = strat1, dump_file: str | None = None, 
+                          ofile: str = DEFAULT_SOLVER_OUT) -> State:
         maude.init()
         init_module = INIT_MAUDE_PATH
         if not maude.load(init_module):
@@ -1165,7 +1209,7 @@ class State:
                 raise RuntimeError('Too many maude results')
             aux_len += 1
             open(ofile, 'w').write(f'{result}')
-            relations = self.parse_single_result_string(str(result))
+            relations, replacements = self.parse_single_result_string(str(result))
         new_state = State()
         new_state.gen_id = self.gen_id
         # new_state.assignment = deepcopy(self.assignment)
@@ -1174,9 +1218,29 @@ class State:
         new_state.assignment = deepcopy(self.assignment)
         for rel in relations:
             new_state.constraints.add(deepcopy(rel))
-        new_state = new_state.remove_valid_relations()
+        new_state = new_state.replace_from_constraints()
+        # new_state = new_state.remove_valid_relations()
         return new_state
     
+    def replace_from_constraints(self):
+        new_state = deepcopy(self)
+        # new_state.gen_id = self.gen_id
+        rel: Relation
+        leftcnt = dict()
+        for rel in new_state.constraints:
+            if len(rel.bt_left) != 1 and not isinstance(rel.bt_left[0], VarType):
+                continue
+            if rel.bt_left not in leftcnt:
+                leftcnt[rel.bt_left] = [rel.bt_right]
+            else:
+                leftcnt[rel.bt_left].append[rel.bt_right]
+        for lefty, righty in leftcnt.items():
+            if len(righty) != 1:
+                continue
+            new_state = new_state.replace_basetype(lefty, righty[0])
+        new_state = new_state.remove_valid_relations()
+        return new_state
+
     def remove_valid_relations(self):
         new_state = State()
         new_state.gen_id = self.gen_id

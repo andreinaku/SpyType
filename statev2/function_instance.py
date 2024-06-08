@@ -26,7 +26,7 @@ class FunctionInstance:
     def __init__(self, ast_node: ast.Call | ast.BinOp, spec: FuncSpec):
         self.ast_node = ast_node
         self.spec = spec
-        self.call_str = astor.to_source(ast_node).strip()
+        self.call_str = tosrc(ast_node)
     
     def _param_to_args_call(self):
         param_link = dict()
@@ -46,7 +46,7 @@ class FunctionInstance:
         arg_list = []
         for arg in self.ast_node.args:
             # take only the args without keywords
-            argname = astor.to_source(arg).strip()
+            argname = tosrc(arg)
             arg_list.append(argname)
         current_index = None
         for i in range(0, len(param_list)):
@@ -74,7 +74,7 @@ class FunctionInstance:
         kw_dict = {}
         for kw in self.ast_node.keywords:
             kw_formal = deepcopy(kw.arg)
-            kw_actual = astor.to_source(kw.value).strip()
+            kw_actual = tosrc(kw.value)
             if kw_formal in kw_dict:
                 raise ArgumentMismatchError(f'Keyword parameter {kw_formal} already instantiated')
             kw_dict[kw_formal] = kw_actual
@@ -104,10 +104,10 @@ class FunctionInstance:
         param_link = dict()
         param_list = list(self.spec.in_state.assignment)
         if len(param_list) != 2:
-            raise TypeError(f'Node {astor.to_source(self.ast_node).strip()} is a BinOp with more than 2 operands?')
+            raise TypeError(f'Node {tosrc(self.ast_node)} is a BinOp with more than 2 operands?')
         param_link = {
-            param_list[0]: astor.to_source(self.ast_node.left).strip(),
-            param_list[1]: astor.to_source(self.ast_node.right).strip()
+            param_list[0]: tosrc(self.ast_node.left),
+            param_list[1]: tosrc(self.ast_node.right)
         }
         return param_link
 
@@ -117,7 +117,7 @@ class FunctionInstance:
         elif isinstance(self.ast_node, ast.BinOp):
             return self._param_to_args_binop()
         else:
-            raise TypeError(f'Node {astor.to_source(self.ast_node).strip()} is not Call or BinOp')
+            raise TypeError(f'Node {tosrc(self.ast_node)} is not Call or BinOp')
 
     def instantiate_spec(self, call_code: str):
         param_link = self.param_to_args()
