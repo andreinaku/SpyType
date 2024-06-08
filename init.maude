@@ -13,6 +13,7 @@ fmod TYPE is
   op _+_ : Type Type -> Type [assoc comm ctor]. 
   eq T + T = T .
   eq T + top = top .
+  eq T + bot = T .
   eq tuple< T1 > + tuple< T2 > = tuple< T1 + T2 > . 
   eq list< T1 > + list< T2 > = list< T1 + T2 > . 
   eq dict< T1, T2 > + dict< T1', T2' > = dict< T1 + T1', T2 + T2' > .
@@ -25,9 +26,9 @@ fmod TYPE is
   
   sort TypeSubst .
   op [_;_] : Type Subst -> TypeSubst [ctor] .
-  var S S' S'' : Subst .
+  var S S' S'' S''' : Subst .
   
-  var T T' T1 T2 T1' T2' : Type . 
+  var T T' T1 T2 T1' T2' T1'' T2'' T3 T3' T3'' : Type . 
   vars X Y : VarType . 
   vars X? Y? : BoundVarType .
   var CT : ConstType .
@@ -73,6 +74,39 @@ fmod TYPE is
   if [ T' ; S' ] := glb(T1, T2, S) .
  ceq glb(list< T1 >, list< T2 >, S) = [ list< T' > ; S' ]
   if [ T' ; S' ] := glb(T1, T2, S) . 
+ ceq glb(set< T1 >, set< T2 >, S) = [ set< T' > ; S' ]
+  if [ T' ; S' ] := glb(T1, T2, S) . 
+ ceq glb(dict< T1, T2 >, dict< T1', T2' >, S) = [ dict< T3, T3' > ; S'' ]
+  if [ T3 ; S' ] := glb(T1, T1', S)
+  /\ [ T3' ; S'' ] := glb(T2, T2', S') . 
+***
+---  ceq glb(T + T1, T + T2, S) = [ T + T' ; S' ]
+---   if [ T' ; S' ] := glb(T1, T2, S) .
+ ceq glb(T + list< T1 >, T' + list< T2 >, S) = [ T1' + list< T2' > ; S'' ]
+  if [ T2' ; S' ] := glb(T1, T2, S)
+  /\ [ T1' ; S'' ] := glb(T, T', S') .
+ ceq glb(T + list< T1 >, list< T2 >, S) = [ list< T2' > ; S' ]
+  if [ T2' ; S' ] := glb(T1, T2, S) . 
+ ceq glb(T + set< T1 >, T' + set< T2 >, S) = [ T1' + set< T2' > ; S'' ]
+  if [ T2' ; S' ] := glb(T1, T2, S)
+  /\ [ T1' ; S'' ] := glb(T, T', S') .
+ ceq glb(T + set< T1 >, set< T2 >, S) = [ set< T2' > ; S' ]
+  if [ T2' ; S' ] := glb(T1, T2, S) . 
+ ceq glb(T + tuple< T1 >, T' + tuple< T2 >, S) = [ T1' + tuple< T2' > ; S'' ]
+  if [ T2' ; S' ] := glb(T1, T2, S)
+  /\ [ T1' ; S'' ] := glb(T, T', S') .
+ ceq glb(T + tuple< T1 >, tuple< T2 >, S) = [ tuple< T2' > ; S' ]
+  if [ T2' ; S' ] := glb(T1, T2, S) . 
+ ceq glb(T + dict< T1, T2 >, T' + dict< T1', T2' >, S) = [ T3 + dict< T3', T3'' > ; S''' ]
+  if [ T3 ; S' ] := glb(T, T', S)
+  /\ [ T3' ; S'' ] := glb(T1, T1', S')
+  /\ [ T3'' ; S''' ] := glb(T2, T2', S'') .
+ ceq glb(T + dict< T1, T2 >, dict< T1', T2' >, S) = [ dict< T1'', T2'' > ; S'' ]
+  if [ T1'' ; S' ] := glb(T1, T1', S)
+  /\ [ T2'' ; S'' ] := glb(T2, T2', S') . 
+ ceq glb(T + T1, T + T2, S) = [ T + T' ; S' ]
+  if [ T' ; S' ] := glb(T1, T2, S) .
+***
  ceq glb(set< T1 >, set< T2 >, S) = [ set< T' > ; S' ]
   if [ T' ; S' ] := glb(T1, T2, S) . 
  ceq glb(frozenset< T1 >, frozenset< T2 >, S) = [ frozenset< T' > ; S' ] 
