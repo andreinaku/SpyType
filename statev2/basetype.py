@@ -1170,6 +1170,8 @@ class State:
     def parse_single_result_string(cls, case: str) -> tuple[list[Relation], dict[Basetype, Basetype]]:
         relations = []
         replacements = dict()
+        if case == 'c[nil]':
+            return relations, replacements
         repl_list = re.findall(r'\[(.*)\]', case)
         if len(repl_list) != 1:
             raise RuntimeError(f'Substitution string not found for {case}')
@@ -1213,7 +1215,7 @@ class State:
             raise RuntimeError(f'Could not get module {constr_module}')
         if len(self.constraints) == 0:
             return deepcopy(self)
-        c_value = str(self.constraints)
+        c_value = str(self.constraints.replace_superclasses())
         m_input = mod_generator('tempmod', c_value, dump_file)
         if not maude.input(m_input):
             raise RuntimeError('Maude input operation failed')
@@ -1268,7 +1270,7 @@ class State:
         rel: Relation
         leftcnt = dict()
         for rel in new_state.constraints:
-            if len(rel.bt_left) != 1 and not isinstance(rel.bt_left[0], VarType):
+            if len(rel.bt_left) != 1 or not isinstance(rel.bt_left[0], VarType):
                 continue
             if rel.bt_left not in leftcnt:
                 leftcnt[rel.bt_left] = [rel.bt_right]

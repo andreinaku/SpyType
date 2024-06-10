@@ -492,37 +492,37 @@ class SpecTestCases(unittest.TestCase):
     def test_visit_Set_2(self):
         expr = '{a, b}'
         state_set = StateSet.from_str(
-            r'(a:Ta /\ b:Tb) \/ (a:int /\ b:int)'
+            r'(a:T1 /\ b:T2) \/ (a:int /\ b:int)'
         )
         node = ast.parse(expr)
         tf = TransferFunc(state_set, True)
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'(a:Ta /\ b:Tb /\ {a, b}: set< Ta + Tb >) \/ (a:int /\ b:int /\ {a, b}: set< int >)'
+            r'(a:T1 /\ b:T2 /\ {a, b}: set< T1 + T2 >) \/ (a:int /\ b:int /\ {a, b}: set< int >)'
         )
         self.assertEqual(result, expected_result)
     
     def test_visit_add_1(self):
         expr = 'a + b'
         state_set = StateSet.from_str(
-            r'(a:Ta /\ b:Tb)'
+            r'(a:T1 /\ b:T2)'
         )
         node = ast.parse(expr)
         tf = TransferFunc(state_set, False)
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'((a:Ta /\ b:Tb /\ (a + b):int) ^ (Ta <= int /\ Tb <= int)) \/ '
-            r'((a:Ta /\ b:Tb /\ (a + b):tuple< T1 >) ^ (Ta <= tuple< T1 > /\ Tb <= tuple< T1 >)) \/ '
-            r'((a:Ta /\ b:Tb /\ (a + b):bytearray) ^ (Ta <= bytearray /\ Tb <= bytearray + bytes + memoryview)) \/ '
-            r'((a:Ta /\ b:Tb /\ (a + b):float) ^ (Ta <= float /\ Tb <= float)) \/ '
-            r'((a:Ta /\ b:Tb /\ (a + b):bytes) ^ (Ta <= bytes /\ Tb <= bytearray + bytes + memoryview)) \/ '
-            r'((a:Ta /\ b:Tb /\ (a + b):tuple< T1 + T2 >) ^ (Ta <= tuple< T1 > /\ Tb <= tuple< T2 >)) \/ '
-            r'((a:Ta /\ b:Tb /\ (a + b):list< T1 + T2 >) ^ (Ta <= list< T1 > /\ Tb <= list< T2 >)) \/ '
-            r'((a:Ta /\ b:Tb /\ (a + b):str) ^ (Ta <= str /\ Tb <= str)) \/ '
-            r'((a:Ta /\ b:Tb /\ (a + b):complex) ^ (Ta <= complex /\ Tb <= complex)) \/ '
-            r'((a:Ta /\ b:Tb /\ (a + b):list< T1 >) ^ (Ta <= list< T1 > /\ Tb <= list< T1 >))'
+            r'(a:int /\ b:int /\ a + b:int) \/ '\
+            r'(a:float /\ b:float /\ a + b:float) \/ '\
+            r'(a:complex /\ b:complex /\ a + b:complex) \/ '\
+            r'(a:list< T1 > /\ b:list< T1 > /\ a + b:list< T1 >) \/ '\
+            r'(a:list< T1 > /\ b:list< T2 > /\ a + b:list< T1 + T2 >) \/ '\
+            r'(a:tuple< T1 > /\ b:tuple< T1 > /\ a + b:tuple< T1 >) \/ '\
+            r'(a:tuple< T1 > /\ b:tuple< T2 > /\ a + b:tuple< T1 + T2 >) \/ '\
+            r'(a:bytes /\ b:bytearray + bytes + memoryview /\ a + b:bytes) \/ '\
+            r'(a:str /\ b:str /\ a + b:str) \/ '\
+            r'(a:bytearray /\ b:bytearray + bytes + memoryview /\ a + b:bytearray)'
         )
         self.assertEqual(result, expected_result)
         # self.assertEqual(StateSet.raw_eq(result, expected_result), True)
@@ -593,8 +593,11 @@ class SpecTestCases(unittest.TestCase):
         tf = TransferFunc(state_set, False)
         tf.visit(node)
         result = tf.state_set
+        # expected_result = StateSet.from_str(
+        #     r'((a:T1 /\ b:int+float /\ len(a):int) ^ (T1 <= int + float /\ T1 <= Sized))'
+        # )
         expected_result = StateSet.from_str(
-            r'((a:T1 /\ b:int+float /\ len(a):int) ^ (T1 <= int + float /\ T1 <= Sized))'
+            r'((a:Sized /\ b:int+float /\ len(a):int) ^ (T1 <= int + float /\ T1 <= Sized))'
         )
         self.assertEqual(result, expected_result)
 
