@@ -1,0 +1,3 @@
+Note that:
+- files bellman_ford, coop_concatenate, crafting_challenge, disjoint_sets, functions are under Typpete's licence (see LICENCE_TYPPETE)
+- files chaos, fannkuch, float, go, hexiom, nbody, raytrace, regex_v8, richards, scimkar, spectral_norm, unpack_sequence are under pyperformance's licence (see LICENCE_PYPERFORMANCE)

@@ -1187,6 +1187,13 @@ class State:
             rel = Relation.from_str(aux)
             relations.append(deepcopy(rel))
         return relations, replacements
+    
+    def is_invalid(self) -> bool:
+        bottom_bt = Basetype({PyType(BottomType)})
+        for rel in self.constraints:
+            if rel.bt_right == bottom_bt:
+                return True
+        return False
 
     def solve_constraints(self, strategy_str: str = strat1, dump_file: str | None = None, 
                           ofile: str = DEFAULT_SOLVER_OUT) -> State:
@@ -1240,12 +1247,15 @@ class State:
         new_state.assignment = deepcopy(self.assignment)
         if relations is None:
             raise RuntimeError(f'Empty relations for {str(result)}')
-        for to_repl, repl_with in replacements.items():
-            new_state.assignment = new_state.assignment.replace_basetype(to_repl, repl_with)    
         for rel in relations:
             new_state.constraints.add(deepcopy(rel))
-        new_state = new_state.generate_fresh_vartypes()
-        # new_state = new_state.replace_from_constraints()
+        if not new_state.is_invalid():
+            new_state = new_state.replace_from_constraints()
+            for to_repl, repl_with in replacements.items():
+                new_state = new_state.replace_basetype(to_repl, repl_with)
+            new_state = new_state.generate_fresh_vartypes()
+        else:
+            new_state = BottomState()
         with open(ofile, 'a') as f:
             f.write(
                 f'new state: {new_state}{os.linesep}---------------{os.linesep}'
