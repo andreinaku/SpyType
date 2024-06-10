@@ -269,7 +269,8 @@ class SpecTestCases(unittest.TestCase):
             r'(a:float /\ b:float /\ c:float /\ a + b:float /\ a + b + c:float) \/ ' \
             r'(a:complex /\ b:complex /\ c:complex /\ a + b:complex /\ a + b + c:complex) \/ ' \
             r'(a:str /\ b:str /\ c:str /\ a + b:str /\ a + b + c:str) \/ ' \
-            r'(a:bytes /\ b:bytes + memoryview + bytearray /\ c:bytes + memoryview + bytearray /\ a + b:bytes /\ a + b + c:bytes) \/ ' \
+            r'(a:bytes /\ b:bytes + memoryview + bytearray /\ c:bytes + memoryview + bytearray /\ ' \
+                r'a + b:bytes /\ a + b + c:bytes) \/ ' \
             r'(a:tuple< T1 > /\ b:tuple< T1 > /\ c:tuple< T1 > /\ a + b:tuple< T1 > /\ a + b + c:tuple< T1 >) \/ ' \
             r'(a:tuple< T1 > /\ b:tuple< T1 > /\ c:tuple< T2 > /\ a + b:tuple< T1 > /\ a + b + c:tuple< T1 + T2 >) \/ ' \
             r'(a:tuple< T1 > /\ b:tuple< T2 > /\ c:tuple< T1 + T2 > /\ a + b:tuple< T1 + T2 > /\ a + b + c:tuple< T1 + T2 >) \/ ' \
@@ -278,23 +279,8 @@ class SpecTestCases(unittest.TestCase):
             r'(a:list< T1 > /\ b:list< T1 > /\ c:list< T2 > /\ a + b:list< T1 > /\ a + b + c:list< T1 + T2 >) \/ ' \
             r'(a:list< T1 > /\ b:list< T2 > /\ c:list< T1 + T2 > /\ a + b:list< T1 + T2 > /\ a + b + c:list< T1 + T2 >) \/ ' \
             r'(a:list< T1 > /\ b:list< T2 > /\ c:list< T3 > /\ a + b:list< T1 + T2 > /\ a + b + c:list< T1 + T2 + T3 >) \/ ' \
-            r'(a:bytearray /\ b:bytes + memoryview + bytearray /\ c:bytes + memoryview + bytearray /\ a + b:bytearray /\ a + b + c:bytearray)'
-        )
-        self.assertEqual(result, expected_result)
-
-    def test_visit_BinOp_5_limited(self):
-        state_set = StateSet.from_str(r'(a:T1 /\ b:T2 /\ c:T3)')
-        code = 'a + b + c'
-        # code = 'a + b'
-        node = ast.parse(code)
-        tf = TransferFunc(state_set)
-        tf.visit(node)
-        result = tf.state_set
-        expected_result = StateSet.from_str(
-            r'(a:list< T1 > /\ b:list< T1 > /\ c:list< T1 > /\ a + b:list< T1 > /\ a + b + c:list< T1 >) \/ ' \
-            r'(a:list< T1 > /\ b:list< T1 > /\ c:list< T2 > /\ a + b:list< T1 > /\ a + b + c:list< T1 + T2 >) \/ ' \
-            r'(a:list< T1 > /\ b:list< T2 > /\ c:list< T1 + T2 > /\ a + b:list< T1 + T2 > /\ a + b + c:list< T1 + T2 >) \/ ' \
-            r'(a:list< T1 > /\ b:list< T2 > /\ c:list< T3 > /\ a + b:list< T1 + T2 > /\ a + b + c:list< T1 + T2 + T3 >)'
+            r'(a:bytearray /\ b:bytes + memoryview + bytearray /\ c:bytes + memoryview + bytearray /\ ' \
+                r'a + b:bytearray /\ a + b + c:bytearray)'
         )
         self.assertEqual(result, expected_result)
 
