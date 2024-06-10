@@ -593,11 +593,18 @@ class SpecTestCases(unittest.TestCase):
         tf = TransferFunc(state_set, False)
         tf.visit(node)
         result = tf.state_set
-        # expected_result = StateSet.from_str(
-        #     r'((a:T1 /\ b:int+float /\ len(a):int) ^ (T1 <= int + float /\ T1 <= Sized))'
-        # )
+        expected_result = StateSet()
+        self.assertEqual(result, expected_result)
+    
+    def test_visit_Call_4(self):
+        expr = 'len(a)'
+        state_set = StateSet.from_str(r'(a:int+float+list<int>+set<float> /\ b:int+float)')
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, False)
+        tf.visit(node)
+        result = tf.state_set
         expected_result = StateSet.from_str(
-            r'((a:Sized /\ b:int+float /\ len(a):int) ^ (T1 <= int + float /\ T1 <= Sized))'
+            r'(a:list< int > + set< float > /\ b:int + float /\ len(a):int)'
         )
         self.assertEqual(result, expected_result)
 

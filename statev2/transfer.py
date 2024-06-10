@@ -100,7 +100,7 @@ def set_apply_specset(state_set: StateSet, node: ast.BinOp | ast.Call, testmode:
             new_state = state_apply_spec(state, spec.in_state, testmode)
             for expr, bt in spec.out_state.assignment.items():
                 new_state.assignment[expr] = deepcopy(bt)
-            new_state = new_state.solve_constraints()
+            new_state = new_state.solve_constraints(strategy_str=strat3)
             if new_state != BottomState():
                 # new_state = new_state.generate_fresh_vartypes()
                 new_state.update_vt_index()
