@@ -491,6 +491,8 @@ class Basetype(hset):
         if self.contains_basetype(to_replace):
             new_bt = deepcopy(replace_with)
             rest_bt = self - to_replace
+        else:
+            rest_bt = deepcopy(self)
         for self_atom in rest_bt:
             if not isinstance(self_atom, PyType):
                 new_bt.add(deepcopy(self_atom))
@@ -1087,6 +1089,17 @@ class State:
     # def __eq__(self, other: State):
     #     return hash(self) == hash(other)
 
+    def update_vt_index(self):
+        all_vt = self.get_all_vartypes()
+        numeric_list = []
+        for vt in all_vt:
+            after_t = vt.varexp[1:]
+            if not after_t.isnumeric():
+                continue
+            numeric_list.append(int(after_t))
+        if len(numeric_list):
+            self.gen_id = max(numeric_list) + 1
+
     @classmethod
     def from_str(cls, input_str: str) -> State:
         # (assignment ^ constraints)
@@ -1105,16 +1118,18 @@ class State:
         else:
             constr = None
         st = State(asgn, constr)
-        all_vt = st.get_all_vartypes()
-        numeric_list = []
-        for vt in all_vt:
-            after_t = vt.varexp[1:]
-            if not after_t.isnumeric():
-                continue
-            numeric_list.append(int(after_t))
-        if len(numeric_list):
-            st.gen_id = max(numeric_list) + 1
+        st.update_vt_index()
         return st
+        # all_vt = st.get_all_vartypes()
+        # numeric_list = []
+        # for vt in all_vt:
+        #     after_t = vt.varexp[1:]
+        #     if not after_t.isnumeric():
+        #         continue
+        #     numeric_list.append(int(after_t))
+        # if len(numeric_list):
+        #     st.gen_id = max(numeric_list) + 1
+        # return st
 
     def replace_vartype(self, to_replace: str, replace_with: str) -> State:
         new_assignment = self.assignment.replace_vartype(to_replace, replace_with)
@@ -1159,10 +1174,11 @@ class State:
         if len(repl_list) != 1:
             raise RuntimeError(f'Substitution string not found for {case}')
         repl_strings = repl_list[0].split(',')
-        for repl_str in repl_strings:
-            to_parse = repl_str.strip('() ')
-            bt_list = to_parse.split(r'|->')
-            replacements[Basetype.from_str(bt_list[0].strip())] = Basetype.from_str(bt_list[1].strip())    
+        if repl_list[0] != 'nil':
+            for repl_str in repl_strings:
+                to_parse = repl_str.strip('() ')
+                bt_list = to_parse.split(r'|->')
+                replacements[Basetype.from_str(bt_list[0].strip())] = Basetype.from_str(bt_list[1].strip())    
         # m_res = case.replace('[nil]', '')
         m_res = case.replace(repl_list[0], '').strip('[]')
         result_list = m_res.split('/\\')
@@ -1174,6 +1190,11 @@ class State:
 
     def solve_constraints(self, strategy_str: str = strat1, dump_file: str | None = None, 
                           ofile: str = DEFAULT_SOLVER_OUT) -> State:
+        with open(ofile, 'a') as f:
+            f.write(
+                f'{os.linesep}---------------{os.linesep}' \
+                f'current state: {self}{os.linesep}'
+            )
         maude.init()
         init_module = INIT_MAUDE_PATH
         if not maude.load(init_module):
@@ -1204,22 +1225,31 @@ class State:
             raise RuntimeError(f'Could not rewrite using {strategy_str}')
         aux_len = 0
         relations = None
+        replacements = None
         for result, nrew in srew:
             if aux_len > 0:
                 raise RuntimeError('Too many maude results')
             aux_len += 1
-            open(ofile, 'w').write(f'{result}')
+            open(ofile, 'a').write(
+                f'{self.constraints} solve:{os.linesep}' \
+                f'{result}{os.linesep}{os.linesep}'
+            )
             relations, replacements = self.parse_single_result_string(str(result))
         new_state = State()
         new_state.gen_id = self.gen_id
-        # new_state.assignment = deepcopy(self.assignment)
+        new_state.assignment = deepcopy(self.assignment)
         if relations is None:
             raise RuntimeError(f'Empty relations for {str(result)}')
-        new_state.assignment = deepcopy(self.assignment)
+        for to_repl, repl_with in replacements.items():
+            new_state.assignment = new_state.assignment.replace_basetype(to_repl, repl_with)    
         for rel in relations:
             new_state.constraints.add(deepcopy(rel))
-        new_state = new_state.replace_from_constraints()
-        # new_state = new_state.remove_valid_relations()
+        new_state = new_state.generate_fresh_vartypes()
+        # new_state = new_state.replace_from_constraints()
+        with open(ofile, 'a') as f:
+            f.write(
+                f'new state: {new_state}{os.linesep}---------------{os.linesep}'
+            )
         return new_state
     
     def replace_from_constraints(self):
@@ -1252,7 +1282,7 @@ class State:
             elif rel.relop == RelOp.EQ:
                 comparator = rel.bt_left.__eq__
             else:
-                raise RuntimeError(f'Relation {rel} has invalida comparator {rel.relop}')
+                raise RuntimeError(f'Relation {rel} has invalid comparator {rel.relop}')
             if not comparator(rel.bt_right):
                 new_state.constraints.add(deepcopy(rel))
         return new_state

@@ -746,6 +746,12 @@ class BasetypeTests(unittest.TestCase):
         expected_result = True
         self.assertEqual(result, expected_result)
 
+    def test_state_replace_from_constraints_1(self):
+        state = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T1 + T2 <= float))')
+        result = state.replace_from_constraints()
+        expected_result = State.from_str(r'((a:int /\ b:T2) ^ (int + T2 <= float))')
+        self.assertEqual(result, expected_result)
+
     def _test_get_spectype_substitutions_1(self):
         bt = Basetype.from_str(r'int + list< set< T1 + int > >')
         specbt = Basetype.from_str(r'int + float + list< T?0 >')
