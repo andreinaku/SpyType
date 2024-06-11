@@ -13,7 +13,7 @@ import itertools
 
 strat1 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; Step5 ! ; Step6 ! '
 strat2 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! '
-strat3 = 'one(Step1) ! ; one(Step2) ! ; one(Step8) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! '
+strat3 = 'one(Step1) ! ; one(Step2) ! ; one(Step7) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! '
 INIT_MAUDE_PATH = os.getcwd() + os.sep + 'init.maude'
 DEFAULT_SOLVER_OUT = os.getcwd() + os.sep + 'solver.out'
 
