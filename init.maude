@@ -23,6 +23,7 @@ fmod TYPE is
   op _|->_ : BoundVarType Type -> Subst [ctor] .
   op _`,_ : Subst Subst -> Subst  [ctor assoc comm id: nil].
   eq ((X? |-> T), (X? |-> T)) = (X? |-> T) .
+  eq ((X? |-> T1), (X? |-> T2)) = (X? |-> T1 + T2) .
   
   sort TypeSubst .
   op [_;_] : Type Subst -> TypeSubst [ctor] .
@@ -184,15 +185,23 @@ mod CONSTR is
 
   rl [Step7]: ((T <= dict< T1 + T2, T1' >)[S]) => ((T <= dict< T1, T1' >)[S]) || ((T <= dict< T2, T1' >)[S]) .
 )***
-
-  rl [Step7]: ((C[S]) && ((T <= T1 + T2)[S])) => ((C[S]) && ((T <= T1)[S])) || ((C[S]) && ((T <= T2)[S])) .
-  rl [Step7]: ((C[S]) && ((T <= list< T1 + T2 >)[S])) => ((C[S]) && ((T <= list< T1 >)[S])) || ((C[S]) && ((T <= list< T2 >)[S])) .
+***(
+  rl [Step7]: ((C[S]) && ((T <= T1 + T2)[S])) => (((C[S]) && ((T <= T1)[S])) || ((C[S]) && ((T <= T2)[S]))) .
+  rl [Step7]: ((C[S]) && ((T <= list< T1 + T2 >)[S])) => (((C[S]) && ((T <= list< T1 >)[S])) || ((C[S]) && ((T <= list< T2 >)[S]))) .
   rl [Step7]: ((C[S]) && ((T <= set< T1 + T2 >)[S])) => ((C[S]) && ((T <= set< T1 >)[S])) || ((C[S]) && ((T <= set< T2 >)[S])) .
   rl [Step7]: ((C[S]) && ((T <= tuple< T1 + T2 >)[S])) => ((C[S]) && ((T <= tuple< T1 >)[S])) || ((C[S]) && ((T <= tuple< T2 >)[S])) .
   rl [Step7]: ((C[S]) && ((T <= frozenset< T1 + T2 >)[S])) => ((C[S]) && ((T <= frozenset< T1 >)[S])) || ((C[S]) && ((T <= frozenset< T2 >)[S])) .
   rl [Step7]: ((C[S]) && ((T <= dict< T1, T1' + T2' >)[S])) => ((C[S]) && ((T <= dict< T1, T1' >)[S])) || ((C[S]) && ((T <= dict< T1, T2' >)[S])) .
   rl [Step7]: ((C[S]) && ((T <= dict< T1 + T2, T1' >)[S])) => ((C[S]) && ((T <= dict< T1, T1' >)[S])) || ((C[S]) && ((T <= dict< T2, T1' >)[S])) .
+***)
+  rl [Step7]: ((T <= T')[S]) && ((T <= T1 + T2)[S]) => (((T <= T')[S]) && ((T <= T1)[S])) || (((T <= T')[S]) && ((T <= T2)[S])) .
+  rl [Step7]: ((T <= T')[S]) && ((T <= list< T1 + T2 >)[S]) => (((T <= T')[S]) && ((T <= list< T1 >)[S])) || (((T <= T')[S]) && ((T <= list< T2 >)[S])) .
+  rl [Step7]: ((T <= T')[S]) && ((T <= set< T1 + T2 >)[S]) => (((T <= T')[S]) && ((T <= set< T1 >)[S])) || (((T <= T')[S]) && ((T <= set< T2 >)[S])) .
+  rl [Step7]: ((T <= T')[S]) && ((T <= tuple< T1 + T2 >)[S]) => (((T <= T')[S]) && ((T <= tuple< T1 >)[S])) || (((T <= T')[S]) && ((T <= tuple< T2 >)[S])) .
+  rl [Step7]: ((T <= T')[S]) && ((T <= frozenset< T1 + T2 >)[S]) => (((T <= T')[S]) && ((T <= frozenset< T1 >)[S])) || (((T <= T')[S]) && ((T <= frozenset< T2 >)[S])) .
 
+  rl [Step7]: ((T <= T')[S]) && ((T <= dict< T1, T1' + T2' >)[S]) => (((T <= T')[S]) && ((T <= dict< T1, T1' >)[S])) || (((T <= T')[S]) && ((T <= dict< T1, T2' >)[S])) .
+  rl [Step7]: ((T <= T')[S]) && ((T <= dict< T1 + T2, T1' >)[S]) => (((T <= T')[S]) && ((T <= dict< T1, T1' >)[S])) || (((T <= T')[S]) && ((T <= dict< T2, T1' >)[S])) .
 ***)
   
 ***(

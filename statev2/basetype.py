@@ -1248,10 +1248,12 @@ class State:
         new_state = State()
         new_state.gen_id = self.gen_id
         new_state.assignment = deepcopy(self.assignment)
-        if relations is None:
-            raise RuntimeError(f'Empty relations for {str(result)}')
-        for rel in relations:
-            new_state.constraints.add(deepcopy(rel))
+        if len(relations) == 0:
+            new_state.constraints = deepcopy(self.constraints)
+            # raise RuntimeError(f'Empty relations for {str(result)}')
+        else:
+            for rel in relations:
+                new_state.constraints.add(deepcopy(rel))
         if not new_state.is_invalid():
             new_state = new_state.replace_from_constraints()
             for to_repl, repl_with in replacements.items():
@@ -1276,7 +1278,7 @@ class State:
             if rel.bt_left not in leftcnt:
                 leftcnt[rel.bt_left] = [rel.bt_right]
             else:
-                leftcnt[rel.bt_left].append[rel.bt_right]
+                leftcnt[rel.bt_left].append(rel.bt_right)
         for lefty, righty in leftcnt.items():
             if len(righty) != 1:
                 continue

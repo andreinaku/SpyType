@@ -80,9 +80,9 @@ class SpecTestCases(unittest.TestCase):
         result = substitute_state_arguments(binop_node)
         expected_result = hset(
             {
-                FuncSpec.from_str(r'((a:complex /\ b:complex) -> ((a / b):complex))'),
-                FuncSpec.from_str(r'((a:float /\ b:float) -> ((a / b):float))'),
-                FuncSpec.from_str(r'((a:int /\ b:int) -> ((a / b):float))')
+                FuncSpec.from_str(r'((a:complex /\ b:complex) -> (a / b:complex))'),
+                FuncSpec.from_str(r'((a:float /\ b:float) -> (a / b:float))'),
+                FuncSpec.from_str(r'((a:int /\ b:int) -> (a / b:float))')
             }
         )
         self.assertEqual(result, expected_result)
@@ -90,24 +90,13 @@ class SpecTestCases(unittest.TestCase):
     def test_set_apply_binop_spec_1(self):
         expr = 'a / b'
         binop_node = ast.parse(expr).body[0].value
-        state_set = StateSet.from_str(r'(a:Ta /\ b:Tb)')
+        state_set = StateSet.from_str(r'(a:T1 /\ b:T2)')
         # result = set_apply_binop_spec(state_set, binop_node, testmode=True)
         result = set_apply_specset(state_set, binop_node, testmode=True)
-        expected_result = StateSet(
-            {
-                State.from_str(
-                    r'((a:Ta /\ b:Tb /\ (a / b):complex) ^ '
-                    r'(Ta <= complex /\ Tb <= complex))'
-                ),
-                State.from_str(
-                    r'((a:Ta /\ b:Tb /\ (a / b):float) ^ '
-                    r'(Ta <= float /\ Tb <= float))'
-                ),
-                State.from_str(
-                    r'((a:Ta /\ b:Tb /\ (a / b):float) ^ '
-                    r'(Ta <= int /\ Tb <= int))'
-                )
-            }
+        expected_result = StateSet.from_str(
+            r'(a:complex /\ b:complex /\ a / b:complex) \/ ' \
+            r'(a:float /\ b:float /\ a / b:float) \/ ' \
+            r'(a:int /\ b:int /\ a / b:float)'
         )
         self.assertEqual(result, expected_result)
 
@@ -115,37 +104,13 @@ class SpecTestCases(unittest.TestCase):
         expr = 'a / b'
         binop_node = ast.parse(expr).body[0].value
         state_set = StateSet.from_str(
-            r'((a:Ta /\ b:Tb) ^ (Ta <= int+float /\ Tb <= int+float)) \/ '
+            r'(a:int + float /\ b:int + float) \/ '
             r'(a:str /\ b:str)'
         )
-        result = set_apply_specset(state_set, binop_node, testmode=True)
-        expected_result = StateSet(
-            {
-                State.from_str(
-                    r'((a:Ta /\ b:Tb /\ (a / b):complex) ^ '
-                    r'(Ta <= int+float /\ Tb <= int+float /\ Ta <= complex /\ Tb <= complex))'
-                ),
-                State.from_str(
-                    r'((a:Ta /\ b:Tb /\ (a / b):float) ^ '
-                    r'(Ta <= int+float /\ Tb <= int+float /\ Ta <= float /\ Tb <= float))'
-                ),
-                State.from_str(
-                    r'((a:Ta /\ b:Tb /\ (a / b):float) ^ '
-                    r'(Ta <= int+float /\ Tb <= int+float /\ Ta <= int /\ Tb <= int))'
-                ),
-                State.from_str(
-                    r'((a:Ta` /\ b:Tb` /\ (a / b):complex) ^ '
-                    r'(Ta` <= str /\ Ta` <= complex /\ Tb` <= str /\ Tb` <= complex))'
-                ),
-                State.from_str(
-                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
-                    r'(Ta` <= str /\ Ta` <= float /\ Tb` <= str /\ Tb` <= float))'
-                ),
-                State.from_str(
-                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
-                    r'(Ta` <= str /\ Ta` <= int /\ Tb` <= str /\ Tb` <= int))'
-                )
-            }
+        result = set_apply_specset(state_set, binop_node)
+        expected_result = StateSet.from_str(
+            r'(a:int /\ b:int /\ a / b:float) \/ '
+            r'(a:float /\ b:float /\ a / b:float)'
         )
         self.assertEqual(result, expected_result)
 
@@ -155,23 +120,8 @@ class SpecTestCases(unittest.TestCase):
         state_set = StateSet.from_str(
             r'(a:str /\ b:str)'
         )
-        result = set_apply_specset(state_set, binop_node, testmode=True)
-        expected_result = StateSet(
-            {
-                State.from_str(
-                    r'((a:Ta` /\ b:Tb` /\ (a / b):complex) ^ '
-                    r'(Ta` <= str /\ Ta` <= complex /\ Tb` <= str /\ Tb` <= complex))'
-                ),
-                State.from_str(
-                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
-                    r'(Ta` <= str /\ Ta` <= float /\ Tb` <= str /\ Tb` <= float))'
-                ),
-                State.from_str(
-                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
-                    r'(Ta` <= str /\ Ta` <= int /\ Tb` <= str /\ Tb` <= int))'
-                )
-            }
-        )
+        result = set_apply_specset(state_set, binop_node)
+        expected_result = StateSet()
         self.assertEqual(result, expected_result)
 
     def test_visit_BinOp_1(self):
@@ -180,57 +130,28 @@ class SpecTestCases(unittest.TestCase):
             r'(a:str /\ b:str)'
         )
         node = ast.parse(expr)
-        tf = TransferFunc(state_set, True)
+        tf = TransferFunc(state_set)
         tf.visit(node)
         result = tf.state_set
-        expected_result = StateSet(
-            {
-                State.from_str(
-                    r'((a:Ta` /\ b:Tb` /\ (a / b):complex) ^ '
-                    r'(Ta` <= str /\ Ta` <= complex /\ Tb` <= str /\ Tb` <= complex))'
-                ),
-                State.from_str(
-                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
-                    r'(Ta` <= str /\ Ta` <= float /\ Tb` <= str /\ Tb` <= float))'
-                ),
-                State.from_str(
-                    r'((a:Ta` /\ b:Tb` /\ (a / b):float) ^ '
-                    r'(Ta` <= str /\ Ta` <= int /\ Tb` <= str /\ Tb` <= int))'
-                )
-            }
-        )
+        expected_result = StateSet()
         self.assertEqual(result, expected_result)
 
     def test_visit_BinOp_2(self):
         expr = '(a >> b) / c'
         state_set = StateSet.from_str(
-            r'(a:Ta /\ b:Tb /\ c:Tc)'
+            r'(a:T1 /\ b:T2 /\ c:T3)'
         )
         node = ast.parse(expr)
-        tf = TransferFunc(state_set, False)
+        tf = TransferFunc(state_set)
         tf.visit(node)
         result = tf.state_set
-        expected_result = StateSet(
-            {
-                State.from_str(
-                    r'((a:Ta /\ b:Tb /\ c:Tc /\ (a >> b):T3 /\ ((a >> b) / c):float) ^ '
-                    r'(Ta <= int /\ Tb <= int /\ Tc <= int /\ T3 <= int))'
-                ),
-                State.from_str(
-                    r'((a:Ta /\ b:Tb /\ c:Tc /\ (a >> b):T3 /\ ((a >> b) / c):float) ^ '
-                    r'(Ta <= int /\ Tb <= int /\ Tc <= float /\ T3 <= int /\ T3 <= float))'
-                ),
-                State.from_str(
-                    r'((a:Ta /\ b:Tb /\ c:Tc /\ (a >> b):T3 /\ ((a >> b) / c):complex) ^ '
-                    r'(Ta <= int /\ Tb <= int /\ Tc <= complex /\ T3 <= int /\ T3 <= complex))'
-                ),
-            }
+        expected_result = StateSet.from_str(
+            r'(a:int /\ b:int /\ c:int /\ a >> b:int /\ (a >> b) / c:float)'
         )
         self.assertEqual(result, expected_result)
 
     def test_visit_BinOp_3(self):
         state = State.from_str(r'(a:T1 /\ b:T2)')
-        state.gen_id = 3
         state_set = StateSet()
         state_set.add(deepcopy(state))
         code = 'a >> b'
@@ -239,21 +160,20 @@ class SpecTestCases(unittest.TestCase):
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'((a:T1 /\ b:T2 /\ (a >> b):int) ^ (T1 <= int /\ T2 <= int))'
+            r'(a:int /\ b:int /\ a >> b:int)'
         )
         self.assertEqual(result, expected_result)
 
     def test_visit_BinOp_4(self):
-        state = State.from_str(r'(a:list< T1 + T2 > /\ b:list< T3 >)')
-        state.gen_id = 3
-        state_set = StateSet()
-        state_set.add(deepcopy(state))
+        state_set = StateSet.from_str(r'(a:list< T1 + T2 > /\ b:list< T3 >)')
         code = 'a + b'
         node = ast.parse(code)
         tf = TransferFunc(state_set)
         tf.visit(node)
         result = tf.state_set
-        expected_result = None
+        expected_result = StateSet.from_str(
+            r'(a:list< T1 + T2 > /\ b:list< T3 > /\ a + b:list< T1 + T2 + T3 >)'
+        )
         self.assertEqual(result, expected_result)
 
     def test_visit_BinOp_5(self):
@@ -282,16 +202,6 @@ class SpecTestCases(unittest.TestCase):
             r'(a:bytearray /\ b:bytes + memoryview + bytearray /\ c:bytes + memoryview + bytearray /\ ' \
                 r'a + b:bytearray /\ a + b + c:bytearray)'
         )
-        self.assertEqual(result, expected_result)
-
-    def test_visit_BinOp_6(self):
-        state_set = StateSet.from_str(r'(a:T1 /\ b:T2)')
-        code = 'a + b'
-        node = ast.parse(code)
-        tf = TransferFunc(state_set)
-        tf.visit(node)
-        result = tf.state_set
-        expected_result = None
         self.assertEqual(result, expected_result)
 
     def test_visit_Constant_1(self):
@@ -763,7 +673,7 @@ class SpecTestCases(unittest.TestCase):
 
     def test_state_apply_assign_1(self):
         state_set = StateSet.from_str(
-            r'((a:Ta /\ b:Tb /\ c:Tc /\ d:Td) ^ (Ta <= Tb))'
+            r'((a:T1 /\ b:T2 /\ c:T3 /\ d:T4) ^ (T1 <= T2))'
         )
         code = 'a, b = c, d'
         node = ast.parse(code)
@@ -771,14 +681,14 @@ class SpecTestCases(unittest.TestCase):
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'((a:Tc /\ b:Td /\ c:Tc /\ d:Td /\ (c, d):tuple< Tc + Td >) ^ (Ta <= Tb))'
+            r'(a:T3 /\ b:T4 /\ c:T3 /\ d:T4 /\ (c, d):tuple< T3 + T4 >)'
         )
         # self.assertEqual(result, expected_result)
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
 
     def test_state_apply_assign_2(self):
         state_set = StateSet.from_str(
-            r'((a:Ta /\ b:Tb /\ c:list< Tc >) ^ (Ta <= Tb))'
+            r'((a:T1 /\ b:T2 /\ c:list< T3 >) ^ (T1 <= T2))'
         )
         code = 'a, b = c'
         node = ast.parse(code)
@@ -786,14 +696,14 @@ class SpecTestCases(unittest.TestCase):
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'((a:Tc /\ b:Tc /\ c:list< Tc >) ^ (Ta <= Tb))'
+            r'(a:T3 /\ b:T3 /\ c:list< T3 >)'
         )
         # self.assertEqual(result, expected_result)
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
 
     def test_state_apply_assign_3(self):
         state_set = StateSet.from_str(
-            r'((a:Ta /\ b:Tb /\ c:int + list< float > + tuple< str > + str) ^ (Ta <= Tb))'
+            r'((a:T1 /\ b:T2 /\ c:int + list< float > + tuple< str > + str) ^ (T1 <= T2))'
         )
         code = 'a, b = c'
         node = ast.parse(code)
@@ -801,10 +711,9 @@ class SpecTestCases(unittest.TestCase):
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'((a:float + str /\ b:float + str /\ c:list< float > + tuple< str > + str) ^ (Ta <= Tb))'
+            r'(a:float + str /\ b:float + str /\ c:list< float > + tuple< str > + str)'
         )
-        # self.assertEqual(result, expected_result)
-        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+        self.assertEqual(result, expected_result)
 
     def test_state_apply_assign_4(self):
         state_set = StateSet.from_str(
