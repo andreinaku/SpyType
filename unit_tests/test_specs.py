@@ -717,7 +717,7 @@ class SpecTestCases(unittest.TestCase):
 
     def test_state_apply_assign_4(self):
         state_set = StateSet.from_str(
-            r'((a:Ta /\ b:Tb /\ c:int + list< float > + tuple< str > + str + Tc) ^ (Ta <= Tb))'
+            r'((a:T1 /\ b:T2 /\ c:int + list< float > + tuple< str > + str + T3) ^ (T1 <= T2))'
         )
         code = 'a, b = c'
         node = ast.parse(code)
@@ -725,7 +725,7 @@ class SpecTestCases(unittest.TestCase):
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'((a:float + str /\ b:float + str /\ c:list< float > + tuple< str > + str + Tc) ^ (Ta <= Tb /\ Tc <= Iterable< float + str >))'
+            r'(a:float + str /\ b:float + str /\ c:list< float > + tuple< str > + str + Iterable< float + str >)'
         )
         # self.assertEqual(result, expected_result)
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)

@@ -776,3 +776,17 @@ class BasetypeTests(unittest.TestCase):
         result = Basetype.get_spectype_substitutions(bt, specbt)
         expected_result = dict()
         self.assertEqual(result, expected_result)
+
+    def test_get_builtin_from_bt_1(self):
+        # bt = Basetype.from_str(r'Iterable< int + float >')
+        bt = Basetype.from_str(r'Iterable< int > + Iterable< float >')
+        result = bt.get_builtin_from_bt()
+        expected_result = Basetype()
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_flatten_1(self):
+        bt = Basetype.from_str(r'int + list< int + float > + set< T1 > + set< int + float >')
+        bt.flatten()
+        result = bt
+        expected_result = Basetype.from_str(r'int + list< int + float > + set< T1 + int + float >')
+        self.assertEqual(result, expected_result)

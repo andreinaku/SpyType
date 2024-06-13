@@ -1,6 +1,7 @@
 from __future__ import annotations
 import sys
 import os
+from types import UnionType
 sys.path.append(os.getcwd())
 from utils.utils import *
 from enum import Enum
@@ -284,12 +285,13 @@ class PyType(GenericType):
             for btype in builtin_seqs:
                 contained_keys = Basetype({PyType(TopType)})
                 if self.keys is not None and len(self.keys) != 0:
-                    if len(self.keys) == 1:
-                        # contained_keys = deepcopy(ptip.keys)
-                        # contained_keys = self.get_builtin_from_bt(ptip.keys)
-                        contained_keys = self.keys.get_builtin_from_bt()
-                    else:
-                        raise TypeError(f'We do not support {self} substitution yet')
+                    # if len(self.keys) == 1:
+                    #     # contained_keys = deepcopy(ptip.keys)
+                    #     # contained_keys = self.get_builtin_from_bt(ptip.keys)
+                    #     contained_keys = self.keys.get_builtin_from_bt()
+                    # else:
+                    #     raise TypeError(f'We do not support {self} substitution yet')
+                    contained_keys = self.keys.get_builtin_from_bt()
                 try:
                     if issubclass(btype, self.ptype):
                         new_bt.add(PyType(btype, contained_keys))
@@ -348,6 +350,48 @@ class Basetype(hset):
 
     def __hash__(self):
         return super().__hash__()
+    
+    def __or__(self, value: Basetype) -> Basetype:
+        return Basetype.lub(self, value)
+    
+    def add(self, element):
+        super().add(element)
+
+    def flatten(self) -> Basetype:
+        new_bt = Basetype()
+        for atom in self:
+           new_bt = Basetype.lub(new_bt, Basetype({atom}))
+        self.clear()
+        self.update(new_bt)
+
+    # def superadd(self, element):
+    #     super().add(element)
+
+    # def add(self, element: PyType | VarType):
+    #     new_bt = Basetype()
+    #     if not isinstance(element, GenericType):
+    #         raise RuntimeError(f'What is this {element} you are trying to add to {self}?')
+    #     if isinstance(element, VarType):
+    #         new_bt.superadd(deepcopy(element))
+    #     else:
+    #         if element.keys is None:
+    #             # new_bt.add(deepcopy(element))
+    #             new_bt.superadd(deepcopy(element))
+    #         else:
+    #             found = False
+    #             for atom in self:
+    #                 if atom.ptype == element.ptype:
+    #                     found = True
+    #                     new_atom = PyType(atom.ptype)
+    #                     new_atom.keys = Basetype.lub(atom.keys, element.keys)
+    #                     if element.values is not None:
+    #                         new_atom.values = Basetype.lub(atom.values, element.values)
+    #                     new_bt.superadd(new_atom)
+    #                 if found:
+    #                     break
+    #             if not found:
+    #                 new_bt.superadd(deepcopy(element))
+    #     self = new_bt
     
     @classmethod
     def lub(cls, bt1: Basetype, bt2: Basetype) -> Basetype:
@@ -563,7 +607,9 @@ class Basetype(hset):
                     raise RuntimeError(f'Type not supported: {ptip}')
                 new_bt.add(ptip)
                 continue
-            new_bt |= ptip.get_builtin_from_pytype()
+            aux = ptip.get_builtin_from_pytype()
+            aux2 = new_bt | aux
+            new_bt |= aux
         return new_bt
 
     @classmethod
