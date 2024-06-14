@@ -1,0 +1,98 @@
+fmod TYPE is
+    sorts ConstType VarType BoundVarType ContainerType Type .
+    subsort BoundVarType VarType ConstType < Type .
+    ops NoneType top bot bool int float str complex memoryview bytearray bytes range : -> ConstType [ctor].
+    ops list set tuple frozenset : -> ContainerType [ctor]. 
+    op _<_> : ContainerType Type -> Type [ctor].
+    op dict <_,_> : Type Type -> Type [ctor].
+    op _+_ : Type Type -> Type [assoc comm ctor].
+    eq T + T = T .
+    eq T + top = top .
+    eq T + bot = T .
+    eq dict < T1, T2 > + dict < T1', T2' > = dict < T1 + T1', T2 + T2' > .
+
+    sort Subst .
+    op nil : -> Subst [ctor] .
+    op _|->_ : BoundVarType Type -> Subst [ctor] .
+    op _`,_ : Subst Subst -> Subst  [ctor assoc comm id: nil].
+    eq ((X? |-> T), (X? |-> T)) = (X? |-> T) .
+
+    sort TypeSubst .
+    op [_;_] : Type Subst -> TypeSubst [ctor] .
+    var S S' S'' : Subst .
+
+    var T T' T1 T2 T1' T2' T'' : Type . 
+    vars X Y : VarType . 
+    vars X? Y? : BoundVarType .
+    var CT : ConstType .
+    var CONT : ContainerType .
+
+    op leq : Type Type -> Bool [strat(1 2 0)] .
+    --- eq leq(NoneType, T) = true .
+    eq leq(bot, T) = true .
+    eq leq(T, top) = true .
+    eq leq(T, T) = true .
+    eq leq(CONT < T1 >, CONT < T2 >) = leq(T1, T2) .
+    eq leq(dict < T1, T2 >, dict < T1', T2' >) = leq(T1, T1') and leq(T2, T2') .
+    *** eq leq(T1, T1 + T2) = true .
+    ceq leq(T, T1 + T2) = true 
+        if leq(T, T1) = true . 
+    eq leq(T1, T2) = false [owise].
+
+    op lub : Type Type Subst -> TypeSubst .
+    ceq lub(T1, T2, S) = [ T2 ; S ] if leq(T1, T2). 
+    ceq lub(T1, T2, S) = [ T1 ; S ] if leq(T2, T1).
+    ceq lub(CONT < T1 >, CONT < T2 >, S) = [ CONT < T' > ; S' ]
+        if [ T' ; S' ] := lub(T1, T2, S) .
+    ceq lub(dict < T1, T2 >, dict < T1', T2' >, S) = [ dict < T, T' > ; S'' ]
+        if [ T  ; S'  ] := lub(T1, T2, S)
+        /\ [ T' ; S'' ] := lub(T1', T2', S').
+    eq lub(X?, T, S) = [ T ; (S, X? |-> T) ] . 
+    eq lub(T, Y?, S) = [ T ; (S, Y? |-> T) ] . 
+    eq lub(T1, T2, S) = [ T1 + T2 ; S ] [owise].
+
+    op lub : Type Type Subst -> TypeSubst .
+    ceq lub(T1, T2, S) = [ T2 ; S ] if leq(T1, T2). 
+    ceq lub(T1, T2, S) = [ T1 ; S ] if leq(T2, T1).
+    ceq lub(CONT < T1 >, CONT < T2 >, S) = [ CONT < T' > ; S' ]
+        if [ T' ; S' ] := lub(T1, T2, S) .
+    ceq lub(dict < T1, T2 >, dict < T1', T2' >, S) = [ dict < T, T' > ; S'' ]
+        if [ T  ; S'  ] := lub(T1, T2, S)
+        /\ [ T' ; S'' ] := lub(T1', T2', S').
+    eq lub(X?, T, S) = [ T ; (S, X? |-> T) ] . 
+    eq lub(T, Y?, S) = [ T ; (S, Y? |-> T) ] . 
+    eq lub(T1, T2, S) = [ T1 + T2 ; S ] [owise].
+
+    op glb : Type Type Subst -> TypeSubst .
+    eq glb(X?, T, S) = [ T ; (S, X? |-> T) ] . 
+    eq glb(T, Y?, S) = [ T ; (S, Y? |-> T) ] .
+    ceq glb(T1 + CONT < X? >, T2 + CONT < T2' >, S) = [ T' + CONT < T2' > ; (S', X? |-> T2') ]
+        if [ T' ; S' ] := glb(T1, T2, S) .
+    ceq glb(T1, T2, S) = [ T1 ; S ] if leq(T1, T2). 
+    ceq glb(T1, T2, S) = [ T2 ; S ] if leq(T2, T1).
+    --- ceq glb(T1, T1' + T2', S) = [ T' ; S' ]
+    ---     if [ T' ; S' ] := glb(T1, T1', S) .
+    ceq glb(T1 + CONT < T1' >, T2 + CONT < T2' >, S) = [ T' + CONT < T'' > ; S' ]
+        if [ T' ; S' ] := glb(T1, T2, S) 
+        /\ [ T'' ; S' ] := glb(T1', T2', S') .
+    ceq glb(T1 + T1', T2 + T2', S) = [ T' + T'' ; S' ]
+        if [ T' ; S' ] := glb(T1, T2, S) 
+        /\ [ T'' ; S' ] := glb(T1', T2', S) .
+    ceq glb(CONT < T1 >, CONT < T2 >, S) = [ CONT < T' > ; S' ]
+        if [ T' ; S' ] := glb(T1, T2, S) .
+    ceq glb(T1 + CONT < T1' >, CONT < T2 >, S) = [ CONT < T' > ; S' ]
+        if [ T' ; S' ] := glb(T1', T2, S).
+    ceq glb(T1 + CONT < T1' >, T2 + CONT < T2' >, S) = [ T' + CONT < T'' > ; S' ]
+        if [ T' ; S' ] := glb(T1, T2, S)
+        /\ [ T'' ; S' ] := glb(T1', T2', S) .
+    ceq glb(dict < T1, T2 >, dict < T1', T2' >, S) = [ dict < T, T' > ; S'' ]
+        if [ T  ; S'  ] := glb(T1, T2, S)
+        /\ [ T' ; S'' ] := glb(T1', T2', S').
+    --- eq glb(X?, T, S) = [ T ; (S, X? |-> T) ] . 
+    --- eq glb(T, Y?, S) = [ T ; (S, Y? |-> T) ] .
+    --- ceq glb(T1 + CONT < X? >, T2 + CONT < T2' >, S) = [ T' + CONT < T2' > ; (S', X? |-> T2') ]
+    ---     if [ T' ; S' ] := glb(T1, T2, S) .
+    --- eq glb(T1, T2, S) = [ NoneType ; S ] [owise].
+    eq glb(T1, T2, S) = [ bot ; S ] [owise].
+
+endfm
