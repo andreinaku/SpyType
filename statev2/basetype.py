@@ -354,8 +354,9 @@ class Basetype(hset):
     def __or__(self, value: Basetype) -> Basetype:
         return Basetype.lub(self, value)
     
-    def add(self, element):
-        super().add(element)
+    # def add(self, element):
+    #     super().add(element)
+    #     self.flatten()
 
     def flatten(self) -> Basetype:
         new_bt = Basetype()

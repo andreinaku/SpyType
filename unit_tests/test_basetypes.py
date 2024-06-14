@@ -781,7 +781,10 @@ class BasetypeTests(unittest.TestCase):
         # bt = Basetype.from_str(r'Iterable< int + float >')
         bt = Basetype.from_str(r'Iterable< int > + Iterable< float >')
         result = bt.get_builtin_from_bt()
-        expected_result = Basetype()
+        result.flatten()
+        expected_result = Basetype.from_str(
+            r'list< int + float > + tuple< int + float > + set< int + float > + frozenset< int + float >'
+        )
         self.assertEqual(result, expected_result)
 
     def test_basetype_flatten_1(self):
