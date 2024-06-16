@@ -793,3 +793,16 @@ class BasetypeTests(unittest.TestCase):
         result = bt
         expected_result = Basetype.from_str(r'int + list< int + float > + set< T1 + int + float >')
         self.assertEqual(result, expected_result)
+
+    def test_basetype_container_with_spaces_1(self):
+        result = Basetype.from_str(r'list < int + float >')
+        expected_result = Basetype({PyType(list, Basetype({PyType(int), PyType(float)}))})
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_container_with_spaces_2(self):
+        result = Basetype.from_str(r'list < int + float > + set < float >')
+        expected_result = Basetype({
+            PyType(list, Basetype({PyType(int), PyType(float)})),
+            PyType(set, Basetype({PyType(float)}))
+        })
+        self.assertEqual(result, expected_result)

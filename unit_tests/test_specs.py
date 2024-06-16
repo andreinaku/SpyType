@@ -450,7 +450,7 @@ class SpecTestCases(unittest.TestCase):
         bt = Basetype.from_str(r'Iterable< T1 >')
         result = bt.get_builtin_from_bt()
         expected_result = Basetype.from_str(
-            r'list< T1 > + set< T1 > + frozenset< T1 > + tuple< T1 > '
+            r'list< T1 > + set< T1 > + frozenset< T1 > + tuple< T1 >'
         )
         self.assertEqual(result, expected_result)
 

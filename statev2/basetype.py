@@ -190,7 +190,7 @@ class GenericType:
                 raise RuntimeError('Type {} does not denote  a Python type'.format(strtype))
             return PyType(btip)
         # for containers: list[int, float, set[T_2, complex], bool] etc.
-        container_patt = r'^([a-zA-Z_][a-zA-Z0-9_]*)\<([a-zA-Z0-9\+ ,_\<\?`\.\>]*)\>$'
+        container_patt = r'^([a-zA-Z_][a-zA-Z0-9_]*)[\s]*\<([a-zA-Z0-9\+ ,_\<\?`\.\>]*)\>$'
         # container_patt = r'^([a-zA-Z_][a-zA-Z0-9_]*)\[([a-zA-Z0-9\{} _\{}\{}]+)\]$'.format(start_br, end_br, sep)
         foundlist = re.findall(container_patt, strtype) 
         if len(foundlist) != 1:
@@ -421,6 +421,7 @@ class Basetype(hset):
     @classmethod
     def from_str(cls, input_str: str) -> Basetype:
         str_basetype = elim_paren(input_str)
+        # str_basetype = input_str
         str_bt_split = GenericType.get_types_from_list(str_basetype, "<", ">", "+")
         bt_typelist = []
         new_bt = Basetype()

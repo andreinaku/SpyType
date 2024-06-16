@@ -2,14 +2,18 @@ fmod TYPE is
     sorts ConstType VarType BoundVarType ContainerType Type .
     subsort BoundVarType VarType ConstType < Type .
     ops NoneType top bot bool int float str complex memoryview bytearray bytes range : -> ConstType [ctor].
-    ops list set tuple frozenset : -> ContainerType [ctor]. 
-    op _<_> : ContainerType Type -> Type [ctor].
+    ops list set tuple frozenset Iterable : -> ContainerType [ctor]. 
+    --- op _<_> : ContainerType Type -> Type [ctor].
+    op _<_> : ContainerType Type -> Type [ctor prec 20].
     op dict <_,_> : Type Type -> Type [ctor].
-    op _+_ : Type Type -> Type [assoc comm ctor].
+    op _+_ : Type Type -> Type [assoc comm ctor prec 30].
+    --- op _+_ : Type Type -> Type [assoc comm ctor].
     eq T + T = T .
     eq T + top = top .
     eq T + bot = T .
-    eq dict < T1, T2 > + dict < T1', T2' > = dict < T1 + T1', T2 + T2' > .
+    eq CONT < T1 > + CONT < T2 > = CONT < T1 + T2 > .
+    eq (dict < T1, T2 >) + (dict < T1', T2' >) = dict < T1 + T1', T2 + T2' > .
+    eq Iterable < T1 > = (list < T1 >) + (set < T1 >) + (tuple < T1 >) + (frozenset < T1 >) + (dict < T1, top >) .
 
     sort Subst .
     op nil : -> Subst [ctor] .
@@ -21,7 +25,7 @@ fmod TYPE is
     op [_;_] : Type Subst -> TypeSubst [ctor] .
     var S S' S'' : Subst .
 
-    var T T' T1 T2 T1' T2' T'' : Type . 
+    var T T' T1 T2 T1' T2' T'' T3 T3' T3'' : Type . 
     vars X Y : VarType . 
     vars X? Y? : BoundVarType .
     var CT : ConstType .
@@ -33,6 +37,9 @@ fmod TYPE is
     eq leq(T, top) = true .
     eq leq(T, T) = true .
     eq leq(CONT < T1 >, CONT < T2 >) = leq(T1, T2) .
+    ceq leq(T + CONT < T1 >, T' + CONT < T2 >) = true
+        if leq(T, T') = true
+        /\ leq(T1, T2) = true .
     eq leq(dict < T1, T2 >, dict < T1', T2' >) = leq(T1, T1') and leq(T2, T2') .
     *** eq leq(T1, T1 + T2) = true .
     ceq leq(T, T1 + T2) = true 
@@ -64,35 +71,80 @@ fmod TYPE is
     eq lub(T1, T2, S) = [ T1 + T2 ; S ] [owise].
 
     op glb : Type Type Subst -> TypeSubst .
-    eq glb(X?, T, S) = [ T ; (S, X? |-> T) ] . 
-    eq glb(T, Y?, S) = [ T ; (S, Y? |-> T) ] .
-    ceq glb(T1 + CONT < X? >, T2 + CONT < T2' >, S) = [ T' + CONT < T2' > ; (S', X? |-> T2') ]
-        if [ T' ; S' ] := glb(T1, T2, S) .
     ceq glb(T1, T2, S) = [ T1 ; S ] if leq(T1, T2). 
     ceq glb(T1, T2, S) = [ T2 ; S ] if leq(T2, T1).
-    --- ceq glb(T1, T1' + T2', S) = [ T' ; S' ]
-    ---     if [ T' ; S' ] := glb(T1, T1', S) .
-    ceq glb(T1 + CONT < T1' >, T2 + CONT < T2' >, S) = [ T' + CONT < T'' > ; S' ]
-        if [ T' ; S' ] := glb(T1, T2, S) 
-        /\ [ T'' ; S' ] := glb(T1', T2', S') .
-    ceq glb(T1 + T1', T2 + T2', S) = [ T' + T'' ; S' ]
-        if [ T' ; S' ] := glb(T1, T2, S) 
-        /\ [ T'' ; S' ] := glb(T1', T2', S) .
     ceq glb(CONT < T1 >, CONT < T2 >, S) = [ CONT < T' > ; S' ]
         if [ T' ; S' ] := glb(T1, T2, S) .
-    ceq glb(T1 + CONT < T1' >, CONT < T2 >, S) = [ CONT < T' > ; S' ]
-        if [ T' ; S' ] := glb(T1', T2, S).
-    ceq glb(T1 + CONT < T1' >, T2 + CONT < T2' >, S) = [ T' + CONT < T'' > ; S' ]
-        if [ T' ; S' ] := glb(T1, T2, S)
-        /\ [ T'' ; S' ] := glb(T1', T2', S) .
+    ceq glb(dict < T1, T2 >, dict < T1', T2' >, S) = [ dict < T3, T3' > ; S'' ]
+        if [ T3 ; S' ] := glb(T1, T1', S)
+    /\ [ T3' ; S'' ] := glb(T2, T2', S') .
+    ceq glb(T + CONT < T1 >, T' + CONT < T2 >, S) = [ T1' + CONT < T2' > ; S'' ]
+        if [ T2' ; S' ] := glb(T1, T2, S)
+        /\ [ T1' ; S'' ] := glb(T, T', S') .
+    ceq glb(T + CONT < T1 >, CONT < T2 >, S) = [ CONT < T2' > ; S' ]
+        if [ T2' ; S' ] := glb(T1, T2, S) . 
+    ceq glb(CONT < T1 >, T + CONT < T2 >, S) = [ CONT < T2' > ; S' ]
+        if [ T2' ; S' ] := glb(T1, T2, S) .
     ceq glb(dict < T1, T2 >, dict < T1', T2' >, S) = [ dict < T, T' > ; S'' ]
         if [ T  ; S'  ] := glb(T1, T2, S)
         /\ [ T' ; S'' ] := glb(T1', T2', S').
-    --- eq glb(X?, T, S) = [ T ; (S, X? |-> T) ] . 
-    --- eq glb(T, Y?, S) = [ T ; (S, Y? |-> T) ] .
-    --- ceq glb(T1 + CONT < X? >, T2 + CONT < T2' >, S) = [ T' + CONT < T2' > ; (S', X? |-> T2') ]
-    ---     if [ T' ; S' ] := glb(T1, T2, S) .
-    --- eq glb(T1, T2, S) = [ NoneType ; S ] [owise].
+    eq glb(X?, T, S) = [ T ; (S, X? |-> T) ] . 
+    eq glb(T, Y?, S) = [ T ; (S, Y? |-> T) ] . 
     eq glb(T1, T2, S) = [ bot ; S ] [owise].
-
 endfm
+
+mod CONSTR is
+    protecting TYPE .
+    sort Basic  Conj Disj .
+    subsort Basic < Conj < Disj .
+
+    var T T' T1 T2 T1' T2' : Type .
+    var C C1 C2  C1' C2' : Conj .
+    var D D1 D2 D1' D2' : Disj . 
+    var S S' S'' S1 S2 : Subst .
+    var Cfg Cfg1 Cfg2 : Config .
+    var CONT : ContainerType .
+
+    op _<=_ : Type Type -> Basic [ctor] .
+    op _/\_ : Conj Conj -> Conj [ctor assoc comm] .
+    op _\/_ : Disj Disj -> Disj [ctor assoc comm] .
+
+    sort Config .
+    op none : -> Config [ctor] .
+    op _[_] : Disj Subst -> Config [ctor] .
+    op _&&_ : Config Config -> Config [prec 31 ctor assoc comm] .
+    op _||_ : Config Config -> Config [prec 33 ctor assoc comm] .
+
+    rl [Step1]: (D1 \/ D2)[S] => (D1[S]) || (D2[S]) . 
+
+    rl [Step2]: (C1 /\ C2)[S] => (C1[S]) && (C2[S]) .
+
+    crl [Step3]: ((T <= T1)[S1]) && ((T <= T2)[S2]) => (T <= T')[S']
+        if [T' ; S'] := glb(T1, T2, (S1, S2)).
+
+    crl [Step4]: (Cfg1 && ((T <= T1)[S1])) || (Cfg2 && ((T <= T2)[S2])) => (Cfg1 && ((T <= T')[S'])) || Cfg2
+        if [T' ; S'] := lub(T1, T2, (S1, S2)). 
+
+    crl [Step4]: (Cfg1 && ((T <= T1)[S1])) || ((T <= T2)[S2]) => Cfg1 && ((T <= T')[S'])
+        if [T' ; S'] := lub(T1, T2, (S1, S2)).
+
+    crl [Step4]: ((T <= T1)[S1]) || ((T <= T2)[S2]) => (T <= T')[S']
+        if [T' ; S'] := lub(T1, T2, (S1, S2)).
+
+    rl [Step5]: Cfg && (C1[S1]) && (C2[S2]) => Cfg && ((C1 /\ C2)[S1, S2]) . 
+    rl [Step5]: (C1[S1]) && (C2[S2]) => (C1 /\ C2)[S1, S2] .
+
+    rl [Step6]: (C [S])  || (C [S]) => C [S] .
+
+    rl [Step7]: ((T <= T')[S]) && ((T <= T1 + T2)[S]) => (((T <= T')[S]) && ((T <= T1)[S])) || (((T <= T')[S]) && ((T <= T2)[S])) .
+    rl [Step7]: ((T <= T')[S]) && ((T <= CONT < T1 + T2 >)[S]) => (((T <= T')[S]) && ((T <= CONT < T1 >)[S])) || (((T <= T')[S]) && ((T <= CONT < T2 >)[S])) .
+
+    --- rl [Step7]: ((T <= T')[S]) && ((T <= list< T1 + T2 >)[S]) => (((T <= T')[S]) && ((T <= list< T1 >)[S])) || (((T <= T')[S]) && ((T <= list< T2 >)[S])) .
+    --- rl [Step7]: ((T <= T')[S]) && ((T <= set< T1 + T2 >)[S]) => (((T <= T')[S]) && ((T <= set< T1 >)[S])) || (((T <= T')[S]) && ((T <= set< T2 >)[S])) .
+    --- rl [Step7]: ((T <= T')[S]) && ((T <= tuple< T1 + T2 >)[S]) => (((T <= T')[S]) && ((T <= tuple< T1 >)[S])) || (((T <= T')[S]) && ((T <= tuple< T2 >)[S])) .
+    --- rl [Step7]: ((T <= T')[S]) && ((T <= frozenset< T1 + T2 >)[S]) => (((T <= T')[S]) && ((T <= frozenset< T1 >)[S])) || (((T <= T')[S]) && ((T <= frozenset< T2 >)[S])) .
+
+    rl [Step7]: ((T <= T')[S]) && ((T <= dict < T1, T1' + T2' >)[S]) => (((T <= T')[S]) && ((T <= dict < T1, T1' >)[S])) || (((T <= T')[S]) && ((T <= dict < T1, T2' >)[S])) .
+    rl [Step7]: ((T <= T')[S]) && ((T <= dict < T1 + T2, T1' >)[S]) => (((T <= T')[S]) && ((T <= dict < T1, T1' >)[S])) || (((T <= T')[S]) && ((T <= dict < T2, T1' >)[S])) .
+
+endm

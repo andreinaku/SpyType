@@ -1,23 +1,28 @@
 fmod TYPE is
-  sorts ConstType VarType BoundVarType  Type .
-  subsort BoundVarType  VarType ConstType < Type .
+  sorts ConstType VarType BoundVarType Type .
+  subsort BoundVarType VarType ConstType < Type .
   --- ops NoneType AnyType bool int float str complex memoryview bytearray bytes SupportsIndex : -> ConstType [ctor]. 
   --- ops NoneType AnyType bool int float str complex memoryview bytearray bytes : -> ConstType [ctor]. 
   --- ops NoneType top bool int float str complex memoryview bytearray bytes range : -> ConstType [ctor]. 
-  ops NoneType top bot bool int float str complex memoryview bytearray bytes range : -> ConstType [ctor]. 
+  ops NoneType top bot bool int float str complex memoryview bytearray bytes range SupportsIndex : -> ConstType [ctor].
   op tuple<_> : Type -> Type [ctor].
   op list<_> : Type -> Type [ctor]. 
   op set<_> : Type -> Type [ctor]. 
   op frozenset<_> : Type -> Type [ctor].
   op dict<_,_> : Type Type -> Type [ctor].
   op _+_ : Type Type -> Type [assoc comm ctor]. 
+  op Iterable<_> : Type -> Type [ctor] .
+  op sugar(_) : Type -> Type [ctor] .
   eq T + T = T .
   eq T + top = top .
   eq T + bot = T .
   eq tuple< T1 > + tuple< T2 > = tuple< T1 + T2 > . 
   eq list< T1 > + list< T2 > = list< T1 + T2 > . 
   eq dict< T1, T2 > + dict< T1', T2' > = dict< T1 + T1', T2 + T2' > .
-  
+  eq SupportsIndex = int .
+  eq Iterable< T1 > = list< T1 > + set< T1 > + tuple< T1 > + frozenset< T1 > + dict< T1, top > . 
+
+
   sort Subst .
   op nil : -> Subst [ctor] .
   op _|->_ : BoundVarType Type -> Subst [ctor] .
@@ -87,6 +92,8 @@ fmod TYPE is
   if [ T2' ; S' ] := glb(T1, T2, S)
   /\ [ T1' ; S'' ] := glb(T, T', S') .
  ceq glb(T + list< T1 >, list< T2 >, S) = [ list< T2' > ; S' ]
+  if [ T2' ; S' ] := glb(T1, T2, S) . 
+ ceq glb(list< T1 >, T + list< T2 >, S) = [ list< T2' > ; S' ]
   if [ T2' ; S' ] := glb(T1, T2, S) . 
  ceq glb(T + set< T1 >, T' + set< T2 >, S) = [ T1' + set< T2' > ; S'' ]
   if [ T2' ; S' ] := glb(T1, T2, S)
