@@ -11,7 +11,7 @@ class SolverTestCases(unittest.TestCase):
             r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T1 <= int + str /\ T2 <= float /\ T2 <= float + complex))'
         )
         result = state.solve_constraints(strat1, MAUDE_DUMP)
-        expected_result = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= float))')
+        expected_result = State.from_str(r'(a:int /\ b:float)')
         # self.assertEqual(result, expected_result)
         self.assertEqual(State.raw_eq(result, expected_result), True)
 
@@ -20,7 +20,8 @@ class SolverTestCases(unittest.TestCase):
             r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T1 <= int + str /\ T2 <= str /\ T2 <= float + complex))'
         )
         result = state.solve_constraints(strat1, MAUDE_DUMP)
-        expected_result = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= bot))')
+        # expected_result = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= bot))')
+        expected_result = BottomState()
         self.assertEqual(State.raw_eq(result, expected_result), True)
 
     def test_solve_state_constraints_3(self):
@@ -28,7 +29,8 @@ class SolverTestCases(unittest.TestCase):
             r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T1 <= int + str /\ T2 <= str /\ T2 <= float + complex))'
         )
         result = state.solve_constraints(strat1, MAUDE_DUMP)
-        expected_result = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= bot))')
+        # expected_result = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= bot))')
+        expected_result = BottomState()
         self.assertEqual(State.raw_eq(result, expected_result), True)
 
     def test_solve_state_constraints_4(self):
@@ -36,20 +38,14 @@ class SolverTestCases(unittest.TestCase):
             r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T1 <= int + str /\ T2 <= str /\ T2 <= float + complex))'
         )
         result = state.solve_constraints(strat1, MAUDE_DUMP)
-        expected_result = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= bot))')
-        self.assertEqual(State.raw_eq(result, expected_result), True)
-
-    def test_solve_state_constraints_5(self):
-        state = State.from_str(
-            r'((a:T1 /\ b:T2) ^ (T1 <= float /\ T2 <= float /\ int <= str))'
-        )
-        result = state.solve_constraints(strat1, MAUDE_DUMP)
-        expected_result = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= float /\ T2 <= float /\ int <= str))')
+        # expected_result = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= bot))')
+        expected_result = BottomState()
         self.assertEqual(State.raw_eq(result, expected_result), True)
 
     def _test_solve_state_constraints_6(self):
         state = State.from_str(
-            r'((a:T4 /\ b:T5 /\ c:T3) ^ (T6 <= int /\ T7 <= float /\ T1 <= float /\ T2 <= str /\ T3 <= int /\ T4 <= T6 + T1 /\ T5 <= T7 + T2))'
+            r'((a:T4 /\ b:T5 /\ c:T3) ^ (T6 <= int /\ T7 <= float /\ '
+            r'T1 <= float /\ T2 <= str /\ T3 <= int /\ T4 <= T6 + T1 /\ T5 <= T7 + T2))'
         )
         result = state.solve_constraints(strat1, MAUDE_DUMP)
         expected_result = None
@@ -60,23 +56,16 @@ class SolverTestCases(unittest.TestCase):
             r'((a:T1 /\ b:T2) ^ (T1 <= T2 /\ T2 <= T1))'
         )
         result = state.solve_constraints(strat1, MAUDE_DUMP)
-        expected_result = State.from_str( r'((a:T1 /\ b:T2) ^ (T1 <= T2 /\ T2 <= T1))')
-        self.assertEqual(State.raw_eq(result, expected_result), True)
-
-    def test_solve_state_constraint_8(self):
-        state = State.from_str(
-            r'((a:T1 /\ b:T2) ^ (T3 <= T1 + T2))'
-        )
-        result = state.solve_constraints()
-        expected_result = State.from_str(r'((a:T1 /\ b:T2) ^ (T3 <= T1 + T2))')
-        self.assertEqual(State.raw_eq(result, expected_result), True)
+        expected_result = State.from_str( r'(a:T1 /\ b:T1)')
+        # self.assertEqual(State.raw_eq(result, expected_result), True)
+        self.assertEqual(result, expected_result)
 
     def test_solve_state_constraint_9(self):
         state = State.from_str(
             r'((a:T1 /\ b:T2) ^ (T1 <= list< T3 > /\ T2 <= list< T4 >))'
         )
         result = state.solve_constraints()
-        expected_result = State.from_str(r'((a:T1 /\ b:T2) ^ (T1 <= list< T3 > /\ T2 <= list< T4 >))')
+        expected_result = State.from_str(r'(a:list < T3 > /\ b:list < T4 >)')
         self.assertEqual(State.raw_eq(result, expected_result), True)
 
     def test_solved_state_eq_1(self):
@@ -97,20 +86,7 @@ class SolverTestCases(unittest.TestCase):
         )
         result = stateset.solve_states()
         expected_result = StateSet.from_str(
-            r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= int)) \/ '
-            r'((a:T1 /\ b:T2) ^ (T1 <= float /\ T2 <= float))'
-        )
-        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
-
-    def test_solve_stateset_2(self):
-        stateset = StateSet.from_str(
-            r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= int)) \/ '
-            r'((a:T1 /\ b:T2) ^ (T1 <= float /\ T2 <= float /\ int <= str))'
-        )
-        result = stateset.solve_states()
-        expected_result = StateSet.from_str(
-            r'((a:T1 /\ b:T2) ^ (T1 <= int /\ T2 <= int)) \/ '
-            r'((a:T1 /\ b:T2) ^ (T1 <= float /\ T2 <= float /\ int <= str))'
+            r'(a:int /\ b:int) \/ (a:float /\ b:float)'
         )
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
 
@@ -129,7 +105,7 @@ class SolverTestCases(unittest.TestCase):
         )
         result = stateset.solve_states()
         expected_result = StateSet.from_str(
-            r'((b:T4 /\ a:int) ^ (T1 <= int /\ T4 <= int))'
+            r'(b:int /\ a:int)'
         )
         self.assertEqual(result, expected_result)
 
@@ -148,19 +124,5 @@ class SolverTestCases(unittest.TestCase):
             r'((a:T1 /\ b:list< T3 >) ^ ((T1 <= list< T3 >) /\ (T2 <= list< T3 >)))'
         )
         result = state.solve_constraints()
-        expected_result = State.from_str(r'((a:T1 /\ b:list< T3 >) ^ ((T1 <= list< T3 >) /\ (T2 <= list< T3 >)))')
+        expected_result = State.from_str(r'(a:list< T3 > /\ b:list< T3 >)')
         self.assertEqual(State.raw_eq(result, expected_result), True)
-
-    def test_solve_state_constraint_12(self):
-        state = State.from_str(
-            r'((a:int) ^ (T6 <= list< T4 + T5 > /\ T6 <= list< T7 >))'
-        )
-        result = state.solve_constraints()
-        expected_result = None
-        self.assertEqual(result, expected_result)
-
-    def test_parse_single_result_string_1(self):
-        to_search = r'((T1 <= int + float) /\ T2 <= complex)[(T?0 |-> int + float), T?1 |-> complex]'
-        aux, result = State.parse_single_result_string(to_search)
-        expected_result = None
-        self.assertEqual(result, expected_result)

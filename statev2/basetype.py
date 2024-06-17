@@ -15,7 +15,8 @@ import itertools
 strat1 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; Step5 ! ; Step6 ! '
 strat2 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! '
 strat3 = 'one(Step1) ! ; one(Step2) ! ; one(Step7) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! '
-INIT_MAUDE_PATH = os.getcwd() + os.sep + 'init.maude'
+# INIT_MAUDE_PATH = os.getcwd() + os.sep + 'init.maude'
+INIT_MAUDE_PATH = os.getcwd() + os.sep + 'new.maude'
 DEFAULT_SOLVER_OUT = os.getcwd() + os.sep + 'solver.out'
 
 
@@ -240,11 +241,11 @@ class PyType(GenericType):
         else:
             retstr = self.ptype.__name__
         if self.keys is not None and len(self.keys) > 0 and self.values is None:
-            retstr += '< '
+            retstr += ' < '
             retstr += str(self.keys)
             retstr += ' >'
         elif self.keys is not None and len(self.keys) > 0 and self.values is not None and len(self.values) > 0:
-            retstr += '< '
+            retstr += ' < '
             retstr += str(self.keys)
             retstr += ', '
             retstr += str(self.values)
@@ -801,6 +802,7 @@ class Assignment(hdict):
         bt: Basetype
         for expr, bt in self.items():
             new_assign[expr] = bt.replace_basetype(to_replace, replace_with)
+            new_assign[expr].flatten()
         return new_assign
 
     @classmethod
@@ -1568,22 +1570,9 @@ class StateSet(hset):
     def solve_states(self):
         solved_stateset = StateSet()
         state: State
-        bottom_bt = Basetype({PyType(BottomType)})
         for state in self:
             solved_state = state.solve_constraints()
-            invalid = False
-            # considered invalid if bottom appears as a solution for a constraint
-            for rel in solved_state.constraints:
-                if rel.bt_left == Basetype.from_str('bot'):
-                    invalid = True
-                    break
-            if invalid:
-                continue
-            for rel in solved_state.constraints:
-                if rel.bt_right == bottom_bt:
-                    invalid = True
-                    break
-            if invalid:
+            if solved_state == BottomState():
                 continue
             solved_stateset.add(deepcopy(solved_state))
         return solved_stateset
