@@ -153,7 +153,8 @@ def tosrc(node: ast.AST):
     else:
         ret_string = astor.to_source(node).strip()
     # ret_string.replace(os.linesep, '')
-    ret_string = elim_paren(ret_string)
+    if isinstance(node, ast.BinOp) or isinstance(node, ast.Constant):
+        ret_string = elim_paren(ret_string)
     return ret_string
 
 

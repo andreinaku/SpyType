@@ -1,4 +1,4 @@
-from ast import Assign, If, While
+from ast import Assign, If, Subscript, While
 from typing import Any
 from statev2.basetype import *
 from united_specs import op_equiv, unitedspecs
@@ -133,6 +133,7 @@ class TransferFunc(ast.NodeVisitor):
     def visit_Call(self, node: ast.Call):
         for _arg in node.args:
             self.visit(_arg)
+            self.state_set.solve_states()
         new_state_set = set_apply_specset(self.state_set, node, self.testmode)
         # new_state_set = new_state_set.solve_states()
         self.state_set = deepcopy(new_state_set)
@@ -239,7 +240,7 @@ class TransferFunc(ast.NodeVisitor):
                 new_state.assignment[target_src] = deepcopy(new_state.assignment[value_src])
         return new_state
 
-    def visit_Assign(self, node: Assign):
+    def old_visit_Assign(self, node: Assign):
         new_state_set = StateSet()
         self.visit(node.value)
         for state in self.state_set:
@@ -247,6 +248,12 @@ class TransferFunc(ast.NodeVisitor):
             new_state_set.add(new_state)
         new_state_set = new_state_set.solve_states()
         self.state_set = deepcopy(new_state_set)
+    
+    def visit_Assign(self, node: Assign):
+        self.visit(node.targets[0])
+        self.state_set.solve_states()
+        new_call = ast.Call(ast.Name(id='lake'), [node.targets[0], node.value], [])
+        self.visit(new_call)
 
     def visit_Return(self, node: ast.Return):
         new_set = StateSet()
@@ -265,3 +272,21 @@ class TransferFunc(ast.NodeVisitor):
 
     def visit_If(self, node: If):
         pass
+
+    def visit_Subscript(self, node: ast.Subscript):
+        subscript_expr = tosrc(node)
+        new_call = ast.Call(ast.Name(id='emerson'), [node.value, node.slice], [])
+        new_call_expr = tosrc(new_call)
+        self.visit(new_call)
+        new_ss = StateSet()
+        state: State
+        for state in self.state_set:
+            new_state = State()
+            new_state.constraints = deepcopy(state.constraints)
+            for expr, bt in state.assignment.items():
+                if expr != new_call_expr:
+                    new_state.assignment[expr] = deepcopy(bt)
+                    continue
+                new_state.assignment[subscript_expr] = deepcopy(bt)
+            new_ss.add(deepcopy(new_state))
+        self.state_set = new_ss

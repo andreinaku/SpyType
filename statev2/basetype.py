@@ -286,12 +286,6 @@ class PyType(GenericType):
             for btype in builtin_seqs:
                 contained_keys = Basetype({PyType(TopType)})
                 if self.keys is not None and len(self.keys) != 0:
-                    # if len(self.keys) == 1:
-                    #     # contained_keys = deepcopy(ptip.keys)
-                    #     # contained_keys = self.get_builtin_from_bt(ptip.keys)
-                    #     contained_keys = self.keys.get_builtin_from_bt()
-                    # else:
-                    #     raise TypeError(f'We do not support {self} substitution yet')
                     contained_keys = self.keys.get_builtin_from_bt()
                 try:
                     if issubclass(btype, self.ptype):
