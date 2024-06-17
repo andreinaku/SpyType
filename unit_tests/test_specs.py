@@ -622,9 +622,9 @@ class SpecTestCases(unittest.TestCase):
         callnode = ast.parse('a>>b').body[0].value
         spec_set = get_specset(callnode)
         fi = FunctionInstance(callnode, spec_set[0])
-        result = fi.instantiate_spec(astor.to_source(callnode).strip())
+        result = fi.instantiate_spec(tosrc(callnode))
         expected_result = FuncSpec.from_str(
-            r'((a:int /\ b:int) -> ((a >> b):int))'
+            r'((a:int /\ b:int) -> (a >> b:int))'
         )
         self.assertEqual(result, expected_result)
 
@@ -633,7 +633,7 @@ class SpecTestCases(unittest.TestCase):
         callnode = ast.parse('corge(a, b, c=x, d=y)').body[0].value
         spec_set = get_specset(callnode)
         fi = FunctionInstance(callnode, spec_set[0])
-        result = fi.instantiate_spec(astor.to_source(callnode).strip())
+        result = fi.instantiate_spec(tosrc(callnode))
         expected_result = FuncSpec.from_str(
             r'((a:top /\ b:top /\ x:top /\ y:top) -> (corge(a, b, c=x, d=y):bool))'
         )
@@ -644,7 +644,7 @@ class SpecTestCases(unittest.TestCase):
         callnode = ast.parse('fred(a, b, c=x, d=y)').body[0].value
         spec_set = get_specset(callnode)
         fi = FunctionInstance(callnode, spec_set[0])
-        result = fi.instantiate_spec(astor.to_source(callnode).strip())
+        result = fi.instantiate_spec(tosrc(callnode))
         expected_result = FuncSpec.from_str(
             r'((a:str /\ b:str /\ x:str /\ y:str) -> (fred(a, b, c=x, d=y):bool))'
         )
@@ -655,7 +655,7 @@ class SpecTestCases(unittest.TestCase):
         callnode = ast.parse('thud(a, b, c=x, d=y)').body[0].value
         spec_set = get_specset(callnode)
         fi = FunctionInstance(callnode, spec_set[0])
-        result = fi.instantiate_spec(astor.to_source(callnode).strip())
+        result = fi.instantiate_spec(tosrc(callnode))
         expected_result = FuncSpec.from_str(
             r'((a:top /\ b:top /\ x:top /\ y:top) -> (thud(a, b, c=x, d=y):bool))'
         )
@@ -666,7 +666,7 @@ class SpecTestCases(unittest.TestCase):
         callnode = ast.parse('waldo(a, b, c=x, d=y)').body[0].value
         spec_set = get_specset(callnode)
         fi = FunctionInstance(callnode, spec_set[0])
-        result = fi.instantiate_spec(astor.to_source(callnode).strip())
+        result = fi.instantiate_spec(tosrc(callnode))
         expected_result = FuncSpec.from_str(
             r'((a:T?1 /\ b:T?1 /\ x:T?2 /\ y:T?2) -> (waldo(a, b, c=x, d=y):bool))'
         )

@@ -20,13 +20,13 @@ class GetStarTypes(ast.NodeVisitor):
                 aux = ClassdefToBasetypes().parse_node_type(node.args.vararg.annotation)
                 self.argtypes.add(aux)
             except Exception:
-                self.unsupported.add(astor.to_source(node.args.vararg.annotation).strip())
+                self.unsupported.add(tosrc(node.args.vararg.annotation))
         if node.args.kwarg is not None:
             try:
                 aux = ClassdefToBasetypes().parse_node_type(node.args.kwarg.annotation)
                 self.kwargtypes.add(aux)
             except Exception:
-                self.unsupported.add(astor.to_source(node.args.kwarg.annotation).strip())
+                self.unsupported.add(tosrc(node.args.kwarg.annotation))
 
 
 tree = ast.parse(open('sheds/builtins.pyi', 'r').read())

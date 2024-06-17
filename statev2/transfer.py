@@ -60,13 +60,13 @@ def find_spec(node: ast.BinOp | ast.Call) -> StateSet:
         funcname = node.func.id
         raw_set = unitedspecs[funcname]
     else:
-        raise TypeError(f'{astor.to_source(node)} is not a BinOp or a Call')
+        raise TypeError(f'{tosrc(node)} is not a BinOp or a Call')
     return raw_set
 
 
 def get_specset(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
     if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):
-        raise TypeError(f'Node {astor.to_source(node)} not supported yet')
+        raise TypeError(f'Node {tosrc(node)} not supported yet')
     raw_set = find_spec(node)
     spec_set = hset()
     for str_spec in raw_set:
@@ -79,7 +79,7 @@ def get_specset(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
 
 def substitute_state_arguments(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
     if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):
-        raise TypeError(f'Node {astor.to_source(node)} cannot have arguments (afaik)')
+        raise TypeError(f'Node {tosrc(node)} cannot have arguments (afaik)')
     
     interim_spec_set = hset()
     spec_set = get_specset(node)
@@ -92,7 +92,7 @@ def substitute_state_arguments(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
 
 def set_apply_specset(state_set: StateSet, node: ast.BinOp | ast.Call, testmode: bool = False) -> StateSet:
     if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):
-        raise TypeError(f'Node {astor.to_source(node)} cannot have specs to apply (afaik)')
+        raise TypeError(f'Node {tosrc(node)} cannot have specs to apply (afaik)')
     new_set = StateSet()
     for state in state_set:
         interim_spec_set = substitute_state_arguments(node)
@@ -117,7 +117,6 @@ class TransferFunc(ast.NodeVisitor):
         new_set = StateSet()
         for state in self.state_set:
             new_state = deepcopy(state)
-            # new_state.assignment[astor.to_source(node).strip()] = Basetype({PyType(type(node.value))})
             new_state.assignment[str(node.value)] = Basetype({PyType(type(node.value))})
             new_set.add(new_state)
         self.state_set = deepcopy(new_set)
@@ -158,7 +157,7 @@ class TransferFunc(ast.NodeVisitor):
         for state in self.state_set:
             contained_bt = Basetype()
             for elem in node.elts:
-                elem_name = astor.to_source(elem).strip()
+                elem_name = tosrc(elem)
                 contained_bt |= deepcopy(state.assignment[elem_name])
             new_bt = Basetype({PyType(container_tip, contained_bt)})
             new_state = deepcopy(state)
@@ -180,19 +179,19 @@ class TransferFunc(ast.NodeVisitor):
 
     def state_apply_assign(self, state: State, node: Assign):
         new_state = deepcopy(state)
-        value_src = astor.to_source(node.value).strip()
+        value_src = tosrc(node.value)
         for target in node.targets:
             lhs_is_container = isinstance(target, ast.List) or isinstance(target, ast.Tuple)
             rhs_is_container = isinstance(node.value, ast.List) or isinstance(node.value, ast.Tuple)
-            target_src = astor.to_source(target).strip()
+            target_src = tosrc(target)
             if lhs_is_container:
                 if rhs_is_container:
                     # a, b = c, d
                     if len(target.elts) != len(node.value.elts):
-                        raise TypeError(f'{astor.to_source(target.strip())} and {astor.to_source(node.value).strip()} have different lengths')
+                        raise TypeError(f'{tosrc(target)} and {tosrc(node.value)} have different lengths')
                     for i in range(0, len(target.elts)):
-                        target_elem_src = astor.to_source(target.elts[i]).strip()
-                        value_elem_src = astor.to_source(node.value.elts[i]).strip()
+                        target_elem_src = tosrc(target.elts[i])
+                        value_elem_src = tosrc(node.value.elts[i])
                         new_state.assignment[target_elem_src] = deepcopy(new_state.assignment[value_elem_src])
                 else:
                     # a, b = expr
@@ -202,7 +201,7 @@ class TransferFunc(ast.NodeVisitor):
                     value_typevars = set()
                     target_srcs = []
                     for target_elem_node in target.elts:
-                        target_elem_src = astor.to_source(target_elem_node).strip()
+                        target_elem_src = tosrc(target_elem_node)
                         if target_elem_src not in target_srcs:
                             target_srcs.append(target_elem_src)
                     for target_elem_src in target_srcs:
@@ -252,7 +251,7 @@ class TransferFunc(ast.NodeVisitor):
     def visit_Return(self, node: ast.Return):
         new_set = StateSet()
         self.visit(node.value)
-        value_expr = astor.to_source(node.value).strip()
+        value_expr = tosrc(node.value)
         return_expr = 'return'
         state: State
         for state in self.state_set:

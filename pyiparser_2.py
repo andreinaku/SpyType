@@ -101,7 +101,7 @@ class CountClassFuncs(ast.NodeVisitor):
 
     def visit_FunctionDef(self, node):
         self.func_count += 1
-        self.func_list.append(astor.to_source(node).strip())
+        self.func_list.append(tosrc(node))
 
     def get_func_count(self):
         return self.func_count
@@ -180,7 +180,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             container = TYPE_REPLACE[node.value.id] if node.value.id in TYPE_REPLACE else node.value.id
             # container = node.value.id
             if container in ignore_list:
-                ss = f'ignored type (for now) <<{container}>> for {astor.to_source(node.value).strip()}'
+                ss = f'ignored type (for now) <<{container}>> for {tosrc(node.value)}'
                 mylogger.warning(ss)
                 raise TypeError(ss)
             contained = node.slice
@@ -196,7 +196,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             container_ptip = PyType(eval(container))
             if isinstance(contained, ast.Name) or isinstance(contained, ast.BinOp):
                 if kvtuple:
-                    ss = f'Type {astor.to_source(node)} is not compatible with key-value pairs'
+                    ss = f'Type {tosrc(node)} is not compatible with key-value pairs'
                     mylogger.warning(ss)
                     raise TypeError(ss)
                 container_ptip.keys = self.parse_node_type(contained)
@@ -209,14 +209,14 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                     container_ptip.keys = deepcopy(contained_bt)
                 else:
                     if len(contained.elts) != 2:
-                        ss = f'{astor.to_source(node)} type not supported for key-value pairs'
+                        ss = f'{tosrc(node)} type not supported for key-value pairs'
                         mylogger.warning(ss)
                         raise TypeError(ss)
                     container_ptip.keys = self.parse_node_type(contained.elts[0])
                     container_ptip.values = self.parse_node_type(contained.elts[1])
                 return Basetype({container_ptip})
             else:
-                ss = f'Slice for {astor.to_source(node).strip()} is not yet supported'
+                ss = f'Slice for {tosrc(node).strip()} is not yet supported'
                 mylogger.warning(ss)
                 raise TypeError(ss)
         elif isinstance(node, ast.BinOp):
@@ -259,7 +259,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                     default_posonly_list.insert(0, deepcopy(current_arg))
                     posdefaults.pop()
                 else:
-                    raise RuntimeError(f'More defaults than arguments for {astor.to_source(node).strip()}')
+                    raise RuntimeError(f'More defaults than arguments for {tosrc(node)}')
         # add the remaining posonly/args, if any
         while len(args_list) > 0:
             current_arg = args_list.pop()
@@ -305,11 +305,11 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                     else:
                         param_basetype = self.parse_node_type(param.annotation)
                 except NameError:
-                    ss = f'This type is unsupported: {astor.to_source(param.annotation)}'
+                    ss = f'This type is unsupported: {tosrc(param.annotation)}'
                     raise TypeError(ss)
                 new_basetype = param_basetype.filter_pytypes(builtin_types)
                 if len(new_basetype) == 0:
-                    raise TypeError(f'This basetype ({astor.to_source(param.annotation).strip()}) '
+                    raise TypeError(f'This basetype ({tosrc(param.annotation)}) '
                                     f'is fully unsupported: {param_basetype}')
                 param_basetype = new_basetype
                 spec_param_name = f'{prefix}{param.arg}'
@@ -330,7 +330,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             if (not isinstance(base, ast.Subscript)) or (node.name in special_sequences):
                 continue
             else:
-                str_slice = astor.to_source(base.slice).strip()
+                str_slice = tosrc(base.slice)
                 str_type += f'[{str_slice}]'
                 break
         ast_type = ast.parse(str_type).body[0].value
