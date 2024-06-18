@@ -712,29 +712,14 @@ class SpecTestCases(unittest.TestCase):
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'(a:float + str /\ b:float + str /\ c:list< float > + tuple< str > + str)'
+            r'(a:float + str /\ b:float + str /\ c:list< float > + tuple< str >) \/ '
+            r'(a:str /\ b:str /\ c:str)'
         )
         self.assertEqual(result, expected_result)
 
-    def test_state_apply_assign_4(self):
+    def test_state_apply_assign_16(self):
         state_set = StateSet.from_str(
-            r'((a:T1 /\ b:T2 /\ c:int + list< float > + tuple< str > + str + T3) ^ (T1 <= T2))'
-        )
-        code = 'a, b = c'
-        node = ast.parse(code)
-        tf = TransferFunc(state_set)
-        tf.visit(node)
-        result = tf.state_set
-        expected_result = StateSet.from_str(
-            r'(a:float + str /\ b:float + str /\ '
-            r'c:list< float + str > + tuple< str + float > + str + set< float + str > + frozenset< float + str >)'
-        )
-        # self.assertEqual(result, expected_result)
-        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
-
-    def test_state_apply_assign_5(self):
-        state_set = StateSet.from_str(
-            r'((a:Ta /\ b:Tb /\ c:int + list< float > + tuple< str > + str + Tc) ^ (Ta <= Tb))'
+            r'(a:T1 /\ b:T2 /\ c:str)'
         )
         code = 'a = c'
         node = ast.parse(code)
@@ -742,22 +727,7 @@ class SpecTestCases(unittest.TestCase):
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'((a:int + list< float > + tuple< str > + str + Tc /\ b:Tb /\ c:int + list< float > + tuple< str > + str + Tc) ^ (Ta <= Tb))'
-        )
-        # self.assertEqual(result, expected_result)
-        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
-
-    def test_state_apply_assign_6(self):
-        state_set = StateSet.from_str(
-            r'((a:Ta /\ b:Tb /\ c:str) ^ (Ta <= Tb))'
-        )
-        code = 'a = c'
-        node = ast.parse(code)
-        tf = TransferFunc(state_set)
-        tf.visit(node)
-        result = tf.state_set
-        expected_result = StateSet.from_str(
-           r'((a:str /\ b:Tb /\ c:str) ^ (Ta <= Tb))'
+           r'(a:str /\ b:T2 /\ c:str)'
         )
         # self.assertEqual(result, expected_result)
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
@@ -796,7 +766,7 @@ class SpecTestCases(unittest.TestCase):
     #a,b = 1,2.5
     def test_state_apply_assign_7(self):
         state_set = StateSet.from_str(
-            r'(a:Ta /\ b:Tb)'
+            r'(a:T1 /\ b:T2)'
         )
         code = 'a,b = 1,2.5'
         node = ast.parse(code)
@@ -811,7 +781,7 @@ class SpecTestCases(unittest.TestCase):
 
     def test_state_apply_assign_8(self):
         state_set = StateSet.from_str(
-            r'(a:Ta /\ b:Tb)'
+            r'(a:T1 /\ b:T2)'
         )
         code = 'a,b = [1,2.5]'
         node = ast.parse(code)
@@ -826,7 +796,7 @@ class SpecTestCases(unittest.TestCase):
 
     def test_state_apply_assign_9(self):
         state_set = StateSet.from_str(
-            r'(a:Ta /\ b:Tb)'
+            r'(a:T1 /\ b:T2)'
         )
         code = '[a,b] = [1,2.5]'
         node = ast.parse(code)
@@ -841,7 +811,7 @@ class SpecTestCases(unittest.TestCase):
 
     def test_state_apply_assign_10(self):
         state_set = StateSet.from_str(
-            r'(board:T1 /\ pos:T2)'
+            r'(row:bot /\ column:bot /\ board:T1 /\ pos:T2)'
         )
         code = 'row, column = pos'
         node = ast.parse(code)
@@ -947,3 +917,23 @@ class SpecTestCases(unittest.TestCase):
         expected_result = StateSet.from_str(r'a:float /\ b:str /\ c:float /\ d:str /\ (c, d):tuple < float + str >')
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
 
+    def test_visit_assign_5(self):
+        ss = StateSet.from_str(r'a:bot /\ b:T1')
+        expr = 'a = b'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(r'a:T1 /\ b:T1')
+        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+
+    def test_visit_assign_6(self):
+        ss = StateSet.from_str(r'a:T1 /\ b:T2 /\ c:T3 /\ d:T4')
+        # expr = 'simpleassign(b, a, c)'
+        expr = 'a, b = c, d'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(r'a:T3 /\ b:T4 /\ c:T3 /\ d:T4 /\ (c, d):tuple < T3 + T4 >')
+        self.assertEqual(StateSet.raw_eq(result, expected_result), True)

@@ -271,7 +271,7 @@ class TransferFunc(ast.NodeVisitor):
                     call_list = [node.value]
                     for elem in target.elts:
                         call_list.append(elem)
-                    new_call = ast.Call(ast.Name(id='simpleassign'), call_list, [])
+                    new_call = ast.Call(ast.Name(id='tupleassign'), call_list, [])
                     self.visit(new_call)
                     call_expr = tosrc(new_call)
                     self.state_set = self.state_set.remove_expr_from_assign(call_expr)

@@ -126,3 +126,11 @@ class SolverTestCases(unittest.TestCase):
         result = state.solve_constraints()
         expected_result = State.from_str(r'(a:list< T3 > /\ b:list< T3 >)')
         self.assertEqual(State.raw_eq(result, expected_result), True)
+
+    def test_solve_state_constraint_12(self):
+        state = State.from_str(
+            r'((a:T1 /\ b:list< T3 >) ^ (T1 <= top))'
+        )
+        result = state.solve_constraints()
+        expected_result = State.from_str(r'(a:T1 /\ b:list< T3 >)')
+        self.assertEqual(State.raw_eq(result, expected_result), True)

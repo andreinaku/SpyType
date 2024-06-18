@@ -1231,21 +1231,27 @@ class State:
         result_list = m_res.split('/\\')
         for elem in result_list:
             aux = elem.strip('() ')
+            if aux == 'none':
+                continue
             rel = Relation.from_str(aux)
             relations.append(deepcopy(rel))
         return relations, replacements
     
     def is_invalid(self) -> bool:
         bottom_bt = Basetype({PyType(BottomType)})
-        for rel in self.constraints:
-            if rel.bt_right == bottom_bt:
-                return True
+        # for rel in self.constraints:
+        #     if rel.bt_right == bottom_bt:
+        #         return True
+        for expr, bt in self.assignment.items():
+            rel: Relation
+            for rel in self.constraints:
+                if rel.bt_left == bt and rel.bt_right == bottom_bt:
+                    return True
         return False
 
     def solve_constraints(self, strategy_str: str = strat1, dump_file: str | None = None, 
                           ofile: str = DEFAULT_SOLVER_OUT) -> State:
-        with open(ofile, 'a') as f:
-            f.write(
+        open(ofile, 'a').write(
                 f'{os.linesep}---------------{os.linesep}' \
                 f'current state: {self}{os.linesep}'
             )
@@ -1292,23 +1298,25 @@ class State:
         new_state = State()
         new_state.gen_id = self.gen_id
         new_state.assignment = deepcopy(self.assignment)
-        if len(relations) == 0:
-            new_state.constraints = deepcopy(self.constraints)
-            # raise RuntimeError(f'Empty relations for {str(result)}')
-        else:
-            for rel in relations:
-                new_state.constraints.add(deepcopy(rel))
-        if not new_state.is_invalid():
-            new_state = new_state.replace_from_constraints()
-            for to_repl, repl_with in replacements.items():
-                new_state = new_state.replace_basetype(to_repl, repl_with)
-            new_state = new_state.generate_fresh_vartypes()
-        else:
-            new_state = BottomState()
-        with open(ofile, 'a') as f:
-            f.write(
-                f'new state: {new_state}{os.linesep}---------------{os.linesep}'
+        # if len(relations) == 0:
+        #     new_state.constraints = deepcopy(self.constraints)
+        #     # raise RuntimeError(f'Empty relations for {str(result)}')
+        # else:
+        for rel in relations:
+            new_state.constraints.add(deepcopy(rel))
+        if new_state.is_invalid():
+            open(ofile, 'a').write(
+                f'{new_state.constraints} solve:{os.linesep}' \
+                f'INVALID!{os.linesep}{os.linesep}'
             )
+            return BottomState()
+        new_state = new_state.replace_from_constraints()
+        for to_repl, repl_with in replacements.items():
+            new_state = new_state.replace_basetype(to_repl, repl_with)
+        new_state = new_state.generate_fresh_vartypes()
+        open(ofile, 'a').write(
+            f'new state: {new_state}{os.linesep}---------------{os.linesep}'
+        )
         return new_state
     
     def replace_from_constraints(self):
