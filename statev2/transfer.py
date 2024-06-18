@@ -240,20 +240,23 @@ class TransferFunc(ast.NodeVisitor):
                 new_state.assignment[target_src] = deepcopy(new_state.assignment[value_src])
         return new_state
 
-    def old_visit_Assign(self, node: Assign):
+    def visit_Assign(self, node: Assign):
         new_state_set = StateSet()
+        self.visit(node.targets[0])
+        self.state_set.solve_states()
         self.visit(node.value)
+        self.state_set.solve_states()
         for state in self.state_set:
             new_state = self.state_apply_assign(state, node)
             new_state_set.add(new_state)
         new_state_set = new_state_set.solve_states()
         self.state_set = deepcopy(new_state_set)
     
-    def visit_Assign(self, node: Assign):
-        self.visit(node.targets[0])
-        self.state_set.solve_states()
-        new_call = ast.Call(ast.Name(id='lake'), [node.targets[0], node.value], [])
-        self.visit(new_call)
+    # def visit_Assign(self, node: Assign):
+    #     self.visit(node.targets[0])
+    #     self.state_set.solve_states()
+    #     new_call = ast.Call(ast.Name(id='lake'), [node.targets[0], node.value], [])
+    #     self.visit(new_call)
 
     def visit_Return(self, node: ast.Return):
         new_set = StateSet()

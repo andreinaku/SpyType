@@ -918,7 +918,17 @@ class SpecTestCases(unittest.TestCase):
 
     def test_visit_subscript_1(self):
         ss = StateSet.from_str(r'a:T1')
-        expr = 'a[2]'
+        expr = 'a[2] = 3'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(r'a:T2 /\ b:T2')
+        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+
+    def test_visit_subscript_2(self):
+        ss = StateSet.from_str(r'a:list< T1 > /\ b:T1')
+        expr = 'palmer(a, b)'
         node = ast.parse(expr)
         tf = TransferFunc(ss)
         tf.visit(node)
