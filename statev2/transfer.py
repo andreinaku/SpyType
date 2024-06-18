@@ -2,7 +2,7 @@ from ast import Assign, If, Subscript, While
 from typing import Any
 from statev2.basetype import *
 from united_specs import op_equiv, unitedspecs
-from statev2.function_instance import FunctionInstance
+from statev2.function_instance import FunctionInstance, ArgumentMismatchError
 
 
 def state_apply_spec(state: State, spec: State, testmode=False) -> State:
@@ -85,8 +85,13 @@ def substitute_state_arguments(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
     spec_set = get_specset(node)
     for spec in spec_set:
         fi = FunctionInstance(node, spec)
-        interim_spec = fi.instantiate_spec(tosrc(node))
-        interim_spec_set.add(deepcopy(interim_spec))
+        try:
+            interim_spec = fi.instantiate_spec(tosrc(node))
+            interim_spec_set.add(deepcopy(interim_spec))
+        except ArgumentMismatchError:
+            continue
+    if len(interim_spec_set) == 0:
+        raise RuntimeError(f'Cannot apply {spec_set} to the call {tosrc(node)}')
     return interim_spec_set
 
 
@@ -240,23 +245,44 @@ class TransferFunc(ast.NodeVisitor):
                 new_state.assignment[target_src] = deepcopy(new_state.assignment[value_src])
         return new_state
 
-    def visit_Assign(self, node: Assign):
-        new_state_set = StateSet()
-        self.visit(node.targets[0])
-        self.state_set.solve_states()
-        self.visit(node.value)
-        self.state_set.solve_states()
-        for state in self.state_set:
-            new_state = self.state_apply_assign(state, node)
-            new_state_set.add(new_state)
-        new_state_set = new_state_set.solve_states()
-        self.state_set = deepcopy(new_state_set)
-    
     # def visit_Assign(self, node: Assign):
+    #     new_state_set = StateSet()
     #     self.visit(node.targets[0])
     #     self.state_set.solve_states()
-    #     new_call = ast.Call(ast.Name(id='lake'), [node.targets[0], node.value], [])
-    #     self.visit(new_call)
+    #     self.visit(node.value)
+    #     self.state_set.solve_states()
+    #     for state in self.state_set:
+    #         new_state = self.state_apply_assign(state, node)
+    #         new_state_set.add(new_state)
+    #     new_state_set = new_state_set.solve_states()
+    #     self.state_set = deepcopy(new_state_set)
+    
+    def visit_Assign(self, node: Assign):
+        self.visit(node.value)
+        self.state_set.solve_states()
+        for target in node.targets: 
+            if not hasattr(target, 'elts'):
+                new_call = ast.Call(ast.Name(id='simpleassign'), [target, node.value], [])
+                self.visit(new_call)
+                call_expr = tosrc(new_call)
+                self.state_set = self.state_set.remove_expr_from_assign(call_expr)
+            else:
+                if not hasattr(node.value, 'elts'):
+                    call_list = [node.value]
+                    for elem in target.elts:
+                        call_list.append(elem)
+                    new_call = ast.Call(ast.Name(id='simpleassign'), call_list, [])
+                    self.visit(new_call)
+                    call_expr = tosrc(new_call)
+                    self.state_set = self.state_set.remove_expr_from_assign(call_expr)
+                else:
+                    if len(target.elts) != len(node.value.elts):
+                        raise RuntimeError(f'Assignment {tosrc(node)} has operands of different lengths')
+                    for i in range(0, len(target.elts)):
+                        new_call = ast.Call(ast.Name(id='simpleassign'), [target.elts[i], node.value.elts[i]], [])
+                        self.visit(new_call)
+                        call_expr = tosrc(new_call)
+                        self.state_set = self.state_set.remove_expr_from_assign(call_expr)
 
     def visit_Return(self, node: ast.Return):
         new_set = StateSet()
