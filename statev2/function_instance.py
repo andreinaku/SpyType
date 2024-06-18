@@ -121,42 +121,48 @@ class FunctionInstance:
 
     def instantiate_spec(self, call_code: str):
         param_link = self.param_to_args()
+        param_link[RETURN_NAME] = call_code
         new_spec = FuncSpec()
-        # new_spec.out_state = deepcopy(self.spec.out_state)
-        for param_name, bt in self.spec.in_state.assignment.items():
-            # todo: check issue #13
-            if param_name not in param_link:
-                raise RuntimeError(f'Something went wrong. {param_name} does not have a link')
-            
-            if param_name.startswith(VARARG_MARKER) or param_name.startswith(KWARG_MARKER):
-                if len(bt) > 1:
-                    raise TypeError(f'{bt} for the parameter {param_name} should be only one type, not a sum. Aborting!')
-                pt = bt[0]
-                if isinstance(pt, VarType):
-                    # contained_bt = Basetype({deepcopy(pt)})
-                    contained_bt = Basetype({PyType(TopType)})
-                elif isinstance(pt, PyType):
-                    if pt.keys is not None:
-                        if pt.values is not None:
-                            raise TypeError(f'Mapping pairs not supported yet for {bt} for the parameter {param_name}')
-                        contained_bt = deepcopy(pt.keys)
-                    elif pt in extra_sequences:
-                        contained_bt = deepcopy(extra_sequences[pt])
-                    elif pt == PyType(TopType):
-                        contained_bt = Basetype({deepcopy(pt)})
+    
+        def replace_in_state(state):
+            nonlocal param_link
+            new_state = State()
+            for param_name, bt in state.assignment.items():
+                # todo: check issue #13
+                if param_name not in param_link:
+                    raise RuntimeError(f'Something went wrong. {param_name} does not have a link')
+                if param_name.startswith(VARARG_MARKER) or param_name.startswith(KWARG_MARKER):
+                    if len(bt) > 1:
+                        raise TypeError(f'{bt} for the parameter {param_name} should be only one type, not a sum. Aborting!')
+                    pt = bt[0]
+                    if isinstance(pt, VarType):
+                        # contained_bt = Basetype({deepcopy(pt)})
+                        contained_bt = Basetype({PyType(TopType)})
+                    elif isinstance(pt, PyType):
+                        if pt.keys is not None:
+                            if pt.values is not None:
+                                raise TypeError(f'Mapping pairs not supported yet for {bt} for the parameter {param_name}')
+                            contained_bt = deepcopy(pt.keys)
+                        elif pt in extra_sequences:
+                            contained_bt = deepcopy(extra_sequences[pt])
+                        elif pt == PyType(TopType):
+                            contained_bt = Basetype({deepcopy(pt)})
+                        else:
+                            raise TypeError(f'No type available for the contents of {param_name}')
                     else:
-                        raise TypeError(f'No type available for the contents of {param_name}')
+                        raise TypeError(f'{bt} is not PyType or VarType')
+                    if param_name.startswith(VARARG_MARKER):
+                        for member in param_link[param_name]:
+                            new_state.assignment[member] = deepcopy(contained_bt)
+                    else:
+                        for koname, koinstance in param_link[param_name].items():
+                            new_state.assignment[koinstance] = deepcopy(contained_bt)
                 else:
-                    raise TypeError(f'{bt} is not PyType or VarType')
-                if param_name.startswith(VARARG_MARKER):
-                    for member in param_link[param_name]:
-                        new_spec.in_state.assignment[member] = deepcopy(contained_bt)
-                else:
-                    for koname, koinstance in param_link[param_name].items():
-                        new_spec.in_state.assignment[koinstance] = deepcopy(contained_bt)
-            else:
-                new_spec.in_state.assignment[param_link[param_name]] = deepcopy(bt)
-        # new_spec.out_state = deepcopy(self.spec.out_state)
+                    new_state.assignment[param_link[param_name]] = deepcopy(bt)
+            return new_state
+        
+        new_spec.in_state = replace_in_state(self.spec.in_state)
+        new_spec.out_state = replace_in_state(self.spec.out_state)
         new_spec.out_state.assignment[call_code] = deepcopy(self.spec.out_state.assignment[RETURN_NAME])
         return new_spec
     

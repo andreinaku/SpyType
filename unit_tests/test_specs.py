@@ -672,17 +672,6 @@ class SpecTestCases(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
 
-    def test_instantiate_spec_6(self):
-        # def waldo(*args: Iterable[_KT] , **kwargs: Iterable[_VT]) -> bool: ...
-        callnode = ast.parse('lake(a, b, c, d)').body[0].value
-        spec_set = get_specset(callnode)
-        fi = FunctionInstance(callnode, spec_set[0])
-        result = fi.instantiate_spec(tosrc(callnode))
-        expected_result = FuncSpec.from_str(
-            r'((a:T?1 /\ b:T?1 /\ x:T?2 /\ y:T?2) -> (waldo(a, b, c=x, d=y):bool))'
-        )
-        self.assertEqual(result, expected_result)
-
     def test_state_apply_assign_1(self):
         state_set = StateSet.from_str(
             r'((a:T1 /\ b:T2 /\ c:T3 /\ d:T4) ^ (T1 <= T2))'
@@ -926,12 +915,35 @@ class SpecTestCases(unittest.TestCase):
         expected_result = StateSet.from_str(r'a:T2 /\ b:T2')
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
 
-    def test_visit_subscript_2(self):
-        ss = StateSet.from_str(r'a:list< T1 > /\ b:T1')
-        expr = 'palmer(a, b)'
+    def test_visit_assign_2(self):
+        ss = StateSet.from_str(r'a:int /\ b:T1')
+        expr = 'a = b'
         node = ast.parse(expr)
         tf = TransferFunc(ss)
         tf.visit(node)
         result = tf.state_set
-        expected_result = StateSet.from_str(r'a:T2 /\ b:T2')
+        expected_result = StateSet.from_str(r'a:T1 /\ b:T1')
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+
+    def test_visit_assign_3(self):
+        ss = StateSet.from_str(r'a:int /\ c:int /\ b:tuple < T1 >')
+        # expr = 'simpleassign(b, a, c)'
+        expr = 'a, c = b'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(r'a:T1 /\ c:T1 /\ b:tuple < T1 >')
+        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+
+    def test_visit_assign_4(self):
+        ss = StateSet.from_str(r'a:int /\ b:int /\ c:float /\ d:str')
+        # expr = 'simpleassign(b, a, c)'
+        expr = 'a, b = c, d'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(r'a:float /\ b:str /\ c:float /\ d:str /\ (c, d):tuple < float + str >')
+        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+

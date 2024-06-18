@@ -1604,6 +1604,16 @@ class StateSet(hset):
                 return False
         return True
 
+    def remove_expr_from_assign(self, to_remove: str) -> StateSet:
+        new_ss = StateSet()
+        state: State
+        for state in self:
+            new_state = deepcopy(state)
+            if to_remove in new_state.assignment:
+                del new_state.assignment[to_remove]
+            new_ss.add(deepcopy(new_state))
+        return new_ss
+
 
 class FuncSpec:
     def __init__(self, _in: State = None, _out: State = None):
