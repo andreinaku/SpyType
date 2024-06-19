@@ -393,6 +393,11 @@ class Basetype(hset):
     def lub(cls, bt1: Basetype, bt2: Basetype) -> Basetype:
         new_basetype = Basetype()
         already_added = set()
+        bottom_bt = Basetype({PyType(BottomType)})
+        if bt1 == bottom_bt and bt2 != bottom_bt:
+            return deepcopy(bt2)
+        if bt2 == bottom_bt and bt1 != bottom_bt:
+            return deepcopy(bt1)
         for atom1 in bt1:
             if isinstance(atom1, VarType) or (isinstance(atom1, PyType) and atom1.keys is None):
                 new_basetype.add(deepcopy(atom1))
@@ -1053,7 +1058,9 @@ class AndConstraints(hset):
     
     @classmethod
     def lub(cls, andc1: AndConstraints, andc2: AndConstraints) -> AndConstraints:
-        pass
+        new_andc = deepcopy(andc1)
+        new_andc |= deepcopy(andc2)
+        return new_andc
 
     def replace_vartype_from_solution(self, solution_dict: dict[VarType, VarType]) -> AndConstraints:
         new_andconstr = AndConstraints()
@@ -1135,6 +1142,8 @@ class State:
     #     return hash(self) == hash(other)
 
     def update_vt_index(self):
+        if self == BottomState():
+            return
         all_vt = self.get_all_vartypes()
         numeric_list = []
         for vt in all_vt:

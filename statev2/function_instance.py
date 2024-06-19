@@ -119,7 +119,8 @@ class FunctionInstance:
         else:
             raise TypeError(f'Node {tosrc(self.ast_node)} is not Call or BinOp')
 
-    def instantiate_spec(self, call_code: str):
+    def instantiate_spec(self):  # , call_code: str):
+        call_code = self.call_str
         param_link = self.param_to_args()
         param_link[RETURN_NAME] = call_code
         new_spec = FuncSpec()

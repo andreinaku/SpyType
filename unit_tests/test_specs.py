@@ -202,6 +202,9 @@ class SpecTestCases(unittest.TestCase):
             r'(a:bytearray /\ b:bytes + memoryview + bytearray /\ c:bytes + memoryview + bytearray /\ ' \
                 r'a + b:bytearray /\ a + b + c:bytearray)'
         )
+        # expected_result = StateSet.from_str(
+        #     r'(a:list< T1 > /\ b:list< T2 > /\ c:list< T3 > /\ a + b:list< T1 + T2 > /\ a + b + c:list< T1 + T2 + T3 >)'
+        # )
         self.assertEqual(result, expected_result)
 
     def test_visit_Constant_1(self):
@@ -937,3 +940,18 @@ class SpecTestCases(unittest.TestCase):
         result = tf.state_set
         expected_result = StateSet.from_str(r'a:T3 /\ b:T4 /\ c:T3 /\ d:T4 /\ (c, d):tuple < T3 + T4 >')
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+
+    def test_visit_assign_7(self):
+        # ss = StateSet.from_str(r'a:bot /\ b:T2')
+        ss = StateSet.from_str(r'a:bot /\ b:bot /\ c:T1')
+        # expr = 'testassign(a, b)'
+        expr = 'a, b = c'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(
+            r'a:T3 + str /\ b:T4 + str /\ c:tuple < T3 + T4 > + list < T3 + T4 > + set < T3 + T4 > + frozenset < T3 + T4 > + str'
+        )
+        # self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+        self.assertEqual(result, expected_result)

@@ -477,11 +477,11 @@ if __name__ == "__main__":
     }
     spec_dict['tupleassign'] = {
         FuncSpec.from_str(
-            r'((__va_args:Iterable < top > /\ y:Iterable < T?0 >) -> (__va_args:Iterable < T?0 > /\ return:NoneType))'
+            r'((__va_args:Iterable < top > /\ y:Iterable < T?0 > + str) -> (__va_args:Iterable < T?0 + str > /\ return:NoneType))',
         ),
-        FuncSpec.from_str(
-            r'((__va_args:Iterable < top > /\ y:str) -> (__va_args:Iterable < str > /\ return:NoneType))'
-        ),
+    }
+    spec_dict['seqassign'] = {
+        FuncSpec.from_str(r'((x:top /\ y:Iterable < T?0 > + str) -> (x:T?0 + str /\ return:NoneType))')
     }
     #
     dump_specs('united_specs.py', spec_dict)

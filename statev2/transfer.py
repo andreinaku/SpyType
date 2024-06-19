@@ -5,11 +5,11 @@ from united_specs import op_equiv, unitedspecs
 from statev2.function_instance import FunctionInstance, ArgumentMismatchError
 
 
-def state_apply_spec(state: State, spec: State, testmode=False) -> State:
+def state_apply_spec(state: State, spec: FuncSpec, testmode=False) -> State:
     new_state = State()
     new_state.gen_id = state.gen_id
     new_state.constraints = deepcopy(state.constraints)
-    for expr in spec.assignment:
+    for expr in spec.in_state.assignment:
         skip_new = False
         state_bt = state.assignment[expr]
         if len(state_bt) == 1 and isinstance(state_bt[0], VarType):
@@ -20,7 +20,7 @@ def state_apply_spec(state: State, spec: State, testmode=False) -> State:
             else:
                 new_varname = f'T{expr}`'
                 new_basetype = Basetype({VarType(new_varname)})
-                if new_basetype == spec.assignment[expr]:
+                if new_basetype == spec.in_state.assignment[expr]:
                     new_basetype = Basetype({VarType(new_varname + '`')})
             new_state.assignment[expr] = new_basetype
         else:
@@ -28,19 +28,29 @@ def state_apply_spec(state: State, spec: State, testmode=False) -> State:
         if not skip_new:
             new_rel = Relation(RelOp.LEQ, new_basetype, deepcopy(state.assignment[expr]))
             new_state.constraints.add(deepcopy(new_rel))
-        new_rel = Relation(RelOp.LEQ, new_basetype, deepcopy(spec.assignment[expr]))
+        new_rel = Relation(RelOp.LEQ, new_basetype, deepcopy(spec.in_state.assignment[expr]))
         new_state.constraints.add(deepcopy(new_rel))
     for expr in state.assignment:
         if expr not in new_state.assignment:
             new_state.assignment[expr] = deepcopy(state.assignment[expr])
+
+    for expr, bt in spec.out_state.assignment.items():
+        new_state.assignment[expr] = deepcopy(bt)
+    new_state = new_state.solve_constraints(strategy_str=strat3)
+    new_state.update_vt_index()
     return new_state
 
 
 def set_apply_spec(state_set: StateSet, spec_set: StateSet, testmode=False) -> StateSet:
     new_set = StateSet()
+    state: State
+    max_id = 1
     for state in state_set:
         for spec in spec_set:
+            current_state = deepcopy(state)
+            current_state.gen_id = max(max_id, current_state.gen_id)
             new_state = state_apply_spec(state, spec, testmode)
+            max_id = new_state.gen_id
             new_set.add(new_state)
     return new_set
 
@@ -86,7 +96,8 @@ def substitute_state_arguments(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
     for spec in spec_set:
         fi = FunctionInstance(node, spec)
         try:
-            interim_spec = fi.instantiate_spec(tosrc(node))
+            # interim_spec = fi.instantiate_spec(tosrc(node))
+            interim_spec = fi.instantiate_spec()
             interim_spec_set.add(deepcopy(interim_spec))
         except ArgumentMismatchError:
             continue
@@ -99,16 +110,20 @@ def set_apply_specset(state_set: StateSet, node: ast.BinOp | ast.Call, testmode:
     if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):
         raise TypeError(f'Node {tosrc(node)} cannot have specs to apply (afaik)')
     new_set = StateSet()
+    # max_id = 1
     for state in state_set:
+        current_state = deepcopy(state)
         interim_spec_set = substitute_state_arguments(node)
         for spec in interim_spec_set:
-            new_state = state_apply_spec(state, spec.in_state, testmode)
-            for expr, bt in spec.out_state.assignment.items():
-                new_state.assignment[expr] = deepcopy(bt)
-            new_state = new_state.solve_constraints(strategy_str=strat3)
+            # new_state = state_apply_spec(state, spec.in_state, testmode)
+            # for expr, bt in spec.out_state.assignment.items():
+            #     new_state.assignment[expr] = deepcopy(bt)
+            # new_state = new_state.solve_constraints(strategy_str=strat3)
+            # max_id = max(max_id, current_state.gen_id)
+            # current_state.gen_id = max_id
+            new_state = state_apply_spec(current_state, spec, testmode)
             if new_state != BottomState():
-                # new_state = new_state.generate_fresh_vartypes()
-                new_state.update_vt_index()
+                # max_id = new_state.gen_id
                 new_set.add(deepcopy(new_state))
     return new_set
 
@@ -268,13 +283,46 @@ class TransferFunc(ast.NodeVisitor):
                 self.state_set = self.state_set.remove_expr_from_assign(call_expr)
             else:
                 if not hasattr(node.value, 'elts'):
-                    call_list = [node.value]
+                    # # spec with varargs
+                    # call_list = [node.value]
+                    # for elem in target.elts:
+                    #     call_list.append(elem)
+                    # new_call = ast.Call(ast.Name(id='tupleassign'), call_list, [])
+                    # self.visit(new_call)
+                    # call_expr = tosrc(new_call)
+                    # self.state_set = self.state_set.remove_expr_from_assign(call_expr)
+                    # #
+                    
+                    # spec with sequential assigns
+                    current_ss = deepcopy(self.state_set)
+                    call_list = []
                     for elem in target.elts:
-                        call_list.append(elem)
-                    new_call = ast.Call(ast.Name(id='tupleassign'), call_list, [])
-                    self.visit(new_call)
-                    call_expr = tosrc(new_call)
-                    self.state_set = self.state_set.remove_expr_from_assign(call_expr)
+                        new_call = ast.Call(ast.Name(id='seqassign'), [elem, node.value], [])
+                        call_list.append(new_call)
+                    current_ss = deepcopy(self.state_set)
+                    new_ss = StateSet()
+                    for state in current_ss:
+                        current_id = 1
+                        to_lub = []
+                        for call_elem in call_list:
+                            call_elem_src = tosrc(call_elem)
+                            current_state = deepcopy(state)
+                            current_id = max(current_id, current_state.gen_id)
+                            current_state.gen_id = current_id
+                            aux_specset = substitute_state_arguments(call_elem)
+                            if len(aux_specset) != 1:
+                                raise RuntimeError(f'Assignment specset for {call_elem_src} needs only one spec')
+                            interim_spec = list(aux_specset)[0]
+                            new_st = state_apply_spec(current_state, interim_spec)
+                            current_id = max(current_id, new_st.gen_id)
+                            del new_st.assignment[call_elem_src]
+                            to_lub.append(deepcopy(new_st))
+                        lubbed = State()
+                        for lub_elem in to_lub:
+                            lubbed = State.lub(lubbed, lub_elem)
+                        new_ss.add(deepcopy(lubbed))
+                    self.state_set = deepcopy(new_ss)
+                    #
                 else:
                     if len(target.elts) != len(node.value.elts):
                         raise RuntimeError(f'Assignment {tosrc(node)} has operands of different lengths')
