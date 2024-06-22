@@ -601,7 +601,7 @@ class SpecTestCases(unittest.TestCase):
         callnode = ast.parse('a>>b').body[0].value
         spec_set = get_specset(callnode)
         fi = FunctionInstance(callnode, spec_set[0])
-        result = fi.instantiate_spec(tosrc(callnode))
+        result = fi.instantiate_spec()
         expected_result = FuncSpec.from_str(
             r'((a:int /\ b:int) -> (a >> b:int))'
         )
@@ -612,9 +612,12 @@ class SpecTestCases(unittest.TestCase):
         callnode = ast.parse('corge(a, b, c=x, d=y)').body[0].value
         spec_set = get_specset(callnode)
         fi = FunctionInstance(callnode, spec_set[0])
-        result = fi.instantiate_spec(tosrc(callnode))
+        result = fi.instantiate_spec()
+        # expected_result = FuncSpec.from_str(
+        #     r'((a:top /\ b:top /\ x:top /\ y:top) -> (corge(a, b, c=x, d=y):bool))'
+        # )
         expected_result = FuncSpec.from_str(
-            r'((a:top /\ b:top /\ x:top /\ y:top) -> (corge(a, b, c=x, d=y):bool))'
+            r'(((a, b):top /\ (x, y):top) -> (corge(a, b, c=x, d=y):bool))'
         )
         self.assertEqual(result, expected_result)
 
