@@ -372,13 +372,13 @@ class TransferFunc(ast.NodeVisitor):
             for expr in interim_spec.in_state.assignment:
                 expr_node = ast.parse(expr)
                 self.visit(expr_node)
-                temp_expr.add(expr)
+                # temp_expr.add(expr)
         for state in self.state_set:
             current_state = deepcopy(state)
             for spec in interim_spec_set:
                 new_state = state_apply_spec(current_state, spec, testmode)
                 if new_state != BottomState():
-                    for temp in temp_expr:
-                        del new_state.assignment[temp]
+                    # for temp in temp_expr:
+                    #     del new_state.assignment[temp]
                     new_set.add(deepcopy(new_state))
         return new_set

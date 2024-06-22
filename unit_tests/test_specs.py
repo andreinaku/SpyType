@@ -492,7 +492,7 @@ class SpecTestCases(unittest.TestCase):
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'(a:float /\ b:int /\ x:float /\ y:str /\ waldo(a, b, c=x, d=y):bool)'
+            r'(a:float /\ b:int /\ x:float /\ y:str /\ waldo(a, b, c=x, d=y):bool /\ (a, b):tuple < int + float > /\ (x, y):tuple < str + float >)'
         )
         self.assertEqual(result, expected_result)
 
@@ -506,7 +506,8 @@ class SpecTestCases(unittest.TestCase):
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'(a:int+float /\ b:int+float /\ x:float /\ y:str /\ waldo(a, b, c=x, d=y):bool)'
+            r'(a:int+float /\ b:int+float /\ x:float /\ y:str /\ waldo(a, b, c=x, d=y):bool /\ '
+            r'(a, b):tuple < int + float > /\ (x, y):tuple < str + float >)'
         )
         self.assertEqual(result, expected_result)
     
