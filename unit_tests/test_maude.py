@@ -92,16 +92,16 @@ class SolverTestCases(unittest.TestCase):
 
     def test_solve_stateset_3(self):
         stateset = StateSet.from_str(
-            r'((b:T4 /\ a:int) ^ (T1 <= int /\ T4 <= int)) \/ '
-            r'((b:T4 /\ a:float) ^ ((T4 <= float) /\ (T1 <= float) /\ (T1 <= int))) \/ '
-            r'((b:T4 /\ a:bytearray) ^ ((T1 <= bytearray + bytes + memoryview) /\ (T4 <= bytearray) /\ (T1 <= int))) \/ '
-            r'((b:T4 /\ a:tuple< T3 + T2 >) ^ ((T4 <= tuple< T3 >) /\ (T1 <= tuple< T2 >) /\ (T1 <= int))) \/ '
-            r'((b:T4 /\ a:bytes) ^ ((T4 <= bytes) /\ (T1 <= bytearray + bytes + memoryview) /\ (T1 <= int))) \/ '
-            r'((b:T4 /\ a:str) ^ ((T1 <= str) /\ (T4 <= str) /\ (T1 <= int))) \/ '
-            r'((b:T4 /\ a:complex) ^ ((T1 <= complex) /\ (T4 <= complex) /\ (T1 <= int))) \/ '
-            r'((b:T4 /\ a:list< T3 + T2 >) ^ ((T4 <= list< T3 >) /\ (T1 <= int) /\ (T1 <= list< T2 >))) \/ '
-            r'((b:T4 /\ a:tuple< T2 >) ^ ((T1 <= tuple< T2 >) /\ (T4 <= tuple< T2 >) /\ (T1 <= int))) \/ '
-            r'((b:T4 /\ a:list< T2 >) ^ ((T1 <= list< T2 >) /\ (T1 <= int) /\ (T4 <= list< T2 >)))'
+            r'((b:T4 /\ a:T1) ^ (T1 <= int /\ T4 <= int)) \/ '
+            r'((b:T4 /\ a:T1) ^ ((T4 <= float) /\ (T1 <= float) /\ (T1 <= int))) \/ '
+            r'((b:T4 /\ a:T1) ^ ((T1 <= bytearray + bytes + memoryview) /\ (T4 <= bytearray) /\ (T1 <= int))) \/ '
+            r'((b:T4 /\ a:T1) ^ ((T4 <= tuple< T3 >) /\ (T1 <= tuple< T2 >) /\ (T1 <= int))) \/ '
+            r'((b:T4 /\ a:T1) ^ ((T4 <= bytes) /\ (T1 <= bytearray + bytes + memoryview) /\ (T1 <= int))) \/ '
+            r'((b:T4 /\ a:T1) ^ ((T1 <= str) /\ (T4 <= str) /\ (T1 <= int))) \/ '
+            r'((b:T4 /\ a:T1) ^ ((T1 <= complex) /\ (T4 <= complex) /\ (T1 <= int))) \/ '
+            r'((b:T4 /\ a:T1) ^ ((T4 <= list< T3 >) /\ (T1 <= int) /\ (T1 <= list< T2 >))) \/ '
+            r'((b:T4 /\ a:T1) ^ ((T1 <= tuple< T2 >) /\ (T4 <= tuple< T2 >) /\ (T1 <= int))) \/ '
+            r'((b:T4 /\ a:T1) ^ ((T1 <= list< T2 >) /\ (T1 <= int) /\ (T4 <= list< T2 >)))'
         )
         result = stateset.solve_states()
         expected_result = StateSet.from_str(

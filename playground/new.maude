@@ -56,6 +56,7 @@ fmod TYPE is
 
     op orsubst : Subst Subst -> Subst [comm assoc] .
     op andsubst : Subst Subst -> Subst [comm assoc].
+
     eq orsubst((X? |-> T1), (X? |-> T2)) = (X? |-> lubtype(T1, T2)) .
     eq orsubst(nil, S) = S .
     eq orsubst(S, S') = (S, S') [owise] .
@@ -84,7 +85,7 @@ fmod TYPE is
         if leq(T, T') = true
         /\ leq(T1, T2) = true .
     eq leq(dict < T1, T2 >, dict < T1', T2' >) = leq(T1, T1') and leq(T2, T2') .
-    --- eq leq(T1, T1 + T2) = true .
+    *** eq leq(T1, T1 + T2) = true .
     ceq leq(T, T1 + T2) = true 
         if leq(T, T1) = true . 
     eq leq(T1, T2) = false [owise].
@@ -118,8 +119,6 @@ fmod TYPE is
     op glb : Type Type Subst -> TypeSubst .
     ceq glb(T1, T2, S) = [ T1 ; S ] if leq(T1, T2). 
     ceq glb(T1, T2, S) = [ T2 ; S ] if leq(T2, T1).
-    ceq glb(T1, T2 + T2', S) = [ T ; S' ]
-        if [ T ; S' ] := glb(T1, T2, S) .
     ceq glb(CONT < T1 >, CONT < T2 >, S) = [ CONT < T' > ; S' ]
         if [ T' ; S' ] := glb(T1, T2, S) .
     ceq glb(dict < T1, T2 >, dict < T1', T2' >, S) = [ dict < T3, T3' > ; S'' ]
@@ -165,7 +164,7 @@ mod CONSTR is
     op _[_] : Disj Subst -> Config [ctor] .
     op _&&_ : Config Config -> Config [prec 31 ctor assoc comm] .
     op _||_ : Config Config -> Config [prec 33 ctor assoc comm] .
-    
+
     rl [Step1]: (D1 \/ D2)[S] => (D1[S]) || (D2[S]) . 
 
     rl [Step2]: (C1 /\ C2)[S] => (C1[S]) && (C2[S]) .
@@ -190,7 +189,7 @@ mod CONSTR is
         --- if [T' ; S'] := lub(T1, T2, (S1, S2)) .
         if [T' ; S'] := lub(T1, T2, orsubst(S1, S2)) .
 
-    rl [Step5]: Cfg && (C1[S1]) && (C2[S2]) => Cfg && ((C1 /\ C2)[S1, S2]) . 
+    rl [Step5]: Cfg && (C1[S1]) && (C2[S2]) => Cfg && ((C1 /\ C2)[andsubst(S1, S2)]) . 
     --- rl [Step5]: (C1[S1]) && (C2[S2]) => (C1 /\ C2)[S1, S2] .
     rl [Step5]: (C1[S1]) && (C2[S2]) => (C1 /\ C2)[andsubst(S1, S2)] .
 

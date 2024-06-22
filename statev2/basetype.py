@@ -14,7 +14,7 @@ import itertools
 
 strat1 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; Step5 ! ; Step6 ! '
 strat2 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! '
-strat3 = 'one(Step1) ! ; one(Step2) ! ; one(Step7) ! ; one(Step3) ! ; one(Step4) ! ; Step5 ! ; Step6 ! '
+strat3 = 'one(Step1) ! ; one(Step2) ! ; one(Step7) ! ; one(Step3) ! ; one(Step4) ! ; one(Step5) ! ; one(Step6) ! '
 # INIT_MAUDE_PATH = os.getcwd() + os.sep + 'init.maude'
 INIT_MAUDE_PATH = os.getcwd() + os.sep + 'new.maude'
 DEFAULT_SOLVER_OUT = os.getcwd() + os.sep + 'solver.out'
@@ -1234,7 +1234,10 @@ class State:
             for repl_str in repl_strings:
                 to_parse = repl_str.strip('() ')
                 bt_list = to_parse.split(r'|->')
-                replacements[Basetype.from_str(bt_list[0].strip())] = Basetype.from_str(bt_list[1].strip())    
+                repl_key = Basetype.from_str(bt_list[0].strip())
+                if repl_key in replacements:
+                    raise RuntimeError(f'Replacement for {repl_key} already found: replacements[{repl_key}] = {replacements[repl_key]}')
+                replacements[repl_key] = Basetype.from_str(bt_list[1].strip())    
         # m_res = case.replace('[nil]', '')
         m_res = case.replace(repl_list[0], '').strip('[]')
         result_list = m_res.split('/\\')

@@ -106,24 +106,16 @@ def substitute_state_arguments(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
     return interim_spec_set
 
 
-def set_apply_specset(state_set: StateSet, node: ast.BinOp | ast.Call, testmode: bool = False) -> StateSet:
+def _set_apply_specset(state_set: StateSet, node: ast.BinOp | ast.Call, testmode: bool = False) -> StateSet:
     if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):
         raise TypeError(f'Node {tosrc(node)} cannot have specs to apply (afaik)')
     new_set = StateSet()
-    # max_id = 1
+    interim_spec_set = substitute_state_arguments(node)
     for state in state_set:
         current_state = deepcopy(state)
-        interim_spec_set = substitute_state_arguments(node)
         for spec in interim_spec_set:
-            # new_state = state_apply_spec(state, spec.in_state, testmode)
-            # for expr, bt in spec.out_state.assignment.items():
-            #     new_state.assignment[expr] = deepcopy(bt)
-            # new_state = new_state.solve_constraints(strategy_str=strat3)
-            # max_id = max(max_id, current_state.gen_id)
-            # current_state.gen_id = max_id
             new_state = state_apply_spec(current_state, spec, testmode)
             if new_state != BottomState():
-                # max_id = new_state.gen_id
                 new_set.add(deepcopy(new_state))
     return new_set
 
@@ -146,7 +138,8 @@ class TransferFunc(ast.NodeVisitor):
         self.state_set = self.state_set.solve_states()
         self.visit(node.right)
         self.state_set = self.state_set.solve_states()
-        new_state_set = set_apply_specset(self.state_set, node, self.testmode)
+        # new_state_set = set_apply_specset(self.state_set, node, self.testmode)
+        new_state_set = self.set_apply_specset(node, self.testmode)
         # new_state_set = new_state_set.solve_states()
         self.state_set = deepcopy(new_state_set)
 
@@ -154,7 +147,8 @@ class TransferFunc(ast.NodeVisitor):
         for _arg in node.args:
             self.visit(_arg)
             self.state_set.solve_states()
-        new_state_set = set_apply_specset(self.state_set, node, self.testmode)
+        # new_state_set = set_apply_specset(self.state_set, node, self.testmode)
+        new_state_set = self.set_apply_specset(node, self.testmode)
         # new_state_set = new_state_set.solve_states()
         self.state_set = deepcopy(new_state_set)
 
@@ -367,3 +361,24 @@ class TransferFunc(ast.NodeVisitor):
                 new_state.assignment[subscript_expr] = deepcopy(bt)
             new_ss.add(deepcopy(new_state))
         self.state_set = new_ss
+
+    def set_apply_specset(self, node: ast.BinOp | ast.Call, testmode: bool = False) -> StateSet:
+        if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):
+            raise TypeError(f'Node {tosrc(node)} cannot have specs to apply (afaik)')
+        new_set = StateSet()
+        interim_spec_set = substitute_state_arguments(node)
+        temp_expr = set()
+        for interim_spec in interim_spec_set:
+            for expr in interim_spec.in_state.assignment:
+                expr_node = ast.parse(expr)
+                self.visit(expr_node)
+                temp_expr.add(expr)
+        for state in self.state_set:
+            current_state = deepcopy(state)
+            for spec in interim_spec_set:
+                new_state = state_apply_spec(current_state, spec, testmode)
+                if new_state != BottomState():
+                    for temp in temp_expr:
+                        del new_state.assignment[temp]
+                    new_set.add(deepcopy(new_state))
+        return new_set

@@ -23,6 +23,6 @@ mod new_test is
     eq c54 = (T2 <= top) /\ (T2 <= int + float) .
     eq c55 = (T1 <= T?0) /\ (T1 <= dict < top, top > + bytes + str + int + float + frozenset < top > + bytearray + tuple < top > + list < top > + memoryview + range + set < top >) .
     eq c56 = (T1 <= T?0 + float) /\ (T1 <= int + float) .
-    eq c57 = (T2 <= int + float) /\ (T3 <= T?2) /\ (T3 <= float) /\ (T1 <= int + float) /\ (T1 <= T?1) /\ (T4 <= str) . 
+    eq c57 = (T1 <= T?1) /\ (T2 <= T?1) /\ (T4 <= T?2) /\ (T1 <= float + int) /\ (T4 <= str) /\ (T2 <= float + int) /\ (T3 <= T?2) /\ (T3 <= float) .
 
 endm

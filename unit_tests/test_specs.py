@@ -485,6 +485,21 @@ class SpecTestCases(unittest.TestCase):
         # def waldo(*args: Iterable[_KT] , **kwargs: Iterable[_VT]) -> bool: ...
         # callnode = ast.parse('waldo(a, b, c=x, d=y)').body[0].value
         expr = 'waldo(a, b, c=x, d=y)'
+        # state_set = StateSet.from_str(r'(a:int+float /\ b:int+float /\ x:float /\ y:str)')
+        state_set = StateSet.from_str(r'(a:float /\ b:int /\ x:float /\ y:str)')
+        node = ast.parse(expr)
+        tf = TransferFunc(state_set, False)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(
+            r'(a:float /\ b:int /\ x:float /\ y:str /\ waldo(a, b, c=x, d=y):bool)'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_visit_Call_5(self):
+        # def waldo(*args: Iterable[_KT] , **kwargs: Iterable[_VT]) -> bool: ...
+        # callnode = ast.parse('waldo(a, b, c=x, d=y)').body[0].value
+        expr = 'waldo(a, b, c=x, d=y)'
         state_set = StateSet.from_str(r'(a:int+float /\ b:int+float /\ x:float /\ y:str)')
         node = ast.parse(expr)
         tf = TransferFunc(state_set, False)

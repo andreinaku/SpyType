@@ -56,6 +56,7 @@ fmod TYPE is
 
     op orsubst : Subst Subst -> Subst [comm assoc] .
     op andsubst : Subst Subst -> Subst [comm assoc].
+
     eq orsubst((X? |-> T1), (X? |-> T2)) = (X? |-> lubtype(T1, T2)) .
     eq orsubst(nil, S) = S .
     eq orsubst(S, S') = (S, S') [owise] .
@@ -188,7 +189,7 @@ mod CONSTR is
         --- if [T' ; S'] := lub(T1, T2, (S1, S2)) .
         if [T' ; S'] := lub(T1, T2, orsubst(S1, S2)) .
 
-    rl [Step5]: Cfg && (C1[S1]) && (C2[S2]) => Cfg && ((C1 /\ C2)[S1, S2]) . 
+    rl [Step5]: Cfg && (C1[S1]) && (C2[S2]) => Cfg && ((C1 /\ C2)[andsubst(S1, S2)]) . 
     --- rl [Step5]: (C1[S1]) && (C2[S2]) => (C1 /\ C2)[S1, S2] .
     rl [Step5]: (C1[S1]) && (C2[S2]) => (C1 /\ C2)[andsubst(S1, S2)] .
 

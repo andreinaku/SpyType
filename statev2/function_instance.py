@@ -153,11 +153,18 @@ class FunctionInstance:
                     else:
                         raise TypeError(f'{bt} is not PyType or VarType')
                     if param_name.startswith(VARARG_MARKER):
-                        for member in param_link[param_name]:
-                            new_state.assignment[member] = deepcopy(contained_bt)
+                        # for member in param_link[param_name]:
+                        #     new_state.assignment[member] = deepcopy(contained_bt)
+                        new_name = f'({', '.join(param_link[param_name])})'
+                        new_state.assignment[new_name] = deepcopy(bt)
                     else:
+                        # for koname, koinstance in param_link[param_name].items():
+                        #     new_state.assignment[koinstance] = deepcopy(contained_bt)
+                        new_name_list = []
                         for koname, koinstance in param_link[param_name].items():
-                            new_state.assignment[koinstance] = deepcopy(contained_bt)
+                            new_name_list.append(koinstance)
+                        new_name = f'({', '.join(new_name_list)})'
+                        new_state.assignment[new_name] = deepcopy(bt)
                 else:
                     new_state.assignment[param_link[param_name]] = deepcopy(bt)
             return new_state
