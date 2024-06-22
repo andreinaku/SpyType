@@ -19,8 +19,47 @@ fmod TYPE is
     op nil : -> Subst [ctor] .
     op _|->_ : BoundVarType Type -> Subst [ctor] .
     op _`,_ : Subst Subst -> Subst  [ctor assoc comm id: nil].
-    eq ((X? |-> T), (X? |-> T)) = (X? |-> T) .
-    eq ((X? |-> T1), (X? |-> T2)) = (X? |-> T1 + T2) .
+    --- eq ((X? |-> T), (X? |-> T)) = (X? |-> T) .
+    --- eq ((X? |-> T1), (X? |-> T2)) = (X? |-> T1 + T2) .
+
+    op lubtype : Type Type -> Type .
+    ceq lubtype(T1, T2) = T2 if leq(T1, T2) .
+    ceq lubtype(T1, T2) = T1 if leq(T2, T1) .
+    ceq lubtype(CONT < T1 >, CONT < T2 >) = CONT < T' >
+        if T' := lubtype(T1, T2) .
+    ceq lubtype(dict < T1, T2 >, dict < T1', T2' >) = dict < T, T' >
+        if T := lubtype(T1, T2)
+        /\ T' := lubtype(T1', T2') .
+    eq lubtype(T1, T2) = T1 + T2 [owise] .
+
+    op glbtype : Type Type -> Type .
+    ceq glbtype(T1, T2) = T1 if leq(T1, T2) . 
+    ceq glbtype(T1, T2) = T2 if leq(T2, T1) .
+    ceq glbtype(T1, T2 + T2') = T
+        if T := glbtype(T1, T2) .
+    ceq glbtype(CONT < T1 >, CONT < T2 >) = CONT < T' >
+        if T' := glbtype(T1, T2) .
+    ceq glbtype(dict < T1, T2 >, dict < T1', T2' >) = dict < T3, T3' >
+        if T3 := glbtype(T1, T1')
+        /\ T3' := glbtype(T2, T2') .
+    ceq glbtype(T + CONT < T1 >, T' + CONT < T2 >) = T1' + CONT < T2' >
+        if T2' := glbtype(T1, T2)
+        /\ T1' := glbtype(T, T') .
+    ceq glbtype(T + CONT < T1 >, CONT < T2 >) = CONT < T2' >
+        if T2' := glbtype(T1, T2) . 
+    ceq glbtype(CONT < T1 >, T + CONT < T2 >) = CONT < T2' >
+        if T2' := glbtype(T1, T2) .
+    ceq glbtype(dict < T1, T2 >, dict < T1', T2' >) = dict < T, T' >
+        if T := glbtype(T1, T2)
+        /\ T' := glbtype(T1', T2') .
+    eq glbtype(T1, T2) = bot [owise].
+
+    op orsubst : Subst Subst -> Subst [comm assoc] .
+    op andsubst : Subst Subst -> Subst [comm assoc].
+    eq orsubst((X? |-> T1), (X? |-> T2)) = (X? |-> lubtype(T1, T2)) .
+    eq orsubst(nil, S) = S .
+    eq andsubst((X? |-> T1), (X? |-> T2)) = (X? |-> glbtype(T1, T2)) .
+    eq andsubst(nil, S) = S .
 
     sort TypeSubst .
     op [_;_] : Type Subst -> TypeSubst [ctor] .
@@ -67,8 +106,10 @@ fmod TYPE is
     ceq lub(dict < T1, T2 >, dict < T1', T2' >, S) = [ dict < T, T' > ; S'' ]
         if [ T  ; S'  ] := lub(T1, T2, S)
         /\ [ T' ; S'' ] := lub(T1', T2', S').
-    eq lub(X?, T, S) = [ T ; (S, X? |-> T) ] . 
-    eq lub(T, Y?, S) = [ T ; (S, Y? |-> T) ] . 
+    --- eq lub(X?, T, S) = [ T ; (S, X? |-> T) ] . 
+    eq lub(X?, T, S) = [ T ; orsubst(S, X? |-> T) ] . 
+    --- eq lub(T, Y?, S) = [ T ; (S, Y? |-> T) ] . 
+    eq lub(T, Y?, S) = [ T ; orsubst(S, Y? |-> T) ] . 
     eq lub(T1, T2, S) = [ T1 + T2 ; S ] [owise].
 
     op glb : Type Type Subst -> TypeSubst .
@@ -89,9 +130,11 @@ fmod TYPE is
     ceq glb(dict < T1, T2 >, dict < T1', T2' >, S) = [ dict < T, T' > ; S'' ]
         if [ T  ; S'  ] := glb(T1, T2, S)
         /\ [ T' ; S'' ] := glb(T1', T2', S').
-    eq glb(X?, T, S) = [ T ; (S, X? |-> T) ] . 
-    eq glb(T, Y?, S) = [ T ; (S, Y? |-> T) ] . 
+    eq glb(X?, T, S) = [ T ; andsubst(S, X? |-> T) ] . 
+    eq glb(X? + T, T' + T, S) = [ T' + T ; andsubst(S, X? |-> T') ] .
+    eq glb(T, Y?, S) = [ T ; andsubst(S, Y? |-> T) ] .  
     eq glb(T1, T2, S) = [ bot ; S ] [owise].
+
 endfm
 
 mod CONSTR is
@@ -122,25 +165,29 @@ mod CONSTR is
 
     rl [Step2]: (C1 /\ C2)[S] => (C1[S]) && (C2[S]) .
 
-
-    --- rl [Step3]: ((T <= X?)[S]) => (none)[S, (X? |-> T)] .
-    eq [Step3]: ((T <= X?)[S]) = (none)[S, (X? |-> T)] .
+    rl [Step3]: ((T <= X?)[S]) => (none)[S, (X? |-> T)] .
+    --- eq [Step3]: ((T <= X?)[S]) = (none)[S, (X? |-> T)] .
     rl [Step3]: ((T <= top)[S]) => (none)[S] .
     rl [Step3]: (C[S1]) && ((none)[S2]) => (C[S1, S2]) .
     crl [Step3]: ((T <= T1)[S1]) && ((T <= T2)[S2]) => (T <= T')[S']
-        if [T' ; S'] := glb(T1, T2, (S1, S2)).
+        --- if [T' ; S'] := glb(T1, T2, (S1, S2)) .
+        if [T' ; S'] := glb(T1, T2, andsubst(S1, S2)) .
 
     crl [Step4]: (Cfg1 && ((T <= T1)[S1])) || (Cfg2 && ((T <= T2)[S2])) => (Cfg1 && ((T <= T')[S'])) || Cfg2
-        if [T' ; S'] := lub(T1, T2, (S1, S2)). 
+        --- if [T' ; S'] := lub(T1, T2, (S1, S2)) . 
+        if [T' ; S'] := lub(T1, T2, orsubst(S1, S2)) . 
 
     crl [Step4]: (Cfg1 && ((T <= T1)[S1])) || ((T <= T2)[S2]) => Cfg1 && ((T <= T')[S'])
-        if [T' ; S'] := lub(T1, T2, (S1, S2)).
+        --- if [T' ; S'] := lub(T1, T2, (S1, S2)) .
+        if [T' ; S'] := lub(T1, T2, orsubst(S1, S2)) .
 
     crl [Step4]: ((T <= T1)[S1]) || ((T <= T2)[S2]) => (T <= T')[S']
-        if [T' ; S'] := lub(T1, T2, (S1, S2)).
+        --- if [T' ; S'] := lub(T1, T2, (S1, S2)) .
+        if [T' ; S'] := lub(T1, T2, orsubst(S1, S2)) .
 
     rl [Step5]: Cfg && (C1[S1]) && (C2[S2]) => Cfg && ((C1 /\ C2)[S1, S2]) . 
-    rl [Step5]: (C1[S1]) && (C2[S2]) => (C1 /\ C2)[S1, S2] .
+    --- rl [Step5]: (C1[S1]) && (C2[S2]) => (C1 /\ C2)[S1, S2] .
+    rl [Step5]: (C1[S1]) && (C2[S2]) => (C1 /\ C2)[andsubst(S1, S2)] .
 
     rl [Step6]: (C [S])  || (C [S]) => C [S] .
 
