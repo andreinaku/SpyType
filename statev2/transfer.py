@@ -283,46 +283,46 @@ class TransferFunc(ast.NodeVisitor):
                 self.state_set = self.state_set.remove_expr_from_assign(call_expr)
             else:
                 if not hasattr(node.value, 'elts'):
-                    # # spec with varargs
-                    # call_list = [node.value]
-                    # for elem in target.elts:
-                    #     call_list.append(elem)
-                    # new_call = ast.Call(ast.Name(id='tupleassign'), call_list, [])
-                    # self.visit(new_call)
-                    # call_expr = tosrc(new_call)
-                    # self.state_set = self.state_set.remove_expr_from_assign(call_expr)
-                    # #
-                    
-                    # spec with sequential assigns
-                    current_ss = deepcopy(self.state_set)
-                    call_list = []
+                    # spec with varargs
+                    call_list = [node.value]
                     for elem in target.elts:
-                        new_call = ast.Call(ast.Name(id='seqassign'), [elem, node.value], [])
-                        call_list.append(new_call)
-                    current_ss = deepcopy(self.state_set)
-                    new_ss = StateSet()
-                    for state in current_ss:
-                        current_id = 1
-                        to_lub = []
-                        for call_elem in call_list:
-                            call_elem_src = tosrc(call_elem)
-                            current_state = deepcopy(state)
-                            current_id = max(current_id, current_state.gen_id)
-                            current_state.gen_id = current_id
-                            aux_specset = substitute_state_arguments(call_elem)
-                            if len(aux_specset) != 1:
-                                raise RuntimeError(f'Assignment specset for {call_elem_src} needs only one spec')
-                            interim_spec = list(aux_specset)[0]
-                            new_st = state_apply_spec(current_state, interim_spec)
-                            current_id = max(current_id, new_st.gen_id)
-                            del new_st.assignment[call_elem_src]
-                            to_lub.append(deepcopy(new_st))
-                        lubbed = State()
-                        for lub_elem in to_lub:
-                            lubbed = State.lub(lubbed, lub_elem)
-                        new_ss.add(deepcopy(lubbed))
-                    self.state_set = deepcopy(new_ss)
+                        call_list.append(elem)
+                    new_call = ast.Call(ast.Name(id='tupleassign'), call_list, [])
+                    self.visit(new_call)
+                    call_expr = tosrc(new_call)
+                    self.state_set = self.state_set.remove_expr_from_assign(call_expr)
                     #
+                    
+                    # # spec with sequential assigns
+                    # current_ss = deepcopy(self.state_set)
+                    # call_list = []
+                    # for elem in target.elts:
+                    #     new_call = ast.Call(ast.Name(id='seqassign'), [elem, node.value], [])
+                    #     call_list.append(new_call)
+                    # current_ss = deepcopy(self.state_set)
+                    # new_ss = StateSet()
+                    # for state in current_ss:
+                    #     current_id = 1
+                    #     to_lub = []
+                    #     for call_elem in call_list:
+                    #         call_elem_src = tosrc(call_elem)
+                    #         current_state = deepcopy(state)
+                    #         current_id = max(current_id, current_state.gen_id)
+                    #         current_state.gen_id = current_id
+                    #         aux_specset = substitute_state_arguments(call_elem)
+                    #         if len(aux_specset) != 1:
+                    #             raise RuntimeError(f'Assignment specset for {call_elem_src} needs only one spec')
+                    #         interim_spec = list(aux_specset)[0]
+                    #         new_st = state_apply_spec(current_state, interim_spec)
+                    #         current_id = max(current_id, new_st.gen_id)
+                    #         del new_st.assignment[call_elem_src]
+                    #         to_lub.append(deepcopy(new_st))
+                    #     lubbed = State()
+                    #     for lub_elem in to_lub:
+                    #         lubbed = State.lub(lubbed, lub_elem)
+                    #     new_ss.add(deepcopy(lubbed))
+                    # self.state_set = deepcopy(new_ss)
+                    # #
                 else:
                     if len(target.elts) != len(node.value.elts):
                         raise RuntimeError(f'Assignment {tosrc(node)} has operands of different lengths')

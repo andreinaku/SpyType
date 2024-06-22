@@ -58,8 +58,11 @@ fmod TYPE is
     op andsubst : Subst Subst -> Subst [comm assoc].
     eq orsubst((X? |-> T1), (X? |-> T2)) = (X? |-> lubtype(T1, T2)) .
     eq orsubst(nil, S) = S .
+    eq orsubst(S, S') = (S, S') [owise] .
+
     eq andsubst((X? |-> T1), (X? |-> T2)) = (X? |-> glbtype(T1, T2)) .
     eq andsubst(nil, S) = S .
+    eq andsubst(S, S') = (S, S') [owise] .
 
     sort TypeSubst .
     op [_;_] : Type Subst -> TypeSubst [ctor] .

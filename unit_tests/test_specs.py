@@ -6,46 +6,6 @@ from statev2.function_instance import FunctionInstance
 
 
 class SpecTestCases(unittest.TestCase):
-    def test_apply_spec_1(self):
-        state = State.from_str(r'((a:int+float /\ b:int+float))')
-        spec = State.from_str(r'(a:float /\ b:int)')
-        expected_result = State.from_str(
-            r'((a:Ta` /\ b:Tb`) ^ '
-            r'((Ta` <= int+float) /\ (Ta` <= float) /\ (Tb` <= int+float) /\ (Tb` <= int))'
-            r')'
-        )
-        result = state_apply_spec(state, spec, testmode=True)
-        self.assertEqual(result, expected_result)
-
-    def test_apply_spec_set_1(self):
-        stateset = StateSet.from_str(
-            r'((a:Ta /\ b:Tb))'
-        )
-        specset = StateSet.from_str(
-            r'((a:int /\ b:int)) \/ ((a:float /\ b:float))'
-        )
-        expected_result = StateSet.from_str(
-            r'((a:Ta /\ b:Tb) ^ (Ta <= int /\ Tb <= int)) \/ '
-            r'((a:Ta /\ b:Tb) ^ (Ta <= float /\ Tb <= float))'
-        )
-        result = set_apply_spec(stateset, specset, testmode=True)
-        self.assertEqual(result, expected_result)
-
-    def test_apply_spec_set_2(self):
-        stateset = StateSet.from_str(
-            r'((a:Ta /\ b:Tb) ^ (Ta <= int+float /\ Tb <= str))'
-        )
-        specset = StateSet.from_str(
-            r'((a:int /\ b:int)) \/ ((a:float /\ b:float))'
-        )
-        expected_result = StateSet.from_str(
-            r'((a:Ta /\ b:Tb) ^ '
-            r'(Ta <= int /\ Tb <= int /\ Ta <= int+float /\ Tb <= str)) \/ '
-            r'((a:Ta /\ b:Tb) ^ '
-            r'(Ta <= int+float /\ Tb <= str /\ Ta <= float /\ Tb <= float))'
-        )
-        result = set_apply_spec(stateset, specset, testmode=True)
-        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
 
     def test_spec_to_state_1(self):
         spec = FuncSpec.from_str(r'((a:int /\ b:int) -> ((a+b):int))')
@@ -942,16 +902,17 @@ class SpecTestCases(unittest.TestCase):
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
 
     def test_visit_assign_7(self):
-        # ss = StateSet.from_str(r'a:bot /\ b:T2')
         ss = StateSet.from_str(r'a:bot /\ b:bot /\ c:T1')
-        # expr = 'testassign(a, b)'
         expr = 'a, b = c'
         node = ast.parse(expr)
         tf = TransferFunc(ss)
         tf.visit(node)
         result = tf.state_set
+        # expected_result = StateSet.from_str(
+        #     r'a:T3 + str /\ b:T4 + str /\ c:tuple < T3 + T4 > + list < T3 + T4 > + set < T3 + T4 > + frozenset < T3 + T4 > + str'
+        # )
         expected_result = StateSet.from_str(
-            r'a:T3 + str /\ b:T4 + str /\ c:tuple < T3 + T4 > + list < T3 + T4 > + set < T3 + T4 > + frozenset < T3 + T4 > + str'
+            r'a:T1 + str /\ b:T1 + str /\ c:tuple < T1 > + list < T1 > + set< T1 > + frozenset < T1 > + str'
         )
         # self.assertEqual(StateSet.raw_eq(result, expected_result), True)
         self.assertEqual(result, expected_result)

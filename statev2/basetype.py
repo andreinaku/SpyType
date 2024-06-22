@@ -1304,6 +1304,14 @@ class State:
                 f'{result}{os.linesep}{os.linesep}'
             )
             relations, replacements = self.parse_single_result_string(str(result))
+            for spectype, repl_with in replacements.items():
+                bottom_bt = Basetype({PyType(BottomType)})
+                if repl_with == bottom_bt:
+                    open(ofile, 'a').write(
+                        f'{self.constraints} solve:{os.linesep}' \
+                        f'INVALID!{os.linesep}{os.linesep}'
+                    )
+                    return BottomState()
         new_state = State()
         new_state.gen_id = self.gen_id
         new_state.assignment = deepcopy(self.assignment)
