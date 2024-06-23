@@ -671,7 +671,7 @@ class SpecTestCases(unittest.TestCase):
 
     def test_state_apply_assign_2(self):
         state_set = StateSet.from_str(
-            r'((a:T1 /\ b:T2 /\ c:list< T3 >) ^ (T1 <= T2))'
+            r'(a:T1 /\ b:T2 /\ c:list< T3 >)'
         )
         code = 'a, b = c'
         node = ast.parse(code)
