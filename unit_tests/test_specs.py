@@ -927,11 +927,24 @@ class SpecTestCases(unittest.TestCase):
         tf = TransferFunc(ss)
         tf.visit(node)
         result = tf.state_set
-        # expected_result = StateSet.from_str(
-        #     r'a:T3 + str /\ b:T4 + str /\ c:tuple < T3 + T4 > + list < T3 + T4 > + set < T3 + T4 > + frozenset < T3 + T4 > + str'
-        # )
         expected_result = StateSet.from_str(
-            r'a:T1 + str /\ b:T1 + str /\ c:tuple < T1 > + list < T1 > + set< T1 > + frozenset < T1 > + str'
+            r'a:T1 + str /\ b:T2 + str /\ c:tuple < T1 + T2 > + list < T1 + T2 > + set< T1 + T2 > + frozenset < T1 + T2 > + str'
         )
         # self.assertEqual(StateSet.raw_eq(result, expected_result), True)
         self.assertEqual(result, expected_result)
+
+    def test_visit_assign_8(self):
+        state_set = StateSet.from_str(
+            r'(a:T1 /\ b:T2 /\ c:list < T3 >)'
+        )
+        code = 'a, b = c'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+
+        expected_result = StateSet.from_str(
+            r'(a:T3 /\ b:T3 /\ c:list< T3 >)'
+        )
+        # self.assertEqual(result, expected_result)
+        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
