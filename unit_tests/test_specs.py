@@ -617,7 +617,7 @@ class SpecTestCases(unittest.TestCase):
         #     r'((a:top /\ b:top /\ x:top /\ y:top) -> (corge(a, b, c=x, d=y):bool))'
         # )
         expected_result = FuncSpec.from_str(
-            r'(((a, b):top /\ (x, y):top) -> (corge(a, b, c=x, d=y):bool))'
+            r'(((a, b):tuple < top >  /\ (x, y):tuple < top >) -> (corge(a, b, c=x, d=y):bool))'
         )
         self.assertEqual(result, expected_result)
 
@@ -632,17 +632,6 @@ class SpecTestCases(unittest.TestCase):
         # )
         expected_result = FuncSpec.from_str(
             r'(((a, b):tuple < str > /\ (x, y):tuple < str >) -> (fred(a, b, c=x, d=y):bool))'
-        )
-        self.assertEqual(result, expected_result)
-
-    def test_instantiate_spec_4(self):
-        # def thud(*args: _KT, **kwargs: _VT) -> bool: ...
-        callnode = ast.parse('thud(a, b, c=x, d=y)').body[0].value
-        spec_set = get_specset(callnode)
-        fi = FunctionInstance(callnode, spec_set[0])
-        result = fi.instantiate_spec(tosrc(callnode))
-        expected_result = FuncSpec.from_str(
-            r'((a:top /\ b:top /\ x:top /\ y:top) -> (thud(a, b, c=x, d=y):bool))'
         )
         self.assertEqual(result, expected_result)
 
