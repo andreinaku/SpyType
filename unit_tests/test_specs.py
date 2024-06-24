@@ -939,13 +939,7 @@ class SpecTestCases(unittest.TestCase):
 
     def test_foo(self):
         ss = StateSet.from_str(r'a:T1 /\ 3:int')
-        expr = 'a[2]'
-        node = ast.parse(expr)
-        tf = TransferFunc(ss)
-        tf.visit(node)
-        result = tf.state_set
-        ss = deepcopy(result)
-        expr = 'foo1(a[2], 3)'
+        expr = 'subscriptassign(a, 3)'
         node = ast.parse(expr)
         tf = TransferFunc(ss)
         tf.visit(node)

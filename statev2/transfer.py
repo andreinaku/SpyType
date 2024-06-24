@@ -273,6 +273,13 @@ class TransferFunc(ast.NodeVisitor):
                     self.state_set = self.state_set.remove_expr_from_assign(call_expr)
                 else:
                     new_call = ast.Call(ast.Name(id='simpleassign'), [target, node.value], [])
+                    target_src = tosrc(target)
+                    use_stateset = StateSet()
+                    for state in self.state_set:
+                        new_state = deepcopy(state)
+                        new_state.assignment[target_src] = TOP_BT
+                        use_stateset.add(deepcopy(new_state))
+                    self.state_set = deepcopy(use_stateset)
                     self.visit(new_call)
                     call_expr = tosrc(new_call)
                     self.state_set = self.state_set.remove_expr_from_assign(call_expr)
@@ -298,12 +305,15 @@ class TransferFunc(ast.NodeVisitor):
                         call_elem: ast.Call
                         for call_elem in call_list:
                             call_elem_src = tosrc(call_elem)
+                            expr_src = tosrc(call_elem.args[0])
                             current_id = max(current_id, current_state.gen_id)
                             current_state.gen_id = current_id
                             interim_specset = substitute_state_arguments(call_elem)
                             interim_lub = []
                             for interim_spec in interim_specset:
-                                new_st = state_apply_spec(current_state, interim_spec)
+                                use_state = deepcopy(current_state)
+                                use_state.assignment[expr_src] = TOP_BT
+                                new_st = state_apply_spec(use_state, interim_spec)
                                 if new_st == BottomState():
                                     continue
                                 current_id = max(current_id, new_st.gen_id)

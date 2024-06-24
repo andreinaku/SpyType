@@ -1205,14 +1205,14 @@ class State:
     
     def is_invalid(self) -> bool:
         bottom_bt = Basetype({PyType(BottomType)})
-        for expr, bt in self.assignment.items():
-            rel: Relation
-            for rel in self.constraints:
-                if rel.bt_left == bt and rel.bt_right == bottom_bt:
-                    return True
-        # for rel in self.constraints:
-        #     if rel.bt_right == bottom_bt:
-        #         return True
+        # for expr, bt in self.assignment.items():
+        #     rel: Relation
+        #     for rel in self.constraints:
+        #         if rel.bt_left == bt and rel.bt_right == bottom_bt:
+        #             return True
+        for rel in self.constraints:
+            if rel.bt_right == bottom_bt:
+                return True
         return False
 
     def solve_constraints(self, strategy_str: str = strat1, dump_file: str | None = None, 
