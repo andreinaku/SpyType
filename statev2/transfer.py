@@ -6,6 +6,7 @@ from statev2.function_instance import FunctionInstance, ArgumentMismatchError
 
 
 BOTTOM_BT = Basetype({PyType(BottomType)})
+TOP_BT = Basetype({PyType(TopType)})
 
 
 def state_apply_spec(state: State, spec: FuncSpec, testmode=False) -> State:
@@ -265,14 +266,16 @@ class TransferFunc(ast.NodeVisitor):
                 if isinstance(target, ast.Subscript):
                     self.visit(target)
                     new_call = ast.Call(
-                        ast.Name(id='subscriptassign'), [target.value, target, node.value], []
+                        ast.Name(id='subscriptassign'), [target.value, node.value], []
                     )
                     self.visit(new_call)
                     call_expr = tosrc(new_call)
+                    self.state_set = self.state_set.remove_expr_from_assign(call_expr)
                 else:
                     new_call = ast.Call(ast.Name(id='simpleassign'), [target, node.value], [])
                     self.visit(new_call)
                     call_expr = tosrc(new_call)
+                    self.state_set = self.state_set.remove_expr_from_assign(call_expr)
             else:
                 if not hasattr(node.value, 'elts'):                    
                     # spec with sequential assigns
@@ -360,9 +363,9 @@ class TransferFunc(ast.NodeVisitor):
                 expr_node = ast.parse(expr)
                 self.visit(expr_node)
         for state in self.state_set:
-            current_state = deepcopy(state)
+            # current_state = deepcopy(state)
             for spec in interim_spec_set:
-                new_state = state_apply_spec(current_state, spec, testmode)
+                new_state = state_apply_spec(state, spec, testmode)
                 if new_state != BottomState():
                     new_set.add(deepcopy(new_state))
         return new_set

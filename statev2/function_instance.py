@@ -173,6 +173,9 @@ class FunctionInstance:
         
         new_spec.in_state = replace_in_state(self.spec.in_state)
         new_spec.out_state = replace_in_state(self.spec.out_state)
-        new_spec.out_state.assignment[call_code] = deepcopy(self.spec.out_state.assignment[RETURN_NAME])
+        if RETURN_NAME in self.spec.out_state.assignment:
+            new_spec.out_state.assignment[call_code] = deepcopy(self.spec.out_state.assignment[RETURN_NAME])
+        else:
+            new_spec.out_state.assignment[call_code] = Basetype({PyType(type(None))})
         return new_spec
     

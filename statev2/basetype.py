@@ -354,6 +354,8 @@ class Basetype(hset):
     #     self.flatten()
 
     def flatten(self) -> Basetype:
+        if self == Basetype({PyType(BottomType)}):
+            return
         new_bt = Basetype()
         for atom in self:
            new_bt = Basetype.lub(new_bt, Basetype({atom}))
@@ -1208,6 +1210,9 @@ class State:
             for rel in self.constraints:
                 if rel.bt_left == bt and rel.bt_right == bottom_bt:
                     return True
+        # for rel in self.constraints:
+        #     if rel.bt_right == bottom_bt:
+        #         return True
         return False
 
     def solve_constraints(self, strategy_str: str = strat1, dump_file: str | None = None, 

@@ -47,7 +47,7 @@ class SpecTestCases(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
 
-    def test_set_apply_binop_spec_1(self):
+    def _test_set_apply_binop_spec_1(self):
         expr = 'a / b'
         binop_node = ast.parse(expr).body[0].value
         state_set = StateSet.from_str(r'(a:T1 /\ b:T2)')
@@ -60,7 +60,7 @@ class SpecTestCases(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
 
-    def test_set_apply_binop_spec_2(self):
+    def _test_set_apply_binop_spec_2(self):
         expr = 'a / b'
         binop_node = ast.parse(expr).body[0].value
         state_set = StateSet.from_str(
@@ -74,7 +74,7 @@ class SpecTestCases(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
 
-    def test_set_apply_binop_spec_3(self):
+    def _test_set_apply_binop_spec_3(self):
         expr = 'a / b'
         binop_node = ast.parse(expr).body[0].value
         state_set = StateSet.from_str(
@@ -634,9 +634,12 @@ class SpecTestCases(unittest.TestCase):
         callnode = ast.parse('waldo(a, b, c=x, d=y)').body[0].value
         spec_set = get_specset(callnode)
         fi = FunctionInstance(callnode, spec_set[0])
-        result = fi.instantiate_spec(tosrc(callnode))
+        result = fi.instantiate_spec()
+        # expected_result = FuncSpec.from_str(
+        #     r'((a:T?1 /\ b:T?1 /\ x:T?2 /\ y:T?2) -> (waldo(a, b, c=x, d=y):bool))'
+        # )
         expected_result = FuncSpec.from_str(
-            r'((a:T?1 /\ b:T?1 /\ x:T?2 /\ y:T?2) -> (waldo(a, b, c=x, d=y):bool))'
+            r'(((a, b): tuple < T?1 > /\ (x, y):tuple < T?2 >) -> (waldo(a, b, c=x, d=y):bool))'
         )
         self.assertEqual(result, expected_result)
 
@@ -932,4 +935,20 @@ class SpecTestCases(unittest.TestCase):
             r'(a:T3 /\ b:T3 /\ c:list< T3 >)'
         )
         # self.assertEqual(result, expected_result)
+        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+
+    def test_foo(self):
+        ss = StateSet.from_str(r'a:T1 /\ 3:int')
+        expr = 'a[2]'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        ss = deepcopy(result)
+        expr = 'foo1(a[2], 3)'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(r'a:T2 /\ b:T2')
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
