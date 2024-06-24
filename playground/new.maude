@@ -169,10 +169,10 @@ mod CONSTR is
 
     rl [Step2]: (C1 /\ C2)[S] => (C1[S]) && (C2[S]) .
 
-    rl [Step3]: ((T <= X?)[S]) => (none)[S, (X? |-> T)] .
+    rl [Step3]: ((T <= X?)[S]) => (none)[andsubst(S, (X? |-> T))] .
     --- eq [Step3]: ((T <= X?)[S]) = (none)[S, (X? |-> T)] .
     rl [Step3]: ((T <= top)[S]) => (none)[S] .
-    rl [Step3]: (C[S1]) && ((none)[S2]) => (C[S1, S2]) .
+    rl [Step3]: (C[S1]) && ((none)[S2]) => (C[andsubst(S1, S2)]) .
     crl [Step3]: ((T <= T1)[S1]) && ((T <= T2)[S2]) => (T <= T')[S']
         --- if [T' ; S'] := glb(T1, T2, (S1, S2)) .
         if [T' ; S'] := glb(T1, T2, andsubst(S1, S2)) .

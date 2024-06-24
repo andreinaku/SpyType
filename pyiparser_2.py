@@ -484,5 +484,9 @@ if __name__ == "__main__":
         FuncSpec.from_str(r'((x:top /\ y:Iterable < T?0 >) -> (x:T?0 /\ return:NoneType))'),
         FuncSpec.from_str(r'((x:top /\ y:str) -> (x:str /\ return:NoneType))')
     }
+    spec_dict['simple_subscript'] = {
+        FuncSpec.from_str(r'((a:Iterable < T?0 > /\ b:int) -> (return:T?0))'),
+        FuncSpec.from_str(r'((a:dict< T?0, T?1 > /\ b:top) -> (return:T?1))')
+    }
     #
     dump_specs('united_specs.py', spec_dict)

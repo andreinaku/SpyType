@@ -220,12 +220,6 @@ class SpecTestCases(unittest.TestCase):
         expected_result = Basetype()
         self.assertEqual(result, expected_result)
 
-    # def test_basetype_filter_pytypes_3(self):
-    #     bt = Basetype.from_str('Sized< T2 >')
-    #     result = bt.filter_pytypes(builtin_types)
-    #     expected_result = Basetype({PyType(Sized, Basetype({VarType('T2')}))})
-    #     self.assertEqual(result, expected_result)
-
     def test_assignment_filter_pytypes_1(self):
         assignment = Assignment.from_str(
             'a:int + float + list< set < T1 > > + list< reversed< T2 > + complex > /\\ b: int + reversed< T3 >'

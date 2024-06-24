@@ -256,28 +256,23 @@ class TransferFunc(ast.NodeVisitor):
                 new_state = deepcopy(state)
                 new_state.assignment[target_src] = deepcopy(new_state.assignment[value_src])
         return new_state
-
-    # def visit_Assign(self, node: Assign):
-    #     new_state_set = StateSet()
-    #     self.visit(node.targets[0])
-    #     self.state_set.solve_states()
-    #     self.visit(node.value)
-    #     self.state_set.solve_states()
-    #     for state in self.state_set:
-    #         new_state = self.state_apply_assign(state, node)
-    #         new_state_set.add(new_state)
-    #     new_state_set = new_state_set.solve_states()
-    #     self.state_set = deepcopy(new_state_set)
     
     def visit_Assign(self, node: Assign):
         self.visit(node.value)
         self.state_set.solve_states()
         for target in node.targets: 
             if not hasattr(target, 'elts'):
-                new_call = ast.Call(ast.Name(id='simpleassign'), [target, node.value], [])
-                self.visit(new_call)
-                call_expr = tosrc(new_call)
-                self.state_set = self.state_set.remove_expr_from_assign(call_expr)
+                if isinstance(target, ast.Subscript):
+                    self.visit(target)
+                    new_call = ast.Call(
+                        ast.Name(id='subscriptassign'), [target.value, target, node.value], []
+                    )
+                    self.visit(new_call)
+                    call_expr = tosrc(new_call)
+                else:
+                    new_call = ast.Call(ast.Name(id='simpleassign'), [target, node.value], [])
+                    self.visit(new_call)
+                    call_expr = tosrc(new_call)
             else:
                 if not hasattr(node.value, 'elts'):                    
                     # spec with sequential assigns
@@ -350,39 +345,24 @@ class TransferFunc(ast.NodeVisitor):
 
     def visit_Subscript(self, node: ast.Subscript):
         subscript_expr = tosrc(node)
-        new_call = ast.Call(ast.Name(id='emerson'), [node.value, node.slice], [])
+        new_call = ast.Call(ast.Name(id='simple_subscript'), [node.value, node.slice], [])
         new_call_expr = tosrc(new_call)
         self.visit(new_call)
-        new_ss = StateSet()
-        state: State
-        for state in self.state_set:
-            new_state = State()
-            new_state.constraints = deepcopy(state.constraints)
-            for expr, bt in state.assignment.items():
-                if expr != new_call_expr:
-                    new_state.assignment[expr] = deepcopy(bt)
-                    continue
-                new_state.assignment[subscript_expr] = deepcopy(bt)
-            new_ss.add(deepcopy(new_state))
-        self.state_set = new_ss
+        self.state_set = self.state_set.replace_expr(new_call_expr, subscript_expr)
 
     def set_apply_specset(self, node: ast.BinOp | ast.Call, testmode: bool = False) -> StateSet:
         if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):
             raise TypeError(f'Node {tosrc(node)} cannot have specs to apply (afaik)')
         new_set = StateSet()
         interim_spec_set = substitute_state_arguments(node)
-        temp_expr = set()
         for interim_spec in interim_spec_set:
             for expr in interim_spec.in_state.assignment:
                 expr_node = ast.parse(expr)
                 self.visit(expr_node)
-                # temp_expr.add(expr)
         for state in self.state_set:
             current_state = deepcopy(state)
             for spec in interim_spec_set:
                 new_state = state_apply_spec(current_state, spec, testmode)
                 if new_state != BottomState():
-                    # for temp in temp_expr:
-                    #     del new_state.assignment[temp]
                     new_set.add(deepcopy(new_state))
         return new_set

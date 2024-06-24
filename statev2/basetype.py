@@ -719,53 +719,6 @@ class Basetype(hset):
             new_bt = new_bt.replace_vartype(vt1.varexp, vt2.varexp)
         return new_bt
 
-    @classmethod
-    def _replace_from_solution(cls, bt1: Basetype, bt2: Basetype, solution, index = 0) -> tuple[Basetype]:
-        
-        def temp_id(index: int) -> str:
-            temp_vt = f'T`{index}'
-            return temp_vt
-        
-        for pair in solution:
-            temp_varexp = temp_id(index)
-            index += 1
-            bt1 = bt1.replace_vartype(pair[0].varexp, temp_varexp)
-            bt2 = bt2.replace_vartype(pair[1].varexp, temp_varexp)
-        return bt1, bt2, index
-
-    # @classmethod
-    # def get_spectype_substitutions(cls, bt: Basetype, specbt: Basetype) -> dict[Basetype, Basetype]:
-    #     spec_replace = dict()
-    #     if len(specbt) == 1 and isinstance(specbt[0], VarType) and SPECTYPE_MARKER in specbt[0].varexp:
-    #         spec_replace[specbt] = {deepcopy(bt)}
-    #         return spec_replace
-    #     for spec_atom in specbt:
-    #         if isinstance(spec_atom, VarType):
-    #             continue
-    #         if spec_atom.keys is not None:
-    #             for bt_atom in bt:
-    #                 if isinstance(bt_atom, VarType):
-    #                     continue
-    #                 if spec_atom.ptype != bt_atom.ptype:
-    #                     continue
-    #                 key_replace = dict()
-    #                 values_replace = dict()
-    #                 if bt_atom.keys is not None:
-    #                     key_replace = cls.get_spectype_substitutions(bt_atom.keys, spec_atom.keys)
-    #                 if spec_atom.values is not None and bt_atom.values is not None:
-    #                     values_replace = cls.get_spectype_substitutions(spec_atom.values, bt_atom.values)
-    #                 for newbt, newsubst in key_replace.items():
-    #                     if newbt in spec_replace:
-    #                         spec_replace[newbt] |= deepcopy(newsubst)
-    #                     else:
-    #                         spec_replace[newbt] = deepcopy(newsubst)
-    #                 for newbt, newsubst in values_replace.items():
-    #                     if newbt in spec_replace:
-    #                         spec_replace[newbt] |= deepcopy(newsubst)
-    #                     else:
-    #                         spec_replace[newbt] = deepcopy(newsubst)
-    #     return spec_replace
-                    
 
 class Assignment(hdict):
     def __str__(self):
@@ -916,6 +869,15 @@ class Assignment(hdict):
         solution_len = len(all_vt1)  # every vartype in one bt needs a match in the other
         solutions, sol_dicts = get_solution_dicts(solution_len, pairs, all_vt1, all_vt2, index)
         return solutions, sol_dicts
+
+    def replace_expr(self, to_replace: str, repl_with: str) -> Assignment:
+        new_assign = Assignment()
+        for expr, bt in self.items():
+            if expr != to_replace:
+                new_assign[expr] = deepcopy(bt)
+                continue
+            new_assign[repl_with] = deepcopy(bt)
+        return new_assign
 
 
 class Relation:
@@ -1174,16 +1136,6 @@ class State:
         st = State(asgn, constr)
         st.update_vt_index()
         return st
-        # all_vt = st.get_all_vartypes()
-        # numeric_list = []
-        # for vt in all_vt:
-        #     after_t = vt.varexp[1:]
-        #     if not after_t.isnumeric():
-        #         continue
-        #     numeric_list.append(int(after_t))
-        # if len(numeric_list):
-        #     st.gen_id = max(numeric_list) + 1
-        # return st
 
     def replace_vartype(self, to_replace: str, replace_with: str) -> State:
         new_assignment = self.assignment.replace_vartype(to_replace, replace_with)
@@ -1251,9 +1203,6 @@ class State:
     
     def is_invalid(self) -> bool:
         bottom_bt = Basetype({PyType(BottomType)})
-        # for rel in self.constraints:
-        #     if rel.bt_right == bottom_bt:
-        #         return True
         for expr, bt in self.assignment.items():
             rel: Relation
             for rel in self.constraints:
@@ -1318,10 +1267,6 @@ class State:
         new_state = State()
         new_state.gen_id = self.gen_id
         new_state.assignment = deepcopy(self.assignment)
-        # if len(relations) == 0:
-        #     new_state.constraints = deepcopy(self.constraints)
-        #     # raise RuntimeError(f'Empty relations for {str(result)}')
-        # else:
         for rel in relations:
             new_state.constraints.add(deepcopy(rel))
         if new_state.is_invalid():
@@ -1435,23 +1380,6 @@ class State:
     @classmethod
     def get_vartype_solutions(cls, state1: State, state2: State) -> set[tuple[tuple[VarType]]]:
         return Assignment.get_vartype_solutions(state1.assignment, state2.assignment)
-    
-    # @classmethod
-    # #def replace_from_solution(cls, assign1: Assignment, assign2: Assignment, solution: tuple[VarType], index: int = 0) -> tuple[Assignment]:
-    # def replace_from_solution(cls, state1: State, state2: State, solution: tuple[VarType], index: int = 0) -> tuple[State]:
-    #     state1 = State()
-    #     state2 = State()
-    #     bt: Basetype
-    #     for expr in state1.assignment:
-    #         new_bt1, new_bt2, index = Basetype.replace_from_solution(state1.assignment[expr], 
-    #                                                                  state2.assignment[expr], 
-    #                                                                  solution, 
-    #                                                                  index)
-    #         state1.constraints = state1.constraints.replace_vartype(state1.assignment[expr], new_bt1)
-    #         state2.constraints = state2.constraints.replace_vartype(state2.assignment[expr], new_bt2)
-    #         state1.assignment[expr] = deepcopy(new_bt1)
-    #         state2.assignment[expr] = deepcopy(new_bt2)
-    #     return state1, state2, index
 
     def get_all_vartypes(self):
         all_vt = set()
@@ -1485,6 +1413,13 @@ class State:
             new_state.assignment[expr] = deepcopy(bt)
         return new_state
 
+    def replace_expr(self, to_replace: str, repl_with: str) -> State:
+        new_state = State()
+        new_state.gen_id = self.gen_id
+        new_state.assignment = self.assignment.replace_expr(to_replace, repl_with)
+        new_state.constraints = deepcopy(self.constraints)
+        return new_state
+        
 
 class BottomState(State):
     pass
@@ -1639,6 +1574,14 @@ class StateSet(hset):
             new_state = deepcopy(state)
             if to_remove in new_state.assignment:
                 del new_state.assignment[to_remove]
+            new_ss.add(deepcopy(new_state))
+        return new_ss
+    
+    def replace_expr(self, to_replace: str, repl_with: str) -> StateSet:
+        new_ss = StateSet()
+        state: State
+        for state in self:
+            new_state = state.replace_expr(to_replace, repl_with)
             new_ss.add(deepcopy(new_state))
         return new_ss
 
