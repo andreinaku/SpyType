@@ -156,7 +156,8 @@ class FunctionInstance:
                         # for member in param_link[param_name]:
                         #     new_state.assignment[member] = deepcopy(contained_bt)
                         new_name = f'({', '.join(param_link[param_name])})'
-                        new_state.assignment[new_name] = deepcopy(bt)
+                        new_bt = Basetype({PyType(tuple, deepcopy(contained_bt))})
+                        new_state.assignment[new_name] = deepcopy(new_bt)
                     else:
                         # for koname, koinstance in param_link[param_name].items():
                         #     new_state.assignment[koinstance] = deepcopy(contained_bt)
@@ -164,7 +165,8 @@ class FunctionInstance:
                         for koname, koinstance in param_link[param_name].items():
                             new_name_list.append(koinstance)
                         new_name = f'({', '.join(new_name_list)})'
-                        new_state.assignment[new_name] = deepcopy(bt)
+                        new_bt = Basetype({PyType(tuple, deepcopy(contained_bt))})
+                        new_state.assignment[new_name] = deepcopy(new_bt)
                 else:
                     new_state.assignment[param_link[param_name]] = deepcopy(bt)
             return new_state

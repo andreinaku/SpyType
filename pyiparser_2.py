@@ -481,7 +481,8 @@ if __name__ == "__main__":
         ),
     }
     spec_dict['seqassign'] = {
-        FuncSpec.from_str(r'((x:top /\ y:Iterable < T?0 > + str) -> (x:T?0 + str /\ return:NoneType))')
+        FuncSpec.from_str(r'((x:top /\ y:Iterable < T?0 >) -> (x:T?0 /\ return:NoneType))'),
+        FuncSpec.from_str(r'((x:top /\ y:str) -> (x:str /\ return:NoneType))')
     }
     #
     dump_specs('united_specs.py', spec_dict)

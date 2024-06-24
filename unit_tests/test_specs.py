@@ -626,9 +626,12 @@ class SpecTestCases(unittest.TestCase):
         callnode = ast.parse('fred(a, b, c=x, d=y)').body[0].value
         spec_set = get_specset(callnode)
         fi = FunctionInstance(callnode, spec_set[0])
-        result = fi.instantiate_spec(tosrc(callnode))
+        result = fi.instantiate_spec()
+        # expected_result = FuncSpec.from_str(
+        #     r'((a:str /\ b:str /\ x:str /\ y:str) -> (fred(a, b, c=x, d=y):bool))'
+        # )
         expected_result = FuncSpec.from_str(
-            r'((a:str /\ b:str /\ x:str /\ y:str) -> (fred(a, b, c=x, d=y):bool))'
+            r'(((a, b):tuple < str > /\ (x, y):tuple < str >) -> (fred(a, b, c=x, d=y):bool))'
         )
         self.assertEqual(result, expected_result)
 
@@ -694,8 +697,7 @@ class SpecTestCases(unittest.TestCase):
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'(a:float + str /\ b:float + str /\ c:list< float > + tuple< str >) \/ '
-            r'(a:str /\ b:str /\ c:str)'
+            r'(a:float + str /\ b:float + str /\ c:str + list< float > + tuple< str >)'
         )
         self.assertEqual(result, expected_result)
 
@@ -801,8 +803,8 @@ class SpecTestCases(unittest.TestCase):
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'(board:T1 /\ pos:set < T3 + T4 > + list < T3 + T4 > + tuple < T3 + T4 > + '
-            r'frozenset < T3 + T4 > /\ row:T3 /\ column:T4)'
+            r'row:T3 + str /\ column:T4 + str /\ board:T1 /\ pos:str + list < T3 + T4 > + '
+            r'set < T3 + T4 > + frozenset < T3 + T4 > + tuple < T3 + T4 >'
         )
         self.assertEqual(result, expected_result)
         # self.assertEqual(StateSet.raw_eq(result, expected_result), True)
