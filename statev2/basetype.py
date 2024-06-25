@@ -675,7 +675,8 @@ class Basetype(hset):
                     if isinstance(atom2, PyType) and atom2.ptype == atom1.ptype and atom2.keys is not None:
                         new_pairs = cls.get_vartype_pairs(atom1.keys, atom2.keys)
                         if atom1.values is not None and atom2.values is not None:
-                            new_pairs += cls.get_vartype_pairs(atom1.values, atom2.values)
+                            # new_pairs += cls.get_vartype_pairs(atom1.values, atom2.values)
+                            new_pairs |= cls.get_vartype_pairs(atom1.values, atom2.values)
                         old_pairs = deepcopy(pairs)
                         pairs = old_pairs & new_pairs
                         visited = []

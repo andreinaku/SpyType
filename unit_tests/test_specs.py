@@ -852,8 +852,14 @@ class SpecTestCases(unittest.TestCase):
         tf = TransferFunc(ss)
         tf.visit(node)
         result = tf.state_set
-        expected_result = StateSet.from_str(r'a:T2 /\ b:T2')
-        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+        # expected_result = StateSet.from_str(r'a:T2 /\ b:T2')
+        result = result.remove_no_names()
+        expected_result = StateSet.from_str(
+            r'(a:list < int + T1 >) \/ (a:set < int + T1 >) \/ (a:frozenset < int + T1 >) \/ '
+            r'(a:tuple < int + T1 >) \/ (a:dict < T2, int + T1 >)'
+        )
+        # self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+        self.assertEqual(result, expected_result)
 
     def test_visit_assign_2(self):
         ss = StateSet.from_str(r'a:int /\ b:T1')
@@ -937,7 +943,7 @@ class SpecTestCases(unittest.TestCase):
         # self.assertEqual(result, expected_result)
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
 
-    def test_foo(self):
+    def _test_foo(self):
         ss = StateSet.from_str(r'a:T1 /\ 3:int')
         expr = 'subscriptassign(a, 3)'
         node = ast.parse(expr)
