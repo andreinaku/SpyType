@@ -943,6 +943,50 @@ class SpecTestCases(unittest.TestCase):
         # self.assertEqual(result, expected_result)
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
 
+    def test_visit_assign_9(self):
+        state_set = StateSet.from_str(
+            r'(a:bot /\ b:bot /\ c:list < T3 >)'
+        )
+        code = 'a, b = c'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(
+            r'(a:T3 /\ b:T3 /\ c:list< T3 >)'
+        )
+        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+
+    def test_visit_assign_10(self):
+        state_set = StateSet.from_str(
+            r'(a:T1 /\ b:T2 /\ c:list < T3 >)'
+        )
+        code = 'a, b = c'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(
+            r'(a:T3 /\ b:T3 /\ c:list< T3 >)'
+        )
+        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+
+    def test_visit_assign_11(self):
+        state_set = StateSet.from_str(
+            r'(a:T1 /\ b:T2 /\ c:T3)'
+        )
+        code = 'a, b = c'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(
+            r'(a:T1 + str /\ b:T2 + str /\ '
+            r'c:list< T1 + T2 > + set< T1 + T2 > + frozenset< T1 + T2 > + tuple< T1 + T2 > + str)'
+        )
+        self.assertEqual(result, expected_result)
+
+
     def _test_foo(self):
         ss = StateSet.from_str(r'a:T1 /\ 3:int')
         expr = 'subscriptassign(a, 3)'
