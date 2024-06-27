@@ -160,5 +160,6 @@ mod CONSTR is
     rl [Step7]: ((T <= T')[S]) && ((T <= dict < T1 + T2, T1' >)[S]) => (((T <= T')[S]) && ((T <= dict < T1, T1' >)[S])) || (((T <= T')[S]) && ((T <= dict < T2, T1' >)[S])) .
 
     rl [Step8]: ((T <= T1)[S]) && ((T1 <= T2)[S]) => ((T <= T2)[S]) && ((T1 <= T2)[S]) .
+    rl [Step8]: ((T <= T1 + T')[S]) && ((T1 <= T2)[S]) => ((T <= T2 + T')[S]) && ((T1 <= T2)[S]) .
 
 endm
