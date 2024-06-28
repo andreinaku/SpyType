@@ -76,20 +76,23 @@ def unique_names(func_ast: ast.AST, param_list: list):
 
 
 def get_variable_names(node):
-    variable_names = []
-    # Check if the node is a variable definition
-    if isinstance(node, ast.Assign):
-        # Get the name of the variable
-        for target in node.targets:
-            if not isinstance(target, ast.Name):
-                continue
-            variable_names.append(target.id)
-        return variable_names
-    # Recursively search for variable definitions in child nodes
-    for child_node in ast.iter_child_nodes(node):
-        if not isinstance(child_node, ast.FunctionDef) and not isinstance(child_node, ast.ClassDef):
-            variable_names += get_variable_names(child_node)
-    return variable_names
+    # variable_names = []
+    # # Check if the node is a variable definition
+    # if isinstance(node, ast.Assign):
+    #     # Get the name of the variable
+    #     for target in node.targets:
+    #         if not isinstance(target, ast.Name):
+    #             continue
+    #         variable_names.append(target.id)
+    #     return variable_names
+    # # Recursively search for variable definitions in child nodes
+    # for child_node in ast.iter_child_nodes(node):
+    #     if not isinstance(child_node, ast.FunctionDef) and not isinstance(child_node, ast.ClassDef):
+    #         variable_names += get_variable_names(child_node)
+    # return variable_names
+    nv = NameVisitor()
+    nv.visit(node)
+    return nv.get_names()
 
 
 def run_infer(filepath, funcname):
