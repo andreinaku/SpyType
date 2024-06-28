@@ -137,3 +137,8 @@ def test_while_2(b):
 
 def test_add(a, b, c):
     return a + b + c
+
+
+def f1(x, y):
+    a, b = x
+    return y[a + 1, b - 1]

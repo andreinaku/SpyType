@@ -4,8 +4,8 @@ from crackedcfg import CFG, CFGBuilder
 from crackedcfg.builder import NameReplacer
 from statev2.basetype import *
 from statev2.transfer import *
-import simple_fixpoint
-import worklist
+# import type_inference.simple_fixpoint
+import type_inference.worklist as worklist
 
 
 class NameVisitor(ast.NodeVisitor):
