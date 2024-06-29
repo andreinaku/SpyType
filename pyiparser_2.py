@@ -488,5 +488,12 @@ if __name__ == "__main__":
         FuncSpec.from_str(r'((a:Iterable < T?0 > /\ b:int) -> (return:T?0))'),
         FuncSpec.from_str(r'((a:dict< T?0, T?1 > /\ b:top) -> (return:T?1))')
     }
+    spec_dict['subscriptassign'] = {
+        FuncSpec.from_str(r'((x:list < T?0 > /\ y:T?1) -> (x:list < T?0 + T?1 > /\ return:NoneType))'),
+        FuncSpec.from_str(r'((x:set < T?0 > /\ y:T?1) -> (x:set < T?0 + T?1 > /\ return:NoneType))'),
+        FuncSpec.from_str(r'((x:frozenset < T?0 > /\ y:T?1) -> (x:frozenset < T?0 + T?1 > /\ return:NoneType))'),
+        FuncSpec.from_str(r'((x:tuple < T?0 > /\ y:T?1) -> (x:tuple < T?0 + T?1 > /\ return:NoneType))'),
+        FuncSpec.from_str(r'((x:dict < T?0, T?1 > /\ y:T?2) -> (x:dict < T?0, T?1 + T?2 > /\ return:NoneType))')
+    }
     #
     dump_specs('united_specs.py', spec_dict)
