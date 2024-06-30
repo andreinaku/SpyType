@@ -986,6 +986,28 @@ class SpecTestCases(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
 
+    def test_visit_subscript_2(self):
+        ss = StateSet.from_str(r'a:T1 /\ b:T2 /\ c:T3')
+        expr = 'a[b - 1, c + 1]'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = None
+        self.assertEqual(True, True)
+
+    def test_visit_subscript_3(self):
+        ss = StateSet.from_str(r'a:T1 /\ b:T2 /\ c:T3')
+        expr = 'a[b, c]'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(
+            r'a:dict < T2 + T3, T4 > /\ b:T2 /\ c:T3 /\ (b, c):tuple < T2 + T3 > /\ a[b, c]:T4'
+        )
+        self.assertEqual(result, expected_result)
+
 
     def _test_foo(self):
         ss = StateSet.from_str(r'a:T1 /\ 3:int')

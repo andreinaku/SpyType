@@ -358,6 +358,11 @@ class TransferFunc(ast.NodeVisitor):
 
     def visit_Subscript(self, node: ast.Subscript):
         subscript_expr = tosrc(node)
+        # if hasattr(node.slice, 'elts'):
+        #     if len(node.slice.elts) != 2:
+        #         raise RuntimeError(f'{subscript_expr} does not have a valid slice')
+        #     new_call = ast.Call(ast.Name(id='simple_subscript'), [node.value, node.slice.elts[0], node.slice.elts[1]], []) 
+        # else:
         new_call = ast.Call(ast.Name(id='simple_subscript'), [node.value, node.slice], [])
         new_call_expr = tosrc(new_call)
         self.visit(new_call)
