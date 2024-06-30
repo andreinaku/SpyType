@@ -1004,10 +1004,32 @@ class SpecTestCases(unittest.TestCase):
         tf.visit(node)
         result = tf.state_set
         expected_result = StateSet.from_str(
-            r'a:dict < T2 + T3, T4 > /\ b:T2 /\ c:T3 /\ (b, c):tuple < T2 + T3 > /\ a[b, c]:T4'
+            r'a:dict < tuple < T2 + T3 >, T4 > /\ b:T2 /\ c:T3 /\ (b, c):tuple < T2 + T3 > /\ a[b, c]:T4'
+        )
+        self.assertEqual(result, expected_result)
+        result = result.remove_no_names()
+        expected_result = StateSet.from_str(
+            r'a:dict < tuple < T2 + T3 >, T4 > /\ b:T2 /\ c:T3'
         )
         self.assertEqual(result, expected_result)
 
+    def test_visit_subscript_4(self):
+        ss = StateSet.from_str(r'a:T1 /\ b:T2 /\ c:T3')
+        expr = 'a[b + 1, c - 1]'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(
+            r'b:int /\ c:int /\ a:dict< tuple < int >, T4 > /\ b + 1:int /\ c - 1:int /\ '
+            r'(b + 1, c - 1):tuple < int > /\ a[b + 1, c - 1]:T4 /\ 1:int'
+        )
+        self.assertEqual(result, expected_result)
+        result = result.remove_no_names()
+        expected_result = StateSet.from_str(
+            r'b:int /\ c:int /\ a:dict< tuple < int >, T4 >'
+        )
+        self.assertEqual(result, expected_result)
 
     def _test_foo(self):
         ss = StateSet.from_str(r'a:T1 /\ 3:int')

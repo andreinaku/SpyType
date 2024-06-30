@@ -486,7 +486,7 @@ if __name__ == "__main__":
     }
     spec_dict['simple_subscript'] = {
         FuncSpec.from_str(r'((a:Iterable < T?0 > /\ b:int) -> (return:T?0))'),
-        FuncSpec.from_str(r'((a:dict< T?0, T?1 > /\ b:tuple < T?0 >) -> (return:T?1))')
+        FuncSpec.from_str(r'((a:dict< T?0, T?1 > /\ b:T?0) -> (return:T?1))')
     }
     spec_dict['subscriptassign'] = {
         FuncSpec.from_str(r'((x:list < T?0 > /\ y:T?1) -> (x:list < T?0 + T?1 > /\ return:NoneType))'),
