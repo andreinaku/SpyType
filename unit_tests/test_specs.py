@@ -1031,12 +1031,20 @@ class SpecTestCases(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
 
-    def _test_foo(self):
-        ss = StateSet.from_str(r'a:T1 /\ 3:int')
-        expr = 'subscriptassign(a, 3)'
+    def test_foo(self):
+        ss = StateSet.from_str(r'a:bot /\ b:bot /\ x:T1 /\ y:T2')
+        expr = 'a, b = x'
         node = ast.parse(expr)
         tf = TransferFunc(ss)
         tf.visit(node)
         result = tf.state_set
-        expected_result = StateSet.from_str(r'a:T2 /\ b:T2')
-        self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+        # expected_result = StateSet.from_str(r'a:T2 /\ b:T2')
+        # self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+        ss = deepcopy(result)
+        expr = 'y[a + 1, b - 1]'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = None
+        self.assertEqual(result, expected_result)
