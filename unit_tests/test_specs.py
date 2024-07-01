@@ -834,6 +834,18 @@ class SpecTestCases(unittest.TestCase):
             r'(a:int /\ b:int /\ a + b:int /\ 1:int /\ a - 1:int /\ b + 1: int /\ (a - 1, b + 1):tuple<int>)'
         )
         self.assertEqual(result, expected_result)
+    
+    def _test_visit_BinOp_8(self):
+        state_set = StateSet.from_str(r'a:int /\ b:int /\ c:int /\ d:int /\ e:int')
+        code = 'a + b + c + d'
+        node = ast.parse(code)
+        tf = TransferFunc(state_set)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(
+            r'(a:list< T1 + T2 > /\ b:list< T3 > /\ a + b:list< T1 + T2 + T3 >)'
+        )
+        self.assertEqual(True, True)
 
     def test_visit_assign_1(self):
         ss = StateSet.from_str(r'a:T1 /\ b:T2')

@@ -169,7 +169,8 @@ class TransferFunc(ast.NodeVisitor):
             raise TypeError(f'Node {node}:{astor.to_source(node).strip()} is of unknown container type')
         for elem in node.elts:
             self.visit(elem)
-        node_name = astor.to_source(node).strip()
+        # node_name = astor.to_source(node).strip()
+        node_name = tosrc(node)
         new_set = StateSet()
         new_state: State
         state: State

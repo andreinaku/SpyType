@@ -138,7 +138,23 @@ def test_while_2(b):
 def test_add(a, b, c):
     return a + b + c
 
-
 def f1(x, y):
     a, b = x
     return y[a + 1, b - 1]
+
+def life_add(board, pos):
+    row, column = pos
+    return \
+        board[row-1, column-1] >>\
+        board[row-1, column] >>\
+        board[row-1, column+1] >>\
+        board[row, column-1] >>\
+        board[row, column+1] >>\
+        board[row+1, column-1] >>\
+        board[row+1, column] >>\
+        board[row+1, column+1]
+
+def life_add_1(board, pos):
+    row, column = pos
+    return \
+        board[row-1, column-1]

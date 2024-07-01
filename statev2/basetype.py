@@ -58,7 +58,7 @@ def get_solution_dicts(solution_len: int, pairs: set[tuple[Any]], domain_1: set[
     return solutions, sol_dicts
 
 
-def maude_vartype_generator(maxitems: int = 20) -> tuple[list[str], list[str]]:
+def maude_vartype_generator(maxitems: int = 200) -> tuple[list[str], list[str]]:
         normals = []
         specs = []
         for i in range(0, maxitems):
