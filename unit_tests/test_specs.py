@@ -856,7 +856,7 @@ class SpecTestCases(unittest.TestCase):
         result = result.remove_no_names()
         expected_result = StateSet.from_str(
             r'(a:list < int + T1 >) \/ (a:set < int + T1 >) \/ (a:frozenset < int + T1 >) \/ '
-            r'(a:tuple < int + T1 >) \/ (a:dict < T2, int + T1 >)'
+            r'(a:tuple < int + T1 >) \/ (a:dict < int, int + T1 >)'
         )
         # self.assertEqual(StateSet.raw_eq(result, expected_result), True)
         self.assertEqual(result, expected_result)
@@ -879,8 +879,9 @@ class SpecTestCases(unittest.TestCase):
         tf = TransferFunc(ss)
         tf.visit(node)
         result = tf.state_set
-        expected_result = StateSet.from_str(r'a:T1 /\ c:T1 /\ b:tuple < T1 >')
+        expected_result = StateSet.from_str(r'a:T1 /\ c:T1 /\ b:tuple < T1  >')
         self.assertEqual(StateSet.raw_eq(result, expected_result), True)
+        # self.assertEqual(result, expected_result)
 
     def test_visit_assign_4(self):
         ss = StateSet.from_str(r'a:int /\ b:int /\ c:float /\ d:str')

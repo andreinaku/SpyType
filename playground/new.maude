@@ -1,6 +1,7 @@
 fmod TYPE is
     sorts ConstType VarType BoundVarType ContainerType Type .
-    subsort BoundVarType VarType ConstType < Type .
+    subsort BoundVarType < VarType .
+    subsort VarType ConstType < Type .
     ops NoneType top bot bool int float str complex memoryview bytearray bytes range : -> ConstType [ctor].
     ops list set tuple frozenset Iterable : -> ContainerType [ctor]. 
     --- op _<_> : ContainerType Type -> Type [ctor].
@@ -17,23 +18,34 @@ fmod TYPE is
 
     sort Subst .
     op nil : -> Subst [ctor] .
-    op _|->_ : BoundVarType Type -> Subst [ctor] .
+    --- op _|->_ : BoundVarType Type -> Subst [ctor] .
+    op _|->_ : VarType Type -> Subst [ctor] .
     op _`,_ : Subst Subst -> Subst  [ctor assoc comm id: nil].
 
     op orsubst : Subst Subst -> Subst [comm assoc] .
     op andsubst : Subst Subst -> Subst [comm assoc].
 
     eq orsubst(nil, S) = S .
-    ceq orsubst((X? |-> T1), (X? |-> T2)) = (X? |-> T') 
+    --- ceq orsubst((X? |-> T1), (X? |-> T2)) = (X? |-> T') 
+    ---     if [ T' ; S' ] := lub(T1, T2, nil) .
+    --- ceq orsubst((X? |-> T1), ((X? |-> T2), S)) = ((X? |-> T'), S)
+    ---     if [ T' ; S' ] := lub(T1, T2, nil) .
+    ceq orsubst((X |-> T1), (X |-> T2)) = (X |-> T') 
         if [ T' ; S' ] := lub(T1, T2, nil) .
-    ceq orsubst((X? |-> T1), ((X? |-> T2), S)) = ((X? |-> T'), S)
+    ceq orsubst((X |-> T1), ((X |-> T2), S)) = ((X |-> T'), S)
+        if [ T' ; S' ] := lub(T1, T2, nil) .
+    ceq orsubst(((X |-> T1), S), ((X |-> T2), S')) = ((X |-> T'), orsubst(S, S'))
         if [ T' ; S' ] := lub(T1, T2, nil) .
     eq orsubst(S, S') = (S, S') [owise] .
 
     eq andsubst(nil, S) = S .
-    ceq andsubst((X? |-> T1), (X? |-> T2)) = (X? |-> T') 
+    --- ceq andsubst((X? |-> T1), (X? |-> T2)) = (X? |-> T') 
+    ---     if [ T' ; S' ] := glb(T1, T2, nil).
+    --- ceq andsubst((X? |-> T1), ((X? |-> T2), S)) = ((X? |-> T'), S) 
+    ---     if [ T' ; S' ] := glb(T1, T2, nil) .
+    ceq andsubst((X |-> T1), (X |-> T2)) = (X |-> T') 
         if [ T' ; S' ] := glb(T1, T2, nil).
-    ceq andsubst((X? |-> T1), ((X? |-> T2), S)) = ((X? |-> T'), S) 
+    ceq andsubst((X |-> T1), ((X |-> T2), S)) = ((X |-> T'), S) 
         if [ T' ; S' ] := glb(T1, T2, nil) .
     eq andsubst(S, S') = (S, S') [owise] .
 
@@ -44,7 +56,7 @@ fmod TYPE is
     var T T' T1 T2 T1' T2' T'' T3 T3' T3'' : Type . 
     vars X Y : VarType . 
     vars X? Y? : BoundVarType .
-    var CT : ConstType .
+    var CT CT' : ConstType .
     var CONT : ContainerType .
 
     op leq : Type Type -> Bool [strat(1 2 0)] .
@@ -69,15 +81,15 @@ fmod TYPE is
     ceq lub(dict < T1, T2 >, dict < T1', T2' >, S) = [ dict < T, T' > ; S'' ]
         if [ T  ; S'  ] := lub(T1, T2, S)
         /\ [ T' ; S'' ] := lub(T1', T2', S').
-    --- eq lub(X?, T, S) = [ T ; (S, X? |-> T) ] . 
     eq lub(X?, T, S) = [ T ; orsubst(S, X? |-> T) ] . 
-    --- eq lub(T, Y?, S) = [ T ; (S, Y? |-> T) ] . 
     eq lub(T, Y?, S) = [ T ; orsubst(S, Y? |-> T) ] . 
+    eq lub(X, T, S) = [ T ; orsubst(S, X |-> T) ] . 
+    eq lub(T, Y, S) = [ T ; orsubst(S, Y |-> T) ] . 
     eq lub(T1, T2, S) = [ T1 + T2 ; S ] [owise].
 
     op glb : Type Type Subst -> TypeSubst .
-    ceq glb(T1, T2, S) = [ T1 ; S ] if leq(T1, T2). 
-    ceq glb(T1, T2, S) = [ T2 ; S ] if leq(T2, T1).
+    ceq glb(T1, T2, S) = [ T1 ; S ] if leq(T1, T2) . 
+    ceq glb(T1, T2, S) = [ T2 ; S ] if leq(T2, T1) .
     ceq glb(CONT < T1 >, CONT < T2 >, S) = [ CONT < T' > ; S' ]
         if [ T' ; S' ] := glb(T1, T2, S) .
     ceq glb(dict < T1, T2 >, dict < T1', T2' >, S) = [ dict < T3, T3' > ; S'' ]
@@ -96,6 +108,9 @@ fmod TYPE is
     eq glb(X?, T, S) = [ T ; andsubst(S, X? |-> T) ] . 
     eq glb(X? + T, T' + T, S) = [ T' + T ; andsubst(S, X? |-> T') ] .
     eq glb(T, Y?, S) = [ T ; andsubst(S, Y? |-> T) ] .  
+    eq glb(X, CT, S) = [ CT ; andsubst(S, X |-> CT) ] . 
+    --- eq glb(X + T, T' + T, S) = [ T' + T ; andsubst(S, X |-> T') ] .
+    eq glb(CT, Y, S) = [ CT ; andsubst(S, Y |-> CT) ] .  
     eq glb(T1, T2, S) = [ bot ; S ] [owise].
 
 endfm
@@ -143,6 +158,8 @@ mod CONSTR is
     crl [Step4]: (Cfg1 && ((T <= T1)[S1])) || ((T <= T2)[S2]) => Cfg1 && ((T <= T')[S'])
         --- if [T' ; S'] := lub(T1, T2, (S1, S2)) .
         if [T' ; S'] := lub(T1, T2, orsubst(S1, S2)) .
+
+    rl [Step4]: ((T <= T1)[S1]) || ((T <= T1)[S2]) => (T <= T1)[orsubst(S1, S2)] .
 
     crl [Step4]: ((T <= T1)[S1]) || ((T <= T2)[S2]) => (T <= T')[S']
         --- if [T' ; S'] := lub(T1, T2, (S1, S2)) .
