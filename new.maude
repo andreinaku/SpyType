@@ -21,30 +21,58 @@ fmod TYPE is
     --- op _|->_ : BoundVarType Type -> Subst [ctor] .
     op _|->_ : VarType Type -> Subst [ctor] .
     op _`,_ : Subst Subst -> Subst  [ctor assoc comm id: nil].
+    --- eq ((X? |-> T), (X? |-> T)) = (X? |-> T) .
+    --- eq ((X? |-> T1), (X? |-> T2)) = (X? |-> T1 + T2) .
+
+    op lubtype : Type Type -> Type .
+    ceq lubtype(T1, T2) = T2 if leq(T1, T2) .
+    ceq lubtype(T1, T2) = T1 if leq(T2, T1) .
+    ceq lubtype(CONT < T1 >, CONT < T2 >) = CONT < T' >
+        if T' := lubtype(T1, T2) .
+    ceq lubtype(dict < T1, T2 >, dict < T1', T2' >) = dict < T, T' >
+        if T := lubtype(T1, T2)
+        /\ T' := lubtype(T1', T2') .
+    eq lubtype(T1, T2) = T1 + T2 [owise] .
+
+    op glbtype : Type Type -> Type .
+    ceq glbtype(T1, T2) = T1 if leq(T1, T2) . 
+    ceq glbtype(T1, T2) = T2 if leq(T2, T1) .
+    ceq glbtype(T1, T2 + T2') = T
+        if T := glbtype(T1, T2) .
+    ceq glbtype(CONT < T1 >, CONT < T2 >) = CONT < T' >
+        if T' := glbtype(T1, T2) .
+    ceq glbtype(dict < T1, T2 >, dict < T1', T2' >) = dict < T3, T3' >
+        if T3 := glbtype(T1, T1')
+        /\ T3' := glbtype(T2, T2') .
+    ceq glbtype(T + CONT < T1 >, T' + CONT < T2 >) = T1' + CONT < T2' >
+        if T2' := glbtype(T1, T2)
+        /\ T1' := glbtype(T, T') .
+    ceq glbtype(T + CONT < T1 >, CONT < T2 >) = CONT < T2' >
+        if T2' := glbtype(T1, T2) . 
+    ceq glbtype(CONT < T1 >, T + CONT < T2 >) = CONT < T2' >
+        if T2' := glbtype(T1, T2) .
+    ceq glbtype(dict < T1, T2 >, dict < T1', T2' >) = dict < T, T' >
+        if T := glbtype(T1, T2)
+        /\ T' := glbtype(T1', T2') .
+    eq glbtype(T1, T2) = bot [owise].
 
     op orsubst : Subst Subst -> Subst [comm assoc] .
     op andsubst : Subst Subst -> Subst [comm assoc].
 
     eq orsubst(nil, S) = S .
-    --- ceq orsubst((X? |-> T1), (X? |-> T2)) = (X? |-> T') 
-    ---     if [ T' ; S' ] := lub(T1, T2, nil) .
-    --- ceq orsubst((X? |-> T1), ((X? |-> T2), S)) = ((X? |-> T'), S)
-    ---     if [ T' ; S' ] := lub(T1, T2, nil) .
-    ceq orsubst((X |-> T1), (X |-> T2)) = (X |-> T') 
-        if [ T' ; S' ] := lub(T1, T2, nil) .
-    ceq orsubst((X |-> T1), ((X |-> T2), S)) = ((X |-> T'), S)
-        if [ T' ; S' ] := lub(T1, T2, nil) .
+    --- eq orsubst((X? |-> T1), (X? |-> T2)) = (X? |-> lubtype(T1, T2)) .
+    --- eq orsubst((X? |-> T1), ((X? |-> T2), S)) = ((X? |-> lubtype(T1, T2)), S) .
+    eq orsubst((X |-> T1), (X |-> T2)) = (X |-> lubtype(T1, T2)) .
+    eq orsubst((X |-> T1), ((X |-> T2), S)) = ((X |-> lubtype(T1, T2)), S) .
     eq orsubst(S, S') = (S, S') [owise] .
 
     eq andsubst(nil, S) = S .
-    --- ceq andsubst((X? |-> T1), (X? |-> T2)) = (X? |-> T') 
-    ---     if [ T' ; S' ] := glb(T1, T2, nil).
-    --- ceq andsubst((X? |-> T1), ((X? |-> T2), S)) = ((X? |-> T'), S) 
-    ---     if [ T' ; S' ] := glb(T1, T2, nil) .
-    ceq andsubst((X |-> T1), (X |-> T2)) = (X |-> T') 
-        if [ T' ; S' ] := glb(T1, T2, nil).
-    ceq andsubst((X |-> T1), ((X |-> T2), S)) = ((X |-> T'), S) 
-        if [ T' ; S' ] := glb(T1, T2, nil) .
+    eq andsubst((X? |-> T1), (X? |-> T2)) = (X? |-> glbtype(T1, T2)) .
+    eq andsubst((X? |-> T1), ((X? |-> T2), S)) = ((X? |-> glbtype(T1, T2)), S) .
+    ---
+    eq andsubst((X |-> T1), (X |-> T2)) = (X |-> glbtype(T1, T2)) .
+    eq andsubst((X |-> T1), ((X |-> T2), S)) = ((X |-> glbtype(T1, T2)), S) .
+    ---
     eq andsubst(S, S') = (S, S') [owise] .
 
     sort TypeSubst .
@@ -58,6 +86,7 @@ fmod TYPE is
     var CONT : ContainerType .
 
     op leq : Type Type -> Bool [strat(1 2 0)] .
+    --- eq leq(NoneType, T) = true .
     eq leq(bot, T) = true .
     eq leq(T, top) = true .
     eq leq(T, T) = true .
@@ -79,15 +108,27 @@ fmod TYPE is
     ceq lub(dict < T1, T2 >, dict < T1', T2' >, S) = [ dict < T, T' > ; S'' ]
         if [ T  ; S'  ] := lub(T1, T2, S)
         /\ [ T' ; S'' ] := lub(T1', T2', S').
+    eq lub(X?, T, S) = [ T ; (S, X? |-> T) ] . 
+    eq lub(T, Y?, S) = [ T ; (S, Y? |-> T) ] . 
+    eq lub(T1, T2, S) = [ T1 + T2 ; S ] [owise].
+
+    op lub : Type Type Subst -> TypeSubst .
+    ceq lub(T1, T2, S) = [ T2 ; S ] if leq(T1, T2). 
+    ceq lub(T1, T2, S) = [ T1 ; S ] if leq(T2, T1).
+    ceq lub(CONT < T1 >, CONT < T2 >, S) = [ CONT < T' > ; S' ]
+        if [ T' ; S' ] := lub(T1, T2, S) .
+    ceq lub(dict < T1, T2 >, dict < T1', T2' >, S) = [ dict < T, T' > ; S'' ]
+        if [ T  ; S'  ] := lub(T1, T2, S)
+        /\ [ T' ; S'' ] := lub(T1', T2', S').
+    --- eq lub(X?, T, S) = [ T ; (S, X? |-> T) ] . 
     eq lub(X?, T, S) = [ T ; orsubst(S, X? |-> T) ] . 
+    --- eq lub(T, Y?, S) = [ T ; (S, Y? |-> T) ] . 
     eq lub(T, Y?, S) = [ T ; orsubst(S, Y? |-> T) ] . 
-    --- eq lub(X, T, S) = [ T ; orsubst(S, X |-> T) ] . 
-    --- eq lub(T, Y, S) = [ T ; orsubst(S, Y |-> T) ] . 
     eq lub(T1, T2, S) = [ T1 + T2 ; S ] [owise].
 
     op glb : Type Type Subst -> TypeSubst .
-    ceq glb(T1, T2, S) = [ T1 ; S ] if leq(T1, T2) . 
-    ceq glb(T1, T2, S) = [ T2 ; S ] if leq(T2, T1) .
+    ceq glb(T1, T2, S) = [ T1 ; S ] if leq(T1, T2). 
+    ceq glb(T1, T2, S) = [ T2 ; S ] if leq(T2, T1).
     ceq glb(CONT < T1 >, CONT < T2 >, S) = [ CONT < T' > ; S' ]
         if [ T' ; S' ] := glb(T1, T2, S) .
     ceq glb(dict < T1, T2 >, dict < T1', T2' >, S) = [ dict < T3, T3' > ; S'' ]
