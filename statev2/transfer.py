@@ -148,12 +148,16 @@ class TransferFunc(ast.NodeVisitor):
         self.state_set = deepcopy(new_state_set)
 
     def visit_Call(self, node: ast.Call):
-        for _arg in node.args:
+        if isinstance(node.func, ast.Attribute):
+            new_args = [deepcopy(node.func.value)] + deepcopy(node.args)
+            new_call = ast.Call(ast.Name(id=node.func.attr), new_args, deepcopy(node.keywords))
+        else:
+            new_call = node
+        for _arg in new_call.args:
             self.visit(_arg)
             self.state_set.solve_states()
-        # new_state_set = set_apply_specset(self.state_set, node, self.testmode)
-        new_state_set = self.set_apply_specset(node, self.testmode)
-        # new_state_set = new_state_set.solve_states()
+        # new_state_set = self.set_apply_specset(node, self.testmode)
+        new_state_set = self.set_apply_specset(new_call, self.testmode)
         self.state_set = deepcopy(new_state_set)
 
     def container_visit(self, node):

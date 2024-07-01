@@ -23,3 +23,11 @@ class WorklistTestCases(unittest.TestCase):
     def test_3(self):
         mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'add_1')
         pprint_mfp(mfp_in, mfp_out)
+
+    def test_4(self):
+        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'append_1')
+        pprint_mfp(mfp_in, mfp_out)
+
+    def test_5(self):
+        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'append_2')
+        pprint_mfp(mfp_in, mfp_out)
