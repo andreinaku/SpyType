@@ -133,7 +133,8 @@ class TransferFunc(ast.NodeVisitor):
         new_set = StateSet()
         for state in self.state_set:
             new_state = deepcopy(state)
-            new_state.assignment[str(node.value)] = Basetype({PyType(type(node.value))})
+            # new_state.assignment[str(node.value)] = Basetype({PyType(type(node.value))})
+            new_state.assignment[tosrc(node)] = Basetype({PyType(type(node.value))})
             new_set.add(new_state)
         self.state_set = deepcopy(new_set)
 
@@ -183,6 +184,8 @@ class TransferFunc(ast.NodeVisitor):
             for elem in node.elts:
                 elem_name = tosrc(elem)
                 contained_bt |= deepcopy(state.assignment[elem_name])
+            if len(contained_bt) == 0:
+                contained_bt = BOTTOM_BT
             new_bt = Basetype({PyType(container_tip, contained_bt)})
             new_state = deepcopy(state)
             new_state.assignment[node_name] = deepcopy(new_bt)
@@ -338,7 +341,28 @@ class TransferFunc(ast.NodeVisitor):
                     if len(target.elts) != len(node.value.elts):
                         raise RuntimeError(f'Assignment {tosrc(node)} has operands of different lengths')
                     for i in range(0, len(target.elts)):
+                        # #
+                        # new_call = ast.Call(ast.Name(id='simpleassign'), [target, node.value], [])
+                        # target_src = tosrc(target)
+                        # use_stateset = StateSet()
+                        # for state in self.state_set:
+                        #     new_state = deepcopy(state)
+                        #     new_state.assignment[target_src] = TOP_BT
+                        #     use_stateset.add(deepcopy(new_state))
+                        # self.state_set = deepcopy(use_stateset)
+                        # self.visit(new_call)
+                        # call_expr = tosrc(new_call)
+                        # self.state_set = self.state_set.remove_expr_from_assign(call_expr)
+                        # #
+
                         new_call = ast.Call(ast.Name(id='simpleassign'), [target.elts[i], node.value.elts[i]], [])
+                        target_src = tosrc(target.elts[i])
+                        use_stateset = StateSet()
+                        for state in self.state_set:
+                            new_state = deepcopy(state)
+                            new_state.assignment[target_src] = TOP_BT
+                            use_stateset.add(deepcopy(new_state))
+                        self.state_set = deepcopy(use_stateset)
                         self.visit(new_call)
                         call_expr = tosrc(new_call)
                         self.state_set = self.state_set.remove_expr_from_assign(call_expr)
@@ -385,6 +409,9 @@ class TransferFunc(ast.NodeVisitor):
         for state in self.state_set:
             # current_state = deepcopy(state)
             for spec in interim_spec_set:
+                open(DEFAULT_SOLVER_OUT, 'a').write(
+                    f'-----------------{os.linesep}State / Spec{os.linesep}{state}{os.linesep}{spec}{os.linesep}-----------------{os.linesep}'
+                )
                 new_state = state_apply_spec(state, spec, testmode)
                 if new_state != BottomState():
                     new_set.add(deepcopy(new_state))

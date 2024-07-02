@@ -120,6 +120,10 @@ fmod TYPE is
     eq lub(T1, T2, S) = [ T1 + T2 ; S ] [owise].
 
     op glb : Type Type Subst -> TypeSubst .
+    eq glb(X?, bot, S) = [ bot ; andsubst(S, X? |-> bot) ] .
+    eq glb(bot, Y?, S) = [ bot ; andsubst(S, Y? |-> bot) ] .  
+    eq glb(CONT < X? >, CONT < bot >, S) = [ CONT < bot > ; andsubst(S, X? |-> bot) ] .
+    eq glb(CONT < bot >, CONT < Y? >, S) = [ CONT < bot > ; andsubst(S, Y? |-> bot) ] .  
     ceq glb(T1, T2, S) = [ T1 ; S ] if leq(T1, T2). 
     ceq glb(T1, T2, S) = [ T2 ; S ] if leq(T2, T1).
     ceq glb(CONT < T1 >, CONT < T2 >, S) = [ CONT < T' > ; S' ]

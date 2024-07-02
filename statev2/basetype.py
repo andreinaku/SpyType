@@ -538,6 +538,7 @@ class Basetype(hset):
         # replace on first level
         rest_bt = Basetype()
         if self.contains_basetype(to_replace):
+            # if replace_with != Basetype({PyType(BottomType)}):
             new_bt = deepcopy(replace_with)
             rest_bt = self - to_replace
         else:
@@ -1219,8 +1220,7 @@ class State:
     def solve_constraints(self, strategy_str: str = strat1, dump_file: str | None = None, 
                           ofile: str = DEFAULT_SOLVER_OUT) -> State:
         open(ofile, 'a').write(
-                f'{os.linesep}---------------{os.linesep}' \
-                f'current state: {self}{os.linesep}'
+                f'state to solve{os.linesep}{self}{os.linesep}-----------------{os.linesep}'
             )
         maude.init()
         init_module = INIT_MAUDE_PATH
@@ -1259,7 +1259,7 @@ class State:
             aux_len += 1
             open(ofile, 'a').write(
                 f'{self.constraints} solve:{os.linesep}' \
-                f'{result}{os.linesep}{os.linesep}'
+                f'{result}{os.linesep}-----------------{os.linesep}'
             )
             relations, replacements = self.parse_single_result_string(str(result))
             for spectype, repl_with in replacements.items():
@@ -1286,7 +1286,7 @@ class State:
             new_state = new_state.replace_basetype(to_repl, repl_with)
         new_state = new_state.generate_fresh_vartypes()
         open(ofile, 'a').write(
-            f'new state: {new_state}{os.linesep}---------------{os.linesep}'
+            f'new state: {new_state}{os.linesep}-----------------{os.linesep}'
         )
         return new_state
     

@@ -1,4 +1,12 @@
-def assign_1(c):
+import random
+
+
+def assign_1():
+    a, b = [3, 3.5]
+    return a, b
+
+
+def assign_1_prim(c):
     a, b = c
     return a, b
 
@@ -19,6 +27,33 @@ def append_1(a):
     a.append(3)
 
 
-def append_2(a):
+def append_2_prim(a):
     while True:
         a.append(3)
+
+
+def append_4():
+    a = []
+    a.append(3)
+
+
+def append_4_prim(a):
+    a.append(3)
+
+
+def append_5():
+    a = []
+    while random.randint(0, 10) < 5:
+        if random.randint(0, 10) < 5:
+            a.append(3)
+        else:
+            a.append('3')
+    return a[0]
+
+def append_5_prim(a):
+    while random.randint(0, 10) < 5:
+        if random.randint(0, 10) < 5:
+            a.append(3)
+        else:
+            a.append('3')
+    return a[0]

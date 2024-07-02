@@ -496,9 +496,10 @@ if __name__ == "__main__":
         FuncSpec.from_str(r'((x:dict < T?0, T?1 > /\ y:T?2) -> (x:dict < T?0, T?1 + T?2 > /\ return:NoneType))')
     }
     spec_dict['append'] = {\
-        FuncSpec.from_str(r'((self:list < T?0 > /\ __object:T?0) -> (return:NoneType))'),
-        # FuncSpec.from_str(r'((self:list < T?0 > /\ __object:T?1) -> (self:list < T?0 + T?1 > /\ return:NoneType))'),
-        FuncSpec.from_str(r'((self:bytearray /\ __item:SupportsIndex) -> (return:NoneType))')
+        # FuncSpec.from_str(r'((self:list < T?0 > /\ __object:T?0) -> (return:NoneType))'),
+        FuncSpec.from_str(r'((self:list < T?0 > /\ __object:T?1) -> (self:list < T?0 + T?1 > /\ return:NoneType))'),
+        FuncSpec.from_str(r'((self:bytearray /\ __item:SupportsIndex) -> (return:NoneType))'),
+        FuncSpec.from_str(r'((self:list < bot > /\ __object:T?0) -> (self:list < T?0 > /\ return:NoneType))'),
     }
     #
     dump_specs('united_specs.py', spec_dict)

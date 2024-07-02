@@ -145,7 +145,10 @@ class hdict(dict):
         return newhd
 
 
-def tosrc(node: ast.AST):
+def tosrc(_node: ast.AST):
+    # if isinstance(_node, ast.Constant):
+    #     return str(_node.value)
+    node = deepcopy(_node)
     if hasattr(node, '_pp'):
         delattr(node, '_pp')
     if isinstance(node, ast.While):
