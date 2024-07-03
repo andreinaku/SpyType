@@ -837,7 +837,7 @@ class SpecTestCases(unittest.TestCase):
     
     def _test_visit_BinOp_8(self):
         state_set = StateSet.from_str(r'a:int /\ b:int /\ c:int /\ d:int /\ e:int')
-        code = 'a + b + c + d'
+        code = 'a + b + c + d + e'
         node = ast.parse(code)
         tf = TransferFunc(state_set)
         tf.visit(node)
