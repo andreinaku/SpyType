@@ -28,7 +28,7 @@ def add_1(a):
 def life_add_1(board, pos):
     row, column = pos
     return \
-        board[row-1, column-1]
+        board[row-1, column-1] + board[row-1, column]
 
 
 def append_1(a):
