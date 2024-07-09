@@ -1,6 +1,14 @@
 import random
 
 
+def if_1(x, y):
+    if random.randint(0, 10) < 5:
+        a = x
+    else:
+        a = y
+    return a >> 2
+
+
 def assign_1():
     a, b = [3, 3.5]
     return a, b

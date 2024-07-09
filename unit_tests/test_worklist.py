@@ -52,3 +52,7 @@ class WorklistTestCases(unittest.TestCase):
     def test_10(self):
         mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'append_5_prim')
         pprint_mfp(mfp_in, mfp_out)
+
+    def test_11(self):
+        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'if_1')
+        pprint_mfp(mfp_in, mfp_out)
