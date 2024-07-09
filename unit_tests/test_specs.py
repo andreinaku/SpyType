@@ -1045,8 +1045,8 @@ class SpecTestCases(unittest.TestCase):
         self.assertEqual(result, expected_result)
 
     def test_foo(self):
-        ss = StateSet.from_str(r'a:list < bot >')
-        expr = "a.append('3')"
+        ss = StateSet.from_str(r'c:tuple < int + float >')
+        expr = "assign_1_prim(c)"
         node = ast.parse(expr)
         tf = TransferFunc(ss)
         tf.visit(node)

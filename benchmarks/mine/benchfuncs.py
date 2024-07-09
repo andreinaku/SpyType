@@ -16,7 +16,8 @@ def assign_1():
 
 def assign_1_prim(c):
     a, b = c
-    return a, b
+    aux = a >> b
+    return aux
 
 
 def add_1(a):

@@ -501,5 +501,8 @@ if __name__ == "__main__":
         FuncSpec.from_str(r'((self:bytearray /\ __item:SupportsIndex) -> (return:NoneType))'),
         FuncSpec.from_str(r'((self:list < bot > /\ __object:T?0) -> (self:list < T?0 > /\ return:NoneType))'),
     }
+    spec_dict['assign_1_prim'] = {
+        FuncSpec.from_str(r'((c:str + tuple < T?0 + T?1 >) -> (return:tuple < T?0 + T?1 + str >))')
+    }
     #
     dump_specs('united_specs.py', spec_dict)
