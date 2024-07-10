@@ -1212,6 +1212,8 @@ class State:
         #     for rel in self.constraints:
         #         if rel.bt_left == bt and rel.bt_right == bottom_bt:
         #             return True
+
+        # todo: find a better logic
         for rel in self.constraints:
             if rel.bt_right == bottom_bt:
                 return True

@@ -1044,6 +1044,90 @@ class SpecTestCases(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
 
+    def test_for_1(self):
+        ss = StateSet.from_str(r'a:bot /\ b:list < int >')
+        expr = 'for a in b: ...'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(
+            r'a:int /\ b:list < int >'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_for_2(self):
+        ss = StateSet.from_str(r'a:bot /\ b:T1')
+        expr = 'for a in b: ...'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        expected_result = StateSet.from_str(
+            r'(a:T2 /\ b:tuple < T2 > + list < T2 > + set < T2 > + frozenset < T2 >) \/ '
+            r'(a:int /\ b:bytearray) \/ '
+            r'(a:int /\ b:bytes) \/ '
+            r'(a:int /\ b:memoryview) \/ '
+            r'(a:str /\ b:str) \/ '
+            r'(a:int /\ b:range)'
+        )
+        self.assertEqual(result, expected_result)
+
+    def test_range_1(self):
+        ss = StateSet.from_str(r'a:bot /\ b:T1')
+        expr = 'a = range(0, 10)'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        result = result.remove_no_names()
+        expected_result = StateSet.from_str(r'a:range /\ b:T1')
+        self.assertEqual(result, expected_result)
+
+    def test_range_2(self):
+        ss = StateSet.from_str(r'a:bot /\ b:T1 /\ c:T1')
+        expr = 'a = range(b)'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        result = result.remove_no_names()
+        expected_result = StateSet.from_str(r'a:range /\ b:int /\ c:int')
+        self.assertEqual(result, expected_result)
+
+    def test_range_3(self):
+        ss = StateSet.from_str(r'a:bot /\ b:T1 /\ c:T1')
+        expr = 'a = range(0, 10, 2)'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        result = result.remove_no_names()
+        expected_result = StateSet.from_str(r'a:range /\ b:T1 /\ c:T1')
+        self.assertEqual(result, expected_result)
+
+    def test_range_4(self):
+        ss = StateSet.from_str(r'a:bot /\ b:T1 /\ c:T1 /\ d:T2')
+        expr = 'a = range(b, c, d)'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        result = result.remove_no_names()
+        expected_result = StateSet.from_str(r'a:range /\ b:int /\ c:int /\ d:int')
+        self.assertEqual(result, expected_result)
+
+    def test_for_range_1(self):
+        ss = StateSet.from_str(r'a:bot /\ b:T1')
+        expr = 'for a in range(0, 10): ...'
+        node = ast.parse(expr)
+        tf = TransferFunc(ss)
+        tf.visit(node)
+        result = tf.state_set
+        result = result.remove_no_names()
+        expected_result = StateSet.from_str(r'a:int /\ b:T1')
+        self.assertEqual(result, expected_result)
+
     def test_foo(self):
         ss = StateSet.from_str(r'c:tuple < int + float >')
         expr = "assign_1_prim(c)"

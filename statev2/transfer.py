@@ -1,4 +1,4 @@
-from ast import Assign, If, Subscript, While
+from ast import Assign, For, If, Subscript, While
 from typing import Any
 from statev2.basetype import *
 from united_specs import op_equiv, unitedspecs
@@ -396,6 +396,21 @@ class TransferFunc(ast.NodeVisitor):
         new_call_expr = tosrc(new_call)
         self.visit(new_call)
         self.state_set = self.state_set.replace_expr(new_call_expr, subscript_expr)
+
+    def visit_For(self, node: ast.For):
+        self.visit(node.iter)
+        targetsrc = tosrc(node.target)
+        st: State
+        for st in self.state_set:
+            st.assignment[targetsrc] = TOP_BT
+        new_call = ast.Call(
+            ast.Name(id='for_parse'),
+            [node.target, node.iter],
+            []
+        )
+        new_call_expr = tosrc(new_call)
+        self.visit(new_call)
+        self.state_set = self.state_set.remove_expr_from_assign(new_call_expr)
 
     def set_apply_specset(self, node: ast.BinOp | ast.Call, testmode: bool = False) -> StateSet:
         if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):

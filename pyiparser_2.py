@@ -504,5 +504,18 @@ if __name__ == "__main__":
     spec_dict['assign_1_prim'] = {
         FuncSpec.from_str(r'((c:str + tuple < T?0 + T?1 >) -> (return:tuple < T?0 + T?1 + str >))')
     }
+    spec_dict['for_parse'] = {
+        FuncSpec.from_str(r'((target:top /\ iter:Iterable < T?0 >) -> (target:T?0))'),
+        FuncSpec.from_str(r'((target:top /\ iter:str) -> (target:str))'),
+        FuncSpec.from_str(r'((target:top /\ iter:bytearray) -> (target:int))'),
+        FuncSpec.from_str(r'((target:top /\ iter:bytes) -> (target:int))'),
+        FuncSpec.from_str(r'((target:top /\ iter:range) -> (target:int))'),
+        FuncSpec.from_str(r'((target:top /\ iter:memoryview) -> (target:int))'),
+    }
+    spec_dict['range'] = {
+        FuncSpec.from_str(r'((stop:int) -> (return:range))'),
+        FuncSpec.from_str(r'((start:int /\ stop:int) -> (return:range))'),
+        FuncSpec.from_str(r'((start:int /\ stop:int /\ step:int) -> (return:range))')
+    }
     #
     dump_specs('united_specs.py', spec_dict)
