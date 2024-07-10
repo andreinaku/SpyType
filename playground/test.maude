@@ -1,0 +1,43 @@
+mod MY-MODULE is
+  --- Import the STRING module for the String sort
+  including STRING .
+
+  --- Declare the sorts
+  sort Type VarName Entry State StateSet Spec .
+
+  --- Define the types
+  ops int bytearray float : -> Type .
+
+  --- Use strings as variable names
+  subsort String < VarName .
+  subsort Entry < State < Spec .
+
+  --- Define the operator for variable-type pairs
+  op _:_ : VarName Type -> Entry [ctor prec 50] .
+
+  --- Define the operator for combining types
+  op _+_ : Type Type -> Type [assoc comm prec 49] .
+  eq t1 + t1 = t1 .
+
+  --- Define the operators for State
+  op _/\_ : State State -> State [assoc comm ctor prec 51] .
+  op _\/_ : State State -> State [assoc comm ctor prec 52] .
+
+  --- Define the operator for the specification
+  op _->_ : State State -> Spec [prec 53] .
+
+  --- Variable declarations
+  vars st1 st2 st3 : State .
+  vars ss1 ss2 ss3 : StateSet .
+  vars x y z foo bar return : VarName .
+  vars t1 t2 t3 : Type .
+
+  rl [flatten]: (x : t1 /\ st1) \/ st2 => x : t1 /\ st1 /\ st2 . 
+  rl [flatten]: (x : t1 /\ x : t1) => x : t1 .
+  rl [flatten]: (x : t1 /\ x : t2) => x : t1 + t2 .
+
+  rl [spec]: (st1 /\ "return" : t2) => (st1) -> ("return" : t2) . 
+---   rl [flatten]: (x : t1 /\ x : t2 /\ st1) => (x : t1 + t2 /\ st1) .
+
+endm
+

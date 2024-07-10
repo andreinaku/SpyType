@@ -14,45 +14,33 @@ def pprint_mfp(mfp_in, mfp_out):
 class WorklistTestCases(unittest.TestCase):
 
     def test_0(self):
-        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'assign_1')
+        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'if_1')
         pprint_mfp(mfp_in, mfp_out)
 
     def test_1(self):
-        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'assign_1_prim')
+        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'assign_1')
         pprint_mfp(mfp_in, mfp_out)
 
     def test_2(self):
-        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'life_add_1')
-        pprint_mfp(mfp_in, mfp_out)
-
-    def test_3(self):
         mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'add_1')
         pprint_mfp(mfp_in, mfp_out)
 
-    def test_4(self):
+    def test_3(self):
         mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'append_1')
         pprint_mfp(mfp_in, mfp_out)
 
+    def test_4(self):
+        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'append_2')
+        pprint_mfp(mfp_in, mfp_out)
+
     def test_5(self):
-        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'append_2_prim')
+        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'append_3')
+        pprint_mfp(mfp_in, mfp_out)
+
+    def test_6(self):
+        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'for_1')
         pprint_mfp(mfp_in, mfp_out)
 
     def test_7(self):
-        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'append_4')
-        pprint_mfp(mfp_in, mfp_out)
-
-    def test_8(self):
-        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'append_4_prim')
-        pprint_mfp(mfp_in, mfp_out)
-
-    def test_9(self):
-        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'append_5')
-        pprint_mfp(mfp_in, mfp_out)
-
-    def test_10(self):
-        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'append_5_prim')
-        pprint_mfp(mfp_in, mfp_out)
-
-    def test_11(self):
-        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'if_1')
+        mfp_in, mfp_out = run_infer('benchmarks/mine/benchfuncs.py', 'for_2')
         pprint_mfp(mfp_in, mfp_out)
