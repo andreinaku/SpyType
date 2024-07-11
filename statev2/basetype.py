@@ -1224,7 +1224,7 @@ class State:
         open(ofile, 'a').write(
                 f'state to solve{os.linesep}{self}{os.linesep}-----------------{os.linesep}'
             )
-        maude.init()
+        maude.init(advise=False)
         init_module = INIT_MAUDE_PATH
         if not maude.load(init_module):
             raise RuntimeError(f'Could not load {init_module}')

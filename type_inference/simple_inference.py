@@ -1,4 +1,5 @@
 import os, sys
+import time
 sys.path.append(os.getcwd())
 from crackedcfg import CFG, CFGBuilder
 from crackedcfg.builder import NameReplacer
@@ -95,9 +96,8 @@ def get_variable_names(node):
     return nv.get_names()
 
 
-def run_infer(filepath, funcname):
+def run_infer_on_func(cfg, funcname):
     # get the function CFG based on the function name
-    cfg = get_cfg(filepath, makepng=False)
     func_cfg = get_func_cfg(cfg, funcname, True)
     # construct the initial abstract state
     init_ss = StateSet()
@@ -115,15 +115,86 @@ def run_infer(filepath, funcname):
     return mfp_in, mfp_out
 
 
+def run_infer(filename, funcname):
+    cfg = get_cfg(filename, makepng=False)
+    return run_infer_on_func(cfg, funcname)
+
+
+def run_infer_on_file(filepath):
+    cfg = get_cfg(filepath, makepng=False)
+    func_info = dict()    
+    for funcname in cfg.func_asts:
+        func_info[funcname] = dict()
+        # print('---------------')
+        # print(funcname)
+        # print('---------------')
+        func_info[funcname]['mfp_in'], func_info[funcname]['mfp_out'] = run_infer_on_func(cfg, funcname)
+        func_cfg = get_func_cfg(cfg, funcname, True)
+        final_id = func_cfg.finalblocks[0].id
+        func_info[funcname]['final_state'] = func_info[funcname]['mfp_out'][final_id]
+        # print('---------------')
+        # print('MFP in' + os.linesep + '---------------')
+        # for id, ss in mfp_in.items():
+        #     print(f'{id}: {ss}')
+        # print('---------------')
+        # print('MFP out' + os.linesep + '---------------')
+        # for id, ss in mfp_out.items():
+        #     print(f'{id}: {ss}')
+        # print('---------------')
+    return func_info
+
+
+def state_as_spec(st: State, params: list[str]):
+    spec = FuncSpec()
+    for expr, bt in st.assignment.items():
+        if expr not in params:
+            continue
+        spec.in_state.assignment[expr] = deepcopy(bt)
+    if RETURN_NAME not in st.assignment:
+        spec.out_state.assignment[RETURN_NAME] = Basetype({PyType(type(None))})
+        return spec
+    spec.out_state.assignment[RETURN_NAME] = deepcopy(st.assignment[RETURN_NAME])
+    return spec
+
+
+def stateset_as_spec(ss: StateSet, cfg: CFG, fname: str):
+    newset = set()
+    func_cfg = get_func_cfg(cfg, fname, makepng=False)
+    for st in ss:
+        spec = state_as_spec(st, func_cfg.params)
+        newset.add(deepcopy(spec))
+    return newset
+
+
+def pprint_set(seth):
+    to_print = f'{fname} : {{\n'
+    for spec in seth:
+        to_print += f'\t{spec},\n'
+    to_print += f'}}\n'
+    return to_print
+
 if __name__ == "__main__":
-    mfp_in, mfp_out = run_infer('type_inference/test_funcs.py', 'test_add')
-    # mfp_in, mfp_out = run_infer(sys.argv[1], sys.argv[2])
-    print('---------------')
-    print('MFP in' + os.linesep + '---------------')
-    for id, ss in mfp_in.items():
-        print(f'{id}: {ss}')
-    print('---------------')
-    print('MFP out' + os.linesep + '---------------')
-    for id, ss in mfp_out.items():
-        print(f'{id}: {ss}')
-    print('---------------')
+    start_time = time.time()
+    testpath = 'benchmarks/mine/benchfuncs.py'
+    finfo = run_infer_on_file(testpath)
+    end_time = time.time()
+    diff_time = end_time - start_time
+    cfg = get_cfg(testpath, makepng=False)
+    delim = '---------------------------------'
+    to_print = ''
+    for fname, info in finfo.items():
+        nodes = info['mfp_in'].keys()
+        to_print += f'{delim}\n{fname} program points\n{delim}\n'
+        for nodeid in nodes:
+            to_print += f'{nodeid} : {{\n'
+            to_print += f'\tinput: {info['mfp_in'][nodeid]}\n\n'
+            to_print += f'\toutput: {info['mfp_in'][nodeid]}\n'
+            to_print += f'}}\n'
+        to_print += '\n'
+        # pprint_set(info['final_state'])
+        to_print += f'{delim}\n{fname} specs\n{delim}\n'
+        specset = stateset_as_spec(info['final_state'], cfg, fname)
+        to_print += pprint_set(specset)
+        to_print += '\n\n'
+    to_print += f'Time: {diff_time:4f}s'
+    open('spytype.out', 'w').write(to_print)

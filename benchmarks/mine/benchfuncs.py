@@ -29,6 +29,7 @@ def append_1(a):
 def append_2(a):
     while True:
         a.append(3)
+    return None
 
 
 def append_3():
@@ -54,3 +55,15 @@ def for_2(x, y):
     for foo in y:
         bar = bar + (foo >> 2)
     return bar
+
+
+# if __name__ == '__main__':
+x1 = if_1(2, 3.5)
+# x2 = assign_1([2, 3])
+# x3 = add_1(4.5)
+# x4 = append_1([5])
+# # x5 = append_2(['5'])
+# x6 = append_3()
+# x7 = for_1(2, 3)
+# x8 = for_2(2, [3, 4])
+print('done')
