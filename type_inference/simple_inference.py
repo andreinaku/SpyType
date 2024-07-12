@@ -1,11 +1,11 @@
 import os, sys
 import time
+import argparse
 sys.path.append(os.getcwd())
 from crackedcfg import CFG, CFGBuilder
 from crackedcfg.builder import NameReplacer
 from statev2.basetype import *
 from statev2.transfer import *
-# import type_inference.simple_fixpoint
 import type_inference.worklist as worklist
 
 
@@ -157,9 +157,18 @@ def state_as_spec(st: State, params: list[str]):
     return spec
 
 
-def stateset_as_spec(ss: StateSet, cfg: CFG, fname: str):
+def states_lub(ss: StateSet) -> StateSet:
+    st: State
+    new_state = State()
+    for st in ss:
+        new_state = State.lub(new_state, st)
+    return StateSet({new_state})
+
+
+def stateset_as_spec(_ss: StateSet, cfg: CFG, fname: str):
     newset = set()
     func_cfg = get_func_cfg(cfg, fname, makepng=False)
+    ss = states_lub(_ss)
     for st in ss:
         spec = state_as_spec(st, func_cfg.params)
         newset.add(deepcopy(spec))
@@ -173,28 +182,37 @@ def pprint_set(seth):
     to_print += f'}}\n'
     return to_print
 
+
 if __name__ == "__main__":
+    # arguments
+    parser = argparse.ArgumentParser(description='A POC for Python function type inference using Maude solver.')
+    parser.add_argument('-f', '--file', type=str, required=True, help='Path to the input file')
+    parser.add_argument('-o', '--output', type=str, required=True, help='Path to the output file')
+    parser.add_argument('-v', '--verbose', type=bool, default=False, required=False, help='Path to the output file')
+    args = parser.parse_args()
+    #
+    outpath = args.output
     start_time = time.time()
-    testpath = 'benchmarks/mine/benchfuncs.py'
-    finfo = run_infer_on_file(testpath)
+    # testpath = 'benchmarks/mine/benchfuncs_typpete.py'
+    finfo = run_infer_on_file(args.file)
     end_time = time.time()
     diff_time = end_time - start_time
-    cfg = get_cfg(testpath, makepng=False)
+    cfg = get_cfg(args.file, makepng=False)
     delim = '---------------------------------'
     to_print = ''
     for fname, info in finfo.items():
-        nodes = info['mfp_in'].keys()
-        to_print += f'{delim}\n{fname} program points\n{delim}\n'
-        for nodeid in nodes:
-            to_print += f'{nodeid} : {{\n'
-            to_print += f'\tinput: {info['mfp_in'][nodeid]}\n\n'
-            to_print += f'\toutput: {info['mfp_in'][nodeid]}\n'
-            to_print += f'}}\n'
-        to_print += '\n'
-        # pprint_set(info['final_state'])
+        if args.verbose:
+            nodes = info['mfp_in'].keys()
+            to_print += f'{delim}\n{fname} program points\n{delim}\n'
+            for nodeid in nodes:
+                to_print += f'{nodeid} : {{\n'
+                to_print += f'\tinput: {info['mfp_in'][nodeid]}\n\n'
+                to_print += f'\toutput: {info['mfp_out'][nodeid]}\n'
+                to_print += f'}}\n'
+            to_print += '\n'
         to_print += f'{delim}\n{fname} specs\n{delim}\n'
         specset = stateset_as_spec(info['final_state'], cfg, fname)
         to_print += pprint_set(specset)
         to_print += '\n\n'
     to_print += f'Time: {diff_time:4f}s'
-    open('spytype.out', 'w').write(to_print)
+    open(outpath, 'w').write(to_print)
