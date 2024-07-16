@@ -6,6 +6,10 @@ This is a research project that aims to create specifications for Python functio
 
 This project is a work in progress and the name SpyType has been chosen as a tribute to a very good and well-established type inference solution, namely Pytype (https://google.github.io/pytype/)
 
+Worthy mentions:
+- Mopsa Static Analyzer (shout-out to Raphael Monat for `mopsa-python-types`): https://gitlab.com/mopsa/mopsa-analyzer
+- Typpete: https://github.com/caterinaurban/typpete
+
 # Quickstart
 ```
 simple_inference.py [-h] -f FILE -o OUTPUT [-v]
