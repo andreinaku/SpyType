@@ -6,7 +6,7 @@ from crackedcfg import CFG, CFGBuilder
 from crackedcfg.builder import NameReplacer
 from statev2.basetype import *
 from statev2.transfer import *
-import type_inference.worklist as worklist
+import worklist as worklist
 
 
 class NameVisitor(ast.NodeVisitor):
