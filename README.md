@@ -2,6 +2,7 @@
 This is a research project that aims to create specifications for Python functions. Inference is done using the following:
 * a set of stubs snapshotted from the Typeshed project (https://github.com/python/typeshed) - found in the path `sheds/builtins.pyi` of the current project
 * the Maude language for rewriting logic (https://maude.cs.illinois.edu/wiki/The_Maude_System) and the Python Language Bindings for Maude (https://github.com/fadoss/maude-bindings)
+* `model.py`, `builder.py` and `__init__.py` from the Staticfg project (https://github.com/coetaur0/staticfg/tree/master) - to build the control flow graph and add extra metadata to it
 
 # Quickstart
 ```
