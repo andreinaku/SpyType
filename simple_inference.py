@@ -77,20 +77,6 @@ def unique_names(func_ast: ast.AST, param_list: list):
 
 
 def get_variable_names(node):
-    # variable_names = []
-    # # Check if the node is a variable definition
-    # if isinstance(node, ast.Assign):
-    #     # Get the name of the variable
-    #     for target in node.targets:
-    #         if not isinstance(target, ast.Name):
-    #             continue
-    #         variable_names.append(target.id)
-    #     return variable_names
-    # # Recursively search for variable definitions in child nodes
-    # for child_node in ast.iter_child_nodes(node):
-    #     if not isinstance(child_node, ast.FunctionDef) and not isinstance(child_node, ast.ClassDef):
-    #         variable_names += get_variable_names(child_node)
-    # return variable_names
     nv = NameVisitor()
     nv.visit(node)
     return nv.get_names()
@@ -132,15 +118,6 @@ def run_infer_on_file(filepath):
         func_cfg = get_func_cfg(cfg, funcname, True)
         final_id = func_cfg.finalblocks[0].id
         func_info[funcname]['final_state'] = func_info[funcname]['mfp_out'][final_id]
-        # print('---------------')
-        # print('MFP in' + os.linesep + '---------------')
-        # for id, ss in mfp_in.items():
-        #     print(f'{id}: {ss}')
-        # print('---------------')
-        # print('MFP out' + os.linesep + '---------------')
-        # for id, ss in mfp_out.items():
-        #     print(f'{id}: {ss}')
-        # print('---------------')
     return func_info
 
 
@@ -186,9 +163,9 @@ def pprint_set(seth):
 if __name__ == "__main__":
     # arguments
     parser = argparse.ArgumentParser(description='A POC for Python function type inference using Maude solver.')
-    parser.add_argument('-f', '--file', type=str, required=True, help='Path to the input file')
-    parser.add_argument('-o', '--output', type=str, required=True, help='Path to the output file')
-    parser.add_argument('-v', '--verbose', type=bool, default=False, required=False, help='Path to the output file')
+    parser.add_argument('-f', '--file', type=str, required=True, help='Input file containing Python functions')
+    parser.add_argument('-o', '--output', type=str, required=True, help='Path to the output file for writing results')
+    parser.add_argument('-v', '--verbose', type=bool, default=False, required=False, help='Show MFP info in every program point')
     args = parser.parse_args()
     #
     outpath = args.output
