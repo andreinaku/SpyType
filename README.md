@@ -4,6 +4,8 @@ This is a research project that aims to create specifications for Python functio
 * the Maude language for rewriting logic (https://maude.cs.illinois.edu/wiki/The_Maude_System) and the Python Language Bindings for Maude (https://github.com/fadoss/maude-bindings)
 * `model.py`, `builder.py` and `__init__.py` from the Staticfg project (https://github.com/coetaur0/staticfg/tree/master) - to build the control flow graph and add extra metadata to it
 
+This project is a work in progress and the name SpyType has been chosen as a tribute to a very good and well-established type inference solution, namely Pytype (https://google.github.io/pytype/)
+
 # Quickstart
 ```
 simple_inference.py [-h] -f FILE -o OUTPUT [-v]
