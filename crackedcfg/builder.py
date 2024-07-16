@@ -568,7 +568,7 @@ class CFGBuilder(ast.NodeVisitor):
         if not self.current_block.exits:
             # Did not encounter a break statement, loop back
             # psf: neeeeee, just get outta here
-            self.add_exit(self.current_block, afterwhile_block)
+            # self.add_exit(self.current_block, afterwhile_block)
             # todo: check this
             self.add_exit(self.current_block, loop_guard)
 
@@ -599,8 +599,9 @@ class CFGBuilder(ast.NodeVisitor):
             self.visit(child)
         if not self.current_block.exits:
             # Did not encounter a break
-            # psf: neeeee, just get outta here
-            self.add_exit(self.current_block, afterfor_block)
+            # # psf: neeeee, just get outta here
+            # self.add_exit(self.current_block, afterfor_block)
+            self.add_exit(self.current_block, loop_guard)
 
         # Continue building the CFG in the after-for block.
         self.current_block = afterfor_block

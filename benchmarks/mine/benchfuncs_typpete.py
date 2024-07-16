@@ -12,6 +12,19 @@ def if_1(x, y):
     return a >> 2
 
 
+def if_2(x, y):
+    if (x >> 2) >= (y << 2):
+        return y << x
+    return y
+
+
+def while_1(x):
+    L = []
+    while x >> 2:
+        L.append(x % 2)
+    return L     
+
+
 def assign_1(c):
     a, b = c
     aux = a >> b

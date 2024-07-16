@@ -1,4 +1,4 @@
-from ast import Assign, For, If, Subscript, While
+from ast import Assign, Compare, For, If, Subscript, While
 from typing import Any
 from statev2.basetype import *
 from united_specs import op_equiv, unitedspecs
@@ -380,10 +380,11 @@ class TransferFunc(ast.NodeVisitor):
         self.state_set = deepcopy(new_set)
 
     def visit_While(self, node: While):
-        pass
+        self.generic_visit(node)
 
     def visit_If(self, node: If):
-        pass
+        # self.visit(node.test)
+        self.generic_visit(node)
 
     def visit_Subscript(self, node: ast.Subscript):
         subscript_expr = tosrc(node)
