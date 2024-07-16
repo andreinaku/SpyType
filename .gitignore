@@ -176,3 +176,4 @@ statev2/united_specs.py
 statev2/tempmod.maude
 merges.txt
 tempmod.maude
+inferfunc_*

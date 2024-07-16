@@ -52,7 +52,7 @@ def build_func_cfg(func_name, func_ast, param_list, makepng=True):
         add_pass=False
     )
     if makepng:
-        func_cfg.build_visual('func.png', 'png')
+        func_cfg.build_visual(f'inferfunc_{func_name}', 'png')
     return func_cfg
 
 
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='A POC for Python function type inference using Maude solver.')
     parser.add_argument('-f', '--file', type=str, required=True, help='Input file containing Python functions')
     parser.add_argument('-o', '--output', type=str, required=True, help='Path to the output file for writing results')
-    parser.add_argument('-v', '--verbose', type=bool, default=False, required=False, help='Show MFP info in every program point')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Show information in every CFG node (inferfunc_* images)')
     args = parser.parse_args()
     #
     outpath = args.output
