@@ -12,13 +12,16 @@ Worthy mentions:
 
 # Quickstart
 ```
-simple_inference.py [-h] -f FILE -o OUTPUT [-v]
+simple_inference.py [-h] -i INPUT [-f [FUNCTIONS ...]] -o OUTPUT [-v]
 
 A POC for Python function type inference using Maude solver.
 
 options:
   -h, --help            show this help message and exit
-  -f FILE, --file FILE  Input file containing Python functions
+  -i INPUT, --input INPUT
+                        Input file containing Python functions
+  -f [FUNCTIONS ...], --functions [FUNCTIONS ...]
+                        Optional list of functions to be inferred. If this is omitted, then all functions from the input file are inferred
   -o OUTPUT, --output OUTPUT
                         Path to the output file for writing results
   -v, --verbose         Show information in every CFG node (inferfunc_* images)
@@ -31,8 +34,13 @@ python pyiparser_2.py
 ```
 This creates the `united_specs.py` file by translating the stubs into SpyType's internal specification format. Also, some specifications are added that are used for parsing AST nodes from functions.
 
-# Simple example:
+# Simple Usage Examples:
 ```
-python simple_inference.py -f benchmarks\mine\benchfuncs_typpete.py -o results.out
+python simple_inference.py -i benchmarks\mine\benchfuncs.py -o spytype.out
 ```
-This will write the inferred specifications for every function in the `benchfuncs_typpete.py` file.
+This will write the inferred specifications for every function in the `benchfuncs.py` file into `spytype.out`.
+
+```
+python simple_inference.py -i benchmarks\mine\benchfuncs.py -f try_1 -o spytype.out
+```
+This will write the inferred specifications for the function named `try_1` from the `benchfuncs.py` file into `spytype.out`.
