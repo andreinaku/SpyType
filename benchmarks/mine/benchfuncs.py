@@ -1,12 +1,36 @@
-import random
+import time
+
+
+rand_cond = (time.time() % 1) >= 0.5
 
 
 def if_1(x, y):
-    if random.randint(0, 10) < 5:
+    if rand_cond:
         a = x
     else:
         a = y
     return a >> 2
+
+
+def if_2(x, y):
+    if (x >> 2) >= (y << 2):
+        return y << x
+    return y
+
+
+def try_1(x):
+    try:
+        aux = x[0]
+    except:
+        aux = 0
+    return aux
+
+
+def while_1(x):
+    L = []
+    while x >> 2:
+        L.append(x % 2)
+    return L     
 
 
 def assign_1(c):
@@ -27,15 +51,15 @@ def append_1(a):
 
 
 def append_2(a):
-    while True:
+    while rand_cond:
         a.append(3)
     return None
 
 
 def append_3():
     a = []
-    while random.randint(0, 10) < 5:
-        if random.randint(0, 10) < 5:
+    while rand_cond:
+        if rand_cond:
             a.append(3)
         else:
             a.append('3')
@@ -57,13 +81,5 @@ def for_2(x, y):
     return bar
 
 
-# if __name__ == '__main__':
 x1 = if_1(2, 3.5)
-# x2 = assign_1([2, 3])
-# x3 = add_1(4.5)
-# x4 = append_1([5])
-# # x5 = append_2(['5'])
-# x6 = append_3()
-# x7 = for_1(2, 3)
-# x8 = for_2(2, [3, 4])
 print('done')

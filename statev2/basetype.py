@@ -351,10 +351,6 @@ class Basetype(hset):
     
     def __or__(self, value: Basetype) -> Basetype:
         return Basetype.lub(self, value)
-    
-    # def add(self, element):
-    #     super().add(element)
-    #     self.flatten()
 
     def flatten(self) -> Basetype:
         if self == Basetype({PyType(BottomType)}):
@@ -364,35 +360,6 @@ class Basetype(hset):
            new_bt = Basetype.lub(new_bt, Basetype({atom}))
         self.clear()
         self.update(new_bt)
-
-    # def superadd(self, element):
-    #     super().add(element)
-
-    # def add(self, element: PyType | VarType):
-    #     new_bt = Basetype()
-    #     if not isinstance(element, GenericType):
-    #         raise RuntimeError(f'What is this {element} you are trying to add to {self}?')
-    #     if isinstance(element, VarType):
-    #         new_bt.superadd(deepcopy(element))
-    #     else:
-    #         if element.keys is None:
-    #             # new_bt.add(deepcopy(element))
-    #             new_bt.superadd(deepcopy(element))
-    #         else:
-    #             found = False
-    #             for atom in self:
-    #                 if atom.ptype == element.ptype:
-    #                     found = True
-    #                     new_atom = PyType(atom.ptype)
-    #                     new_atom.keys = Basetype.lub(atom.keys, element.keys)
-    #                     if element.values is not None:
-    #                         new_atom.values = Basetype.lub(atom.values, element.values)
-    #                     new_bt.superadd(new_atom)
-    #                 if found:
-    #                     break
-    #             if not found:
-    #                 new_bt.superadd(deepcopy(element))
-    #     self = new_bt
     
     @classmethod
     def lub(cls, bt1: Basetype, bt2: Basetype) -> Basetype:
@@ -413,7 +380,10 @@ class Basetype(hset):
                     same_container = True
                     break
             if same_container:
-                new_atom = PyType(atom1.ptype, cls.lub(atom1.keys, atom2.keys))
+                if atom1.values is None:
+                    new_atom = PyType(atom1.ptype, cls.lub(atom1.keys, atom2.keys))
+                else:
+                    new_atom = PyType(atom1.ptype, cls.lub(atom1.keys, atom2.keys), cls.lub(atom1.values, atom2.values))
                 new_basetype.add(deepcopy(new_atom))
                 already_added.add(atom2)
             else:

@@ -106,14 +106,13 @@ def run_infer(filename, funcname):
     return run_infer_on_func(cfg, funcname)
 
 
-def run_infer_on_file(filepath):
+def run_infer_on_file(filepath, funclist=None):
     cfg = get_cfg(filepath, makepng=False)
     func_info = dict()    
     for funcname in cfg.func_asts:
+        if funclist is not None and funcname not in funclist:
+            continue
         func_info[funcname] = dict()
-        # print('---------------')
-        # print(funcname)
-        # print('---------------')
         func_info[funcname]['mfp_in'], func_info[funcname]['mfp_out'] = run_infer_on_func(cfg, funcname)
         func_cfg = get_func_cfg(cfg, funcname, True)
         final_id = func_cfg.finalblocks[0].id
@@ -163,7 +162,8 @@ def pprint_set(seth):
 if __name__ == "__main__":
     # arguments
     parser = argparse.ArgumentParser(description='A POC for Python function type inference using Maude solver.')
-    parser.add_argument('-f', '--file', type=str, required=True, help='Input file containing Python functions')
+    parser.add_argument('-i', '--input', type=str, required=True, help='Input file containing Python functions')
+    parser.add_argument('-f', '--functions', nargs='*', type=str, help='Optional list of functions to be inferred. If this is omitted, then all functions from the input file are inferred')
     parser.add_argument('-o', '--output', type=str, required=True, help='Path to the output file for writing results')
     parser.add_argument('-v', '--verbose', action='store_true', help='Show information in every CFG node (inferfunc_* images)')
     args = parser.parse_args()
@@ -171,10 +171,10 @@ if __name__ == "__main__":
     outpath = args.output
     start_time = time.time()
     # testpath = 'benchmarks/mine/benchfuncs_typpete.py'
-    finfo = run_infer_on_file(args.file)
+    finfo = run_infer_on_file(args.input, args.functions)
     end_time = time.time()
     diff_time = end_time - start_time
-    cfg = get_cfg(args.file, makepng=False)
+    cfg = get_cfg(args.input, makepng=False)
     delim = '---------------------------------'
     to_print = ''
     for fname, info in finfo.items():

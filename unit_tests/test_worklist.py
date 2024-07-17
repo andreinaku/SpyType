@@ -1,5 +1,5 @@
 from testbase import *
-from type_inference.simple_inference import *
+from simple_inference import *
 
 
 def pprint_mfp(mfp_in, mfp_out):
@@ -11,7 +11,7 @@ def pprint_mfp(mfp_in, mfp_out):
         print(f'\t{id}: {ss}')
 
 
-sourcepath = 'benchmarks/mine/benchfuncs_typpete.py'
+sourcepath = 'benchmarks/mine/benchfuncs.py'
 
 
 class WorklistTestCases(unittest.TestCase):
@@ -56,3 +56,6 @@ class WorklistTestCases(unittest.TestCase):
         mfp_in, mfp_out = run_infer(sourcepath, 'while_1')
         pprint_mfp(mfp_in, mfp_out)
  
+    def test_10(self):
+        mfp_in, mfp_out = run_infer(sourcepath, 'try_1')
+        pprint_mfp(mfp_in, mfp_out)
