@@ -39,15 +39,15 @@ This creates the `united_specs.py` file by translating the stubs into SpyType's 
 
 ## Example 1
 ```
-python simple_inference.py -i benchmarks\mine\benchfuncs.py -f for_1 -o spytype.out
+python simple_inference.py -i benchmarks\mine\benchfuncs.py -f while_1 -o spytype.out
 ```
-This will write the inferred specifications for the function named `for_1` from the `benchfuncs.py` file into `spytype.out`. The output has the following form:
+This will write the inferred specifications for the function named `while_1` from the `benchfuncs.py` file into `spytype.out`. The output has the following form:
 ```
 ---------------------------------
-for_1 specs
+while_1 specs
 ---------------------------------
-for_1 : {
-	((x:int /\ y:T2 + int) -> (return:list < int >)),
+while_1 : {
+	((x:int) -> (return:list < int >)),
 }
 ```
 
