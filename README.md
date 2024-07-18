@@ -1,5 +1,5 @@
 # SpyType - Simple Python Function Type Specification Generator
-This is a research project that aims to create specifications for Python functions. Inference is done using the following:
+SpyType is a research project that aims to create specifications for Python functions. Inference is done using the following:
 * a set of stubs snapshotted from the Typeshed project (https://github.com/python/typeshed) - found in the path `sheds/builtins.pyi` of the current project
 * the Maude language for rewriting logic (https://maude.cs.illinois.edu/wiki/The_Maude_System) and the Python Language Bindings for Maude (https://github.com/fadoss/maude-bindings)
 * `model.py`, `builder.py` and `__init__.py` from the Staticfg project (https://github.com/coetaur0/staticfg/tree/master) - to build the control flow graph and add extra metadata to it
@@ -11,8 +11,9 @@ Worthy mentions:
 - Typpete: https://github.com/caterinaurban/typpete
 
 # Quickstart
+SpyType has been tested on Python 3.11 and Python 3.12. The recommended way to use this is to create a virtual environment and install the required libraries using the `requirements.txt` file. To use the tool, use the following command line:
 ```
-simple_inference.py [-h] -i INPUT [-f [FUNCTIONS ...]] -o OUTPUT [-v]
+python simple_inference.py [-h] -i INPUT [-f [FUNCTIONS ...]] -o OUTPUT [-v]
 
 A POC for Python function type inference using Maude solver.
 
