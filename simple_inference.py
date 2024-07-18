@@ -183,8 +183,8 @@ if __name__ == "__main__":
             to_print += f'{delim}\n{fname} program points\n{delim}\n'
             for nodeid in nodes:
                 to_print += f'{nodeid} : {{\n'
-                to_print += f'\tinput: {info['mfp_in'][nodeid]}\n\n'
-                to_print += f'\toutput: {info['mfp_out'][nodeid]}\n'
+                to_print += f'\tinput: {info["mfp_in"][nodeid]}\n\n'
+                to_print += f'\toutput: {info["mfp_out"][nodeid]}\n'
                 to_print += f'}}\n'
             to_print += '\n'
         to_print += f'{delim}\n{fname} specs\n{delim}\n'
