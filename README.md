@@ -36,12 +36,23 @@ python pyiparser_2.py
 This creates the `united_specs.py` file by translating the stubs into SpyType's internal specification format. Also, some specifications are added that are used for parsing AST nodes from functions.
 
 # Simple Usage Examples:
+
+## Example 1
+```
+python simple_inference.py -i benchmarks\mine\benchfuncs.py -f for_1 -o spytype.out
+```
+This will write the inferred specifications for the function named `for_1` from the `benchfuncs.py` file into `spytype.out`. The output has the following form:
+```
+---------------------------------
+for_1 specs
+---------------------------------
+for_1 : {
+	((x:int /\ y:T2 + int) -> (return:list < int >)),
+}
+```
+
+## Example 2
 ```
 python simple_inference.py -i benchmarks\mine\benchfuncs.py -o spytype.out
 ```
 This will write the inferred specifications for every function in the `benchfuncs.py` file into `spytype.out`.
-
-```
-python simple_inference.py -i benchmarks\mine\benchfuncs.py -f try_1 -o spytype.out
-```
-This will write the inferred specifications for the function named `try_1` from the `benchfuncs.py` file into `spytype.out`.
