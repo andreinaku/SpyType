@@ -56,6 +56,12 @@ def append_2(a):
     return None
 
 
+def append_2_if(a):
+    if rand_cond:
+        a.append(3)
+    return None
+
+
 def append_3():
     a = []
     while rand_cond:
@@ -79,8 +85,3 @@ def for_2(x, y):
     for foo in y:
         bar = bar + (foo >> 2)
     return bar
-
-
-x1 = while_1(2)
-x2 = append_2(['2'])
-print('done')
