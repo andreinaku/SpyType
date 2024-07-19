@@ -81,5 +81,6 @@ def for_2(x, y):
     return bar
 
 
-x1 = if_1(2, 3.5)
+x1 = while_1(2)
+x2 = append_2(['2'])
 print('done')
