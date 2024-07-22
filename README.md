@@ -39,9 +39,9 @@ This creates the `united_specs.py` file by translating the stubs into SpyType's 
 
 ## Example 1
 ```
-python spytype.py -i benchmarks\mine\benchfuncs.py -f while_1 -o spytype.out
+python spytype.py -i benchmarks\mine\benchfuncs.py -f while_1 -o while_1.spytype
 ```
-This will write the inferred specifications for the function named `while_1` from the `benchfuncs.py` file into `spytype.out`. The output has the following form:
+This will write the inferred specifications for the function named `while_1` from the `benchfuncs.py` file into `while_1.spytype`. The output has the following form:
 ```
 ---------------------------------
 while_1 specs
@@ -53,6 +53,6 @@ while_1 : {
 
 ## Example 2
 ```
-python spytype.py -i benchmarks\mine\benchfuncs.py -o spytype.out
+python spytype.py -i benchmarks\mine\benchfuncs.py -o benchfuncs.spytype
 ```
-This will write the inferred specifications for every function in the `benchfuncs.py` file into `spytype.out`.
+This will write the inferred specifications for every function in the `benchfuncs.py` file into `benchfuncs.spytype`.
