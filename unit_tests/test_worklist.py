@@ -1,5 +1,5 @@
 from testbase import *
-from simple_inference import *
+from spytype import *
 
 
 def pprint_mfp(mfp_in, mfp_out):

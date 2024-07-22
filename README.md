@@ -13,7 +13,7 @@ Worthy mentions:
 # Quickstart
 SpyType has been tested on Python 3.11 and Python 3.12. The recommended way to use this is to create a virtual environment and install the required libraries using the `requirements.txt` file. To use the tool, use the following command line:
 ```
-python simple_inference.py [-h] -i INPUT [-f [FUNCTIONS ...]] -o OUTPUT [-v]
+python spytype.py [-h] -i INPUT [-f [FUNCTIONS ...]] -o OUTPUT [-v]
 
 A POC for Python function type inference using Maude solver.
 
@@ -39,7 +39,7 @@ This creates the `united_specs.py` file by translating the stubs into SpyType's 
 
 ## Example 1
 ```
-python simple_inference.py -i benchmarks\mine\benchfuncs.py -f while_1 -o spytype.out
+python spytype.py -i benchmarks\mine\benchfuncs.py -f while_1 -o spytype.out
 ```
 This will write the inferred specifications for the function named `while_1` from the `benchfuncs.py` file into `spytype.out`. The output has the following form:
 ```
@@ -53,6 +53,6 @@ while_1 : {
 
 ## Example 2
 ```
-python simple_inference.py -i benchmarks\mine\benchfuncs.py -o spytype.out
+python spytype.py -i benchmarks\mine\benchfuncs.py -o spytype.out
 ```
 This will write the inferred specifications for every function in the `benchfuncs.py` file into `spytype.out`.

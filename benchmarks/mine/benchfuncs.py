@@ -28,9 +28,11 @@ def try_1(x):
 
 def while_1(x):
     L = []
-    while x >> 2:
-        L.append(x % 2)
-    return L     
+    y = x
+    while y:
+        L.append(y % 2)
+        y = y >> 1
+    return L
 
 
 def assign_1(c):
@@ -51,12 +53,6 @@ def append_1(a):
 
 
 def append_2(a):
-    while rand_cond:
-        a.append(3)
-    return None
-
-
-def append_2_if(a):
     if rand_cond:
         a.append(3)
     return None

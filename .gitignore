@@ -177,3 +177,6 @@ statev2/tempmod.maude
 merges.txt
 tempmod.maude
 inferfunc_*
+benchmarks/mine/mopsa_test_1.py
+benchfuncs.spytype
+*.spytype
