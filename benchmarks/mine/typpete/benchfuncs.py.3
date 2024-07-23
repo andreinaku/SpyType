@@ -1,0 +1,72 @@
+
+from typing import Tuple, List
+import time
+rand_cond: bool = ((time.time() % 1) >= 0.5)
+
+def if_1(x: None, y: int) -> int:
+    if rand_cond:
+        a: int = x
+    else:
+        a: int = y
+    return (a >> 2)
+
+def if_2(x: int, y: float) -> float:
+    if ((x >> 2) >= (y << 2)):
+        return (y << x)
+    return y
+
+def try_1(x: Tuple[None]) -> int:
+    try:
+        aux: int = x[0]
+    except:
+        aux: int = 0
+    return aux
+
+def while_1(x: float) -> List[complex]:
+    L: List[complex] = []
+    y: float = x
+    while y:
+        L.append((y % 2))
+        y: float = (y >> 1)
+    return L
+
+def assign_1(c: None) -> complex:
+    (a, b) = c
+    aux: complex = (a >> b)
+    return aux
+
+def add_1(a: float) -> object:
+    b: object = (a + 3.5)
+    return b
+
+def append_1(a: None) -> int:
+    for i in range(0, a[0]):
+        a.append('x')
+    return len(a)
+
+def append_2(a: List[object]) -> None:
+    if rand_cond:
+        a.append(3)
+    return None
+
+def append_3() -> object:
+    a: List[object] = []
+    while rand_cond:
+        if rand_cond:
+            a.append(3)
+        else:
+            a.append('3')
+    return a[0]
+
+def for_1(x: int, y: int) -> List[int]:
+    a: List[int] = []
+    for foo in range(x):
+        bar: int = (foo >> y)
+        a.append(bar)
+    return a
+
+def for_2(x: int, y: List[None]) -> complex:
+    bar: complex = x
+    for foo in y:
+        bar: complex = (bar + (foo >> 2))
+    return bar
