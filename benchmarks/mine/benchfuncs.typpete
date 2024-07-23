@@ -1,16 +1,16 @@
 
-from typing import Tuple, List
+from typing import List, Tuple
 import time
 rand_cond: bool = ((time.time() % 1) >= 0.5)
 
-def if_1(x: None, y: int) -> int:
+def if_1(x: int, y: int) -> int:
     if rand_cond:
-        a: bool = x
+        a: int = x
     else:
         a: int = y
     return (a >> 2)
 
-def if_2(x: int, y: float) -> float:
+def if_2(x: int, y: int) -> int:
     if ((x >> 2) >= (y << 2)):
         return (y << x)
     return y
@@ -22,21 +22,21 @@ def try_1(x: Tuple[None]) -> int:
         aux: int = 0
     return aux
 
-def while_1(x: float) -> List[float]:
-    L: List[float] = []
-    y: float = x
+def while_1(x: int) -> List[int]:
+    L: List[int] = []
+    y: int = x
     while y:
         L.append((y % 2))
-        y: float = (y >> 1)
+        y: int = (y >> 1)
     return L
 
-def assign_1(c: None) -> float:
+def assign_1(c: None) -> object:
     (a, b) = c
-    aux: float = (a >> b)
+    aux: object = (a >> b)
     return aux
 
-def add_1(a: float) -> object:
-    b: object = (a + 3.5)
+def add_1(a: complex) -> complex:
+    b: complex = (a + 3.5)
     return b
 
 def append_1(a: None) -> int:
@@ -44,7 +44,7 @@ def append_1(a: None) -> int:
         a.append('x')
     return len(a)
 
-def append_2(a: List[float]) -> None:
+def append_2(a: List[int]) -> None:
     if rand_cond:
         a.append(3)
     return None
@@ -58,15 +58,15 @@ def append_3() -> object:
             a.append('3')
     return a[0]
 
-def for_1(x: int, y: int) -> List[float]:
-    a: List[float] = []
+def for_1(x: int, y: int) -> List[object]:
+    a: List[object] = []
     for foo in range(x):
-        bar: int = (foo >> y)
+        bar: object = (foo >> y)
         a.append(bar)
     return a
 
-def for_2(x: None, y: List[None]) -> float:
-    bar: float = x
+def for_2(x: None, y: List[int]) -> int:
+    bar: int = x
     for foo in y:
-        bar: float = (bar + (foo >> 2))
+        bar: int = (bar + (foo >> 2))
     return bar
