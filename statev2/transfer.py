@@ -296,47 +296,68 @@ class TransferFunc(ast.NodeVisitor):
                     # spec with sequential assigns
                     call_list = []
                     new_expr_set = set()
+
+                    # new start
                     for elem in target.elts:
                         new_call = ast.Call(ast.Name(id='seqassign'), [elem, node.value], [])
-                        new_expr_set.add(tosrc(elem))
-                        call_list.append(new_call)
-                    current_ss = StateSet()
-                    for state in self.state_set:
-                        current_state = deepcopy(state)
-                        for new_expr in new_expr_set:
-                            current_state.assignment[new_expr] = BOTTOM_BT
-                        current_ss.add(deepcopy(current_state))
-                    new_ss = StateSet()
-                    for current_state in current_ss:
-                        current_id = 1
-                        to_lub = []
-                        call_elem: ast.Call
-                        for call_elem in call_list:
-                            call_elem_src = tosrc(call_elem)
-                            expr_src = tosrc(call_elem.args[0])
-                            current_id = max(current_id, current_state.gen_id)
-                            current_state.gen_id = current_id
-                            interim_specset = substitute_state_arguments(call_elem)
-                            interim_lub = []
-                            for interim_spec in interim_specset:
-                                use_state = deepcopy(current_state)
-                                use_state.assignment[expr_src] = TOP_BT
-                                new_st = state_apply_spec(use_state, interim_spec)
-                                if new_st == BottomState():
-                                    continue
-                                current_id = max(current_id, new_st.gen_id)
-                                del new_st.assignment[call_elem_src]
-                                interim_lub.append(deepcopy(new_st))
-                            interim_lubbed = State()
-                            for interim_lub_elem in interim_lub:
-                                interim_lubbed = State.lub(interim_lubbed, interim_lub_elem)
-                            to_lub.append(deepcopy(interim_lubbed))
-                        lubbed = State()
-                        for lub_elem in to_lub:
-                            lubbed = State.lub(lubbed, lub_elem)
-                        new_ss.add(deepcopy(lubbed))
-                    self.state_set = deepcopy(new_ss)
-                    #
+                        call_expr = tosrc(new_call)
+                        target_src = tosrc(elem)
+                        use_stateset = StateSet()
+                        for state in self.state_set:
+                            new_state = deepcopy(state)
+                            new_state.assignment[target_src] = TOP_BT
+                            use_stateset.add(deepcopy(new_state))
+                        # new_transfer = TransferFunc(use_stateset)
+                        # new_transfer.visit(new_call)
+                        # aux = new_transfer.state_set
+                        # aux = aux.remove_expr_from_assign(call_expr)
+                        self.state_set = deepcopy(use_stateset)
+                        self.visit(new_call)
+                        self.state_set = self.state_set.remove_expr_from_assign(call_expr)
+                    # new end
+
+                    # old start
+                    # for elem in target.elts:
+                    #     new_call = ast.Call(ast.Name(id='seqassign'), [elem, node.value], [])
+                    #     new_expr_set.add(tosrc(elem))
+                    #     call_list.append(new_call)
+                    # current_ss = StateSet()
+                    # for state in self.state_set:
+                    #     current_state = deepcopy(state)
+                    #     for new_expr in new_expr_set:
+                    #         current_state.assignment[new_expr] = BOTTOM_BT
+                    #     current_ss.add(deepcopy(current_state))
+                    # new_ss = StateSet()
+                    # for current_state in current_ss:
+                    #     current_id = 1
+                    #     to_lub = []
+                    #     call_elem: ast.Call
+                    #     for call_elem in call_list:
+                    #         call_elem_src = tosrc(call_elem)
+                    #         expr_src = tosrc(call_elem.args[0])
+                    #         current_id = max(current_id, current_state.gen_id)
+                    #         current_state.gen_id = current_id
+                    #         interim_specset = substitute_state_arguments(call_elem)
+                    #         interim_lub = []
+                    #         for interim_spec in interim_specset:
+                    #             use_state = deepcopy(current_state)
+                    #             use_state.assignment[expr_src] = TOP_BT
+                    #             new_st = state_apply_spec(use_state, interim_spec)
+                    #             if new_st == BottomState():
+                    #                 continue
+                    #             current_id = max(current_id, new_st.gen_id)
+                    #             del new_st.assignment[call_elem_src]
+                    #             interim_lub.append(deepcopy(new_st))
+                    #         interim_lubbed = State()
+                    #         for interim_lub_elem in interim_lub:
+                    #             interim_lubbed = State.lub(interim_lubbed, interim_lub_elem)
+                    #         to_lub.append(deepcopy(interim_lubbed))
+                    #     lubbed = State()
+                    #     for lub_elem in to_lub:
+                    #         lubbed = State.lub(lubbed, lub_elem)
+                    #     new_ss.add(deepcopy(lubbed))
+                    # self.state_set = deepcopy(new_ss)
+                    # old end
                 else:
                     if len(target.elts) != len(node.value.elts):
                         raise RuntimeError(f'Assignment {tosrc(node)} has operands of different lengths')
