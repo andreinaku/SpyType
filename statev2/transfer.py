@@ -401,10 +401,12 @@ class TransferFunc(ast.NodeVisitor):
         self.state_set = deepcopy(new_set)
 
     def visit_While(self, node: While):
-        self.generic_visit(node)
+        self.visit(node.test)
+        # self.generic_visit(node)
 
     def visit_If(self, node: If):
-        self.generic_visit(node)
+        self.visit(node.test)
+        # self.generic_visit(node)
 
     def visit_Subscript(self, node: ast.Subscript):
         subscript_expr = tosrc(node)
