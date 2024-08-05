@@ -120,8 +120,12 @@ def run_infer_on_file(filepath, funclist=None):
     return func_info
 
 
-def state_as_spec(st: State, params: list[str]):
+def state_as_spec(_st: State, params: list[str], reduce_type):
     spec = FuncSpec()
+    st = _st.vartypes_to_spectypes()
+    #
+    st = st.reduce_state(reduce_type)
+    # 
     for expr, bt in st.assignment.items():
         if expr not in params:
             continue
@@ -141,12 +145,12 @@ def states_lub(ss: StateSet) -> StateSet:
     return StateSet({new_state})
 
 
-def stateset_as_spec(_ss: StateSet, cfg: CFG, fname: str):
+def stateset_as_spec(_ss: StateSet, cfg: CFG, fname: str, reduce_type):
     newset = set()
     func_cfg = get_func_cfg(cfg, fname, makepng=False)
     ss = states_lub(_ss)
     for st in ss:
-        spec = state_as_spec(st, func_cfg.params)
+        spec = state_as_spec(st, func_cfg.params, reduce_type)
         newset.add(deepcopy(spec))
     return newset
 
@@ -166,8 +170,22 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--functions', nargs='*', type=str, help='Optional list of functions to be inferred. If this is omitted, then all functions from the input file are inferred')
     parser.add_argument('-o', '--output', type=str, required=True, help='Path to the output file for writing results')
     parser.add_argument('-v', '--verbose', action='store_true', help='Show information in every CFG node (inferfunc_* images)')
+    parser.add_argument(
+        '-r', '--reduce-type',
+        choices=['restrictive', 'generic', 'default'],
+        default='default',
+        help='(EXPERIMENTAL) Specify how types for function parameters are reduced. Choices are restrictive, generic, or default (default is chosen if this argument is omitted).'
+    )
     args = parser.parse_args()
     #
+    if args.reduce_type == 'restrictive':
+        reduce_type = ReduceTypes.RESTRICTIVE
+    elif args.reduce_type == 'generic':
+        reduce_type = ReduceTypes.GENERIC
+    elif args.reduce_type == 'default':
+        reduce_type = ReduceTypes.DEFAULT
+    else:
+        raise RuntimeError('Invalid reduce type')
     outpath = args.output
     start_time = time.time()
     # testpath = 'benchmarks/mine/benchfuncs_typpete.py'
@@ -182,13 +200,15 @@ if __name__ == "__main__":
             nodes = info['mfp_in'].keys()
             to_print += f'{delim}\n{fname} program points\n{delim}\n'
             for nodeid in nodes:
+                inlub = states_lub(info["mfp_in"][nodeid])
+                outlub = states_lub(info["mfp_out"][nodeid])
                 to_print += f'{nodeid} : {{\n'
-                to_print += f'\tinput: {info["mfp_in"][nodeid]}\n\n'
-                to_print += f'\toutput: {info["mfp_out"][nodeid]}\n'
+                to_print += f'\tinput: {info["mfp_in"][nodeid]} = {inlub}\n\n'
+                to_print += f'\toutput: {info["mfp_out"][nodeid]} = {outlub}\n'
                 to_print += f'}}\n'
             to_print += '\n'
         to_print += f'{delim}\n{fname} specs\n{delim}\n'
-        specset = stateset_as_spec(info['final_state'], cfg, fname)
+        specset = stateset_as_spec(info['final_state'], cfg, fname, reduce_type)
         to_print += pprint_set(specset)
         to_print += '\n\n'
     to_print += f'Time: {diff_time:4f}s'

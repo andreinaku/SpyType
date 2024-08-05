@@ -24,6 +24,12 @@ else:
 DEFAULT_SOLVER_OUT = os.getcwd() + os.sep + 'solver.out'
 
 
+class ReduceTypes:
+    DEFAULT = 1
+    RESTRICTIVE = 2
+    GENERIC = 3
+
+
 def get_all_solutions(solution_len: int, pairs: set[tuple[Any]], 
                       domain_1: set[Any], domain_2: set[Any]) -> set[tuple[tuple[VarType]]]:
     combis = list(itertools.combinations(pairs, solution_len))
@@ -86,6 +92,28 @@ def mod_generator(mod_name: str, constraints: str, dump_file: str | None  = None
     maude_code += (f': -> BoundVarType .{os.linesep}'
                     f'{spaces}op c : -> Disj .{os.linesep}'
                     f'{os.linesep}{spaces}eq c = {os.linesep}{constraints} .{os.linesep}'
+                    f'{os.linesep}'
+                    f'endm')
+    if dump_file is not None:
+        open(dump_file, 'w').write(maude_code)
+    return maude_code
+
+
+def mod_generator_for_spec(mod_name: str, str_state: str, dump_file: str | None  = None, indent: int = 2) -> str:
+    spaces = ' ' * indent
+    maude_code = (f'mod {mod_name} is {os.linesep}'
+                    f'{spaces}protecting REDUX .{os.linesep}'
+                    f'{spaces}ops ')
+    normals, specs = maude_vartype_generator()
+    for n in normals:
+        maude_code += f'{n} '
+    maude_code += (f': -> VarType .{os.linesep}'
+                    f'{spaces}ops ')
+    for s in specs:
+        maude_code += f'{s} '
+    maude_code += (f': -> BoundVarType .{os.linesep}'
+                    f'{spaces}op s : -> state .{os.linesep}'
+                    f'{os.linesep}{spaces}eq s = {os.linesep}{str_state} .{os.linesep}'
                     f'{os.linesep}'
                     f'endm')
     if dump_file is not None:
@@ -699,6 +727,16 @@ class Basetype(hset):
 
 
 class Assignment(hdict):
+
+    def str_for_maude(self):
+        if len(self.items()) == 0:
+            return ''
+        retstr = ''
+        for expr, btype in self.items():
+            retstr += f'"{expr}" : {btype} /\\ '
+        retstr = retstr[:-4]
+        return retstr
+
     def __str__(self):
         if len(self.items()) == 0:
             return ''
@@ -736,7 +774,7 @@ class Assignment(hdict):
         return new_assign
 
     @classmethod
-    def from_str(cls, input_str: str) -> Assignment:
+    def from_str(cls, input_str: str, reduced=False) -> Assignment:
         # (a:bt_a /\ b:bt_b /\ ...)
         assig = Assignment()
         to_translate = elim_paren(input_str)
@@ -744,6 +782,8 @@ class Assignment(hdict):
         for _str_entry in str_entries:
             str_entry = _str_entry.strip()
             expr, str_basetype = str_entry.split(':')
+            if reduced:
+                expr = expr.strip()[1:-1]
             assig[expr] = Basetype.from_str(str_basetype)
         return assig
 
@@ -1072,6 +1112,13 @@ class State:
             retstr = f'({self.assignment}) ^ ({self.constraints})'
         return retstr
 
+    def str_for_maude(self):
+        if len(self.constraints) == 0:
+            retstr = self.assignment.str_for_maude()
+        else:
+            retstr = f'({self.assignment.str_for_maude()}) ^ ({self.constraints})'
+        return retstr
+
     def __repr__(self):
         return self.__str__()
 
@@ -1095,7 +1142,7 @@ class State:
             self.gen_id = max(numeric_list) + 1
 
     @classmethod
-    def from_str(cls, input_str: str) -> State:
+    def from_str(cls, input_str: str, reduced=False) -> State:
         # (assignment ^ constraints)
         delimiter = '^'
         to_translate = elim_paren(input_str)
@@ -1106,7 +1153,7 @@ class State:
         else:
             (str_assignment, str_constraints) = to_translate.split(delimiter)
             (str_assignment, str_constraints) = (str_assignment.strip(), str_constraints.strip())
-        asgn = Assignment.from_str(str_assignment)
+        asgn = Assignment.from_str(str_assignment, reduced)
         if str_constraints is not None:
             constr = AndConstraints.from_str(str_constraints)
         else:
@@ -1193,6 +1240,51 @@ class State:
                 return True
         return False
 
+    def reduce_state(self, reduce_type, dump_file: str | None = None, ofile: str = DEFAULT_SOLVER_OUT) -> State:
+        strategy_str = ''
+        if reduce_type == ReduceTypes.DEFAULT:
+            return deepcopy(self)
+        elif reduce_type == ReduceTypes.RESTRICTIVE:
+            strategy_str = 'one(restrict) ! '
+        elif reduce_type == ReduceTypes.GENERIC:
+            strategy_str = 'one(generic) ! '
+        else:
+            raise RuntimeError(f'Invalid reduce type {reduce_type}')
+        maude.init(advise=False)
+        init_module = INIT_MAUDE_PATH
+        if not maude.load(init_module):
+            raise RuntimeError(f'Could not load {init_module}')
+        modulename = 'redmod'
+        red_module_name = 'REDUX'
+        red_module = maude.getModule(red_module_name)
+        if red_module is None:
+            raise RuntimeError(f'Could not get module {red_module}')
+        str_state = self.str_for_maude()
+        m_input = mod_generator_for_spec(modulename, str_state, dump_file)
+        if not maude.input(m_input):
+            raise RuntimeError('Maude input operation failed')
+        mod = maude.getModule(modulename)
+        if mod is None:
+            raise RuntimeError(f'Maude module {modulename} not found')
+        term_str = 's'
+        term = mod.parseTerm(term_str)
+        if term is None:
+            raise RuntimeError(f'Cannot parse term {term_str}')
+        strat = red_module.parseStrategy(strategy_str)
+        if not strat:
+            raise RuntimeError(f'Cannot parse strategy {strategy_str}')
+        srew = term.srewrite(strat)
+        if srew is None:
+            raise RuntimeError(f'Could not rewrite using {strategy_str}')
+        ret_res = []
+        for result, nrew in srew:
+            ret_res.append(result)
+        if len(ret_res) != 1:
+            raise RuntimeError(f'Cannot rewrite state {self}')
+        # print(ret_res[0])
+        new_state = State.from_str(f'({ret_res[0]})', True)
+        return new_state
+
     def solve_constraints(self, strategy_str: str = strat1, dump_file: str | None = None, 
                           ofile: str = DEFAULT_SOLVER_OUT) -> State:
         open(ofile, 'a').write(
@@ -1210,7 +1302,7 @@ class State:
         if len(self.constraints) == 0:
             return deepcopy(self)
         c_value = str(self.constraints.replace_superclasses())
-        m_input = mod_generator('tempmod', c_value, dump_file)
+        m_input = mod_generator(modulename, c_value, dump_file)
         if not maude.input(m_input):
             raise RuntimeError('Maude input operation failed')
         mod = maude.getModule(modulename)
@@ -1400,6 +1492,15 @@ class State:
         new_state.gen_id = self.gen_id
         new_state.assignment = self.assignment.replace_expr(to_replace, repl_with)
         new_state.constraints = deepcopy(self.constraints)
+        return new_state
+
+    
+    def vartypes_to_spectypes(self):
+        all_vartypes = self.assignment.get_all_vartypes()
+        new_state = deepcopy(self)
+        for vt in all_vartypes:
+            new_varexp = 'T?' + vt.varexp.split('T')[1]
+            new_state = new_state.replace_vartype(vt.varexp, new_varexp)
         return new_state
         
 

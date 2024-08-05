@@ -1,0 +1,25 @@
+mod test2 is
+    protecting REDUX .
+    ops foo1 foo2 foo3 foo4 foo5 foo6 foo7 foo8 foo9 foo10 foo11 foo12 : -> state .
+    ops T?0 T?1 T?2 T?3 : -> BoundVarType .
+    ops T1 T2 T3 : -> VarType .
+    ops x y z : -> expr .
+
+    eq foo1 = x : T?0 + int .
+    eq foo2 = x : int + T?0 + float + list < T?1 + str > /\ y : T?2 + complex .
+    eq foo3 = x : int + float + list < T?1 + str > /\ y : T?2 + complex .
+    eq foo4 = x : int + float + list < T?1 > /\ y : T?2 .
+    eq foo5 = "a" : int /\ "b" : float .
+    eq foo6 = "a" : int + T?0 + float + list < T?1 + str > /\ "b" : T?2 + complex .
+    eq foo7 = 
+    
+"a" : int + T?0 + float + list < T?1 + str > /\ "b" : T?2 + complex .
+
+    eq foo8 = "a" : int /\ "x" : int + T?1 /\ "y" : int + T?2 /\ "return" : int + T?0 .
+    eq foo9 = "a" : int /\ "x" : T?1 /\ "y" : int + T?2 /\ "return" : int + T?1 .
+    eq foo10 = "x" : list < T?3 > /\ "return" : int + T?3 .
+    eq foo11 = "x" : int + T?3 /\ "return" : int + T?3 .
+
+    eq foo12 = "y" : int + T?2 /\ "return" : int + T?1 .
+
+endm
