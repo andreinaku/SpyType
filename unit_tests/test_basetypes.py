@@ -806,3 +806,33 @@ class BasetypeTests(unittest.TestCase):
             PyType(set, Basetype({PyType(float)}))
         })
         self.assertEqual(result, expected_result)
+
+    def test_vartypes_to_spectypes(self):
+        st = State.from_str(r'(a:list < T3 + int > + T1 + bytearray)')
+        result = st.vartypes_to_spectypes()
+        expected_result = State.from_str('(a:list < T?3 + int > + T?1 + bytearray)')
+        self.assertEqual(result.is_same(expected_result), True)
+
+    def test_basetype_remove_vartype(self):
+        bt = Basetype.from_str(r'list < T?3 + int > + T?1 + float')
+        result = bt.remove_vartypes(('T?1', 'T?3'))
+        expected_result = Basetype.from_str(r'list < int > + float')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_remove_irrelevant_vartypes_1(self):
+        spec = FuncSpec.from_str(r'((x:T?1 + int /\ y:T?2 + int) -> (return:int))')
+        result = spec.remove_irrelevant_vartypes()
+        expected_result = FuncSpec.from_str(r'((x:int /\ y:int) -> (return:int))')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_remove_irrelevant_vartypes_2(self):
+        spec = FuncSpec.from_str(r'((x:T?1 + int + list < T?1 > /\ y:T?2 + int) -> (return:int))')
+        result = spec.remove_irrelevant_vartypes()
+        expected_result = FuncSpec.from_str(r'((x:T?1 + int + list < T?1 > /\ y:int) -> (return:int))')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_remove_irrelevant_vartypes_3(self):
+        spec = FuncSpec.from_str(r'((x:T?1 + int /\ y:T?1 + int) -> (return:int))')
+        result = spec.remove_irrelevant_vartypes()
+        expected_result = FuncSpec.from_str(r'((x:T?1 + int /\ y:T?1 + int) -> (return:int))')
+        self.assertEqual(result, expected_result)
