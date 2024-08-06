@@ -13,7 +13,7 @@ Worthy mentions:
 # Quickstart
 SpyType has been tested on Python 3.11 and Python 3.12. The recommended way to use this is to create a virtual environment and install the required libraries using the `requirements.txt` file. To use the tool, use the following command line:
 ```
-python spytype.py [-h] -i INPUT [-f [FUNCTIONS ...]] -o OUTPUT [-v]
+usage: python spytype.py [-h] -i INPUT [-f [FUNCTIONS ...]] -o OUTPUT [-v] [-r]
 
 A POC for Python function type inference using Maude solver.
 
@@ -26,6 +26,7 @@ options:
   -o OUTPUT, --output OUTPUT
                         Path to the output file for writing results
   -v, --verbose         Show information in every CFG node (inferfunc_* images)
+  -r, --restrictive     (EXPERIMENTAL) Apply a restrictive approach for function specification parameter types.
 ```
 
 # Note
