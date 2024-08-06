@@ -214,3 +214,30 @@ mod CONSTR is
     rl [Step8]: ((T <= T1 + T')[S]) && ((T1 <= T2)[S]) => ((T <= T2 + T')[S]) && ((T1 <= T2)[S]) .
 
 endm
+
+mod REDUX is
+    protecting TYPE .
+    protecting STRING .
+
+    sorts expr state .
+    subsort String < expr .
+    --- subsort expr < state .
+    
+    op _:_ : expr Type -> state [prec 32 ctor] .
+    op _/\_ : state state -> state [prec 33 ctor comm assoc] .
+
+    var T T' T1 T2 T1' T2' T3 : Type .
+    vars X? Y? : BoundVarType .
+    vars CT CT': ConstType .
+    var CONT : ContainerType .
+    vars p1 p2 p3 : expr .
+    vars st1 st2 st3 : state .
+
+    --- rl [restrict]: p1 : X? + T => p1 : T .
+    --- rl [restrict]: p1 : CONT < X? + T > + T' => p1 : CONT < T > + T' .
+    rl [restrict]: p1 : X? + T /\ "return" : T' => p1 : T /\ "return" : T' .
+    rl [restrict]: p1 : CONT < X? + T > + T' /\ "return" : T1 => p1 : CONT < T > + T' /\ "return" : T1 .
+    rl [generic]: p1 : X? + T => p1 : X? .
+    rl [generic]: p1 : CONT < X? + T > + T' => p1 : CONT < X? > + T' .
+
+endm
