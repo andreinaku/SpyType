@@ -10,6 +10,7 @@ from statev2.supported_types import is_supported_type, builtin_types, builtin_se
 import maude
 import re
 import itertools
+from collections import Counter
 
 
 strat1 = 'one(Step1) ! ; one(Step2) ! ; one(Step3) ! ; Step5 ! ; Step6 ! '
@@ -465,6 +466,38 @@ class Basetype(hset):
                 raise RuntimeError(f'What type is this inside my basetype? {tip}')
         return new_bt
 
+    def remove_vartypes(self, to_remove: tuple[str]) -> Basetype:
+        new_bt = Basetype()
+        if len(to_remove) == 0:
+            new_bt = deepcopy(self)
+            return new_bt
+        for tip in self:
+            if isinstance(tip, VarType):
+                if tip.varexp in to_remove:
+                    continue
+                else:
+                    new_bt.add(deepcopy(tip))
+            elif isinstance(tip, PyType):
+                # if tip.ptype not in container_ptypes and tip.ptype not in mapping_types:
+                if tip.keys is None and tip.values is None:
+                    new_bt.add(deepcopy(tip))
+                # elif tip.ptype in mapping_types:
+                elif tip.keys is not None and tip.values is not None:
+                    new_keys = tip.keys.remove_vartypes(to_remove)
+                    new_values = tip.values.remove_vartypes(to_remove)
+                    newtip = PyType(tip.ptype, keys=new_keys, values=new_values)
+                    new_bt.add(newtip)
+                # elif tip.ptype in container_ptypes:
+                elif tip.keys is not None:
+                    new_keys = tip.keys.remove_vartypes(to_remove)
+                    newtip = PyType(tip.ptype, keys=new_keys)
+                    new_bt.add(newtip)
+                else:
+                    raise RuntimeError(f'What base type is this? f{tip.ptype}')
+            else:
+                raise RuntimeError(f'What type is this inside my basetype? {tip}')
+        return new_bt
+
     def replace_vartype_with_basetype(self, to_replace: str, replace_with: Basetype) -> Basetype:
         new_bt = Basetype()
         for tip in self:
@@ -642,11 +675,11 @@ class Basetype(hset):
                         return keys_flag and values_flag
         return True
     
-    def get_all_vartypes(self) -> set[VarType]:
+    def get_all_vartypes(self, ignore_first_level=False) -> set[VarType]:
         vt_set = set()
         for atom in self:
             if isinstance(atom, VarType):
-                if atom not in vt_set:
+                if atom not in vt_set and not ignore_first_level:
                     vt_set.add(deepcopy(atom))
             elif atom.keys is not None:
                 vt_from_keys = atom.keys.get_all_vartypes()
@@ -692,19 +725,6 @@ class Basetype(hset):
                             if new_pair[0] not in visited:
                                 pairs.add(deepcopy(new_pair))
         return pairs
-    
-    # @classmethod
-    # def get_basetype_solutions(cls, bt1: Basetype, bt2: Basetype) -> set[tuple[tuple[VarType]]]:
-    #     if not cls.check_all_levels(bt1, bt2):
-    #         return None
-    #     all_vt1 = bt1.get_all_vartypes()
-    #     all_vt2 = bt2.get_all_vartypes()    
-    #     if len(all_vt1) != len(all_vt2):
-    #         return None
-    #     pairs = cls.get_vartype_pairs(bt1, bt2)
-    #     solution_len = len(all_vt1)  # every vartype in one bt needs a match in the other
-    #     solutions = get_solutions_from_pairs(solution_len, pairs, all_vt1, all_vt2)
-    #     return solutions
     
     @classmethod
     def get_solution_replacements(cls, bt1: Basetype, bt2: Basetype, index = 0) -> list[tuple[dict[VarType, VarType]]]:
@@ -1166,6 +1186,14 @@ class State:
         new_assignment = self.assignment.replace_vartype(to_replace, replace_with)
         new_constraints = self.constraints.replace_vartype(to_replace, replace_with)
         new_state = State(new_assignment, new_constraints, self.gen_id)
+        return new_state
+
+    def vartypes_to_spectypes(self):
+        all_vartypes = self.assignment.get_all_vartypes()
+        new_state = deepcopy(self)
+        for vt in all_vartypes:
+            new_varexp = 'T?' + vt.varexp.split('T')[1]
+            new_state = new_state.replace_vartype(vt.varexp, new_varexp)
         return new_state
 
     def filter_pytypes(self, supported_list: list[type]) -> State:
@@ -1736,6 +1764,44 @@ class FuncSpec:
         new_funcspec.in_state = self.in_state.replace_basetype(to_replace, replace_with)
         new_funcspec.out_state = self.out_state.replace_basetype(to_replace, replace_with)
         return new_funcspec
+    
+    def remove_irrelevant_vartypes(self):
+        new_funcspec = FuncSpec()
+        new_funcspec.out_state = deepcopy(self.out_state)
+        # - este pe primul nivel
+        # - apare o singura data in tot basetype-ul
+        # - nu apare in alte basetypes
+        # in_vts = set()
+        aux_in_vts = []
+        for expr, bt in self.in_state.assignment.items():
+            first_level_vts = set()
+            for atom in bt:
+                if isinstance(atom, VarType):
+                    first_level_vts.add(deepcopy(atom))
+            lower_level_vts = bt.get_all_vartypes(ignore_first_level=True)
+            only_first_level = first_level_vts - lower_level_vts  
+            if len(only_first_level) != 0:
+                for vt in only_first_level:
+                    aux_in_vts.append(deepcopy(vt))
+        element_counts = Counter(aux_in_vts)
+        in_vts = [element for element, count in element_counts.items() if count == 1]
+        # in_vts = self.in_state.get_all_vartypes()
+        out_vts = self.out_state.get_all_vartypes()
+        to_remove = set()
+        for in_vt in in_vts:
+            if in_vt not in out_vts:
+                to_remove.add(in_vt)
+        to_remove = tuple(to_remove)
+        bt: Basetype
+        for expr, bt in self.in_state.assignment.items():
+            new_bt = bt.remove_vartypes(to_remove)
+            if len(new_bt) != 0:
+                new_funcspec.in_state.assignment[expr] = bt.remove_vartypes(to_remove)
+            else:
+                # todo: better solution for this cornercase
+                new_funcspec.in_state.assignment[expr] = deepcopy(bt)
+        return new_funcspec
+            
 
 
 # for later use, sequences with implicit types contained

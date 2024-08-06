@@ -120,12 +120,9 @@ def run_infer_on_file(filepath, funclist=None):
     return func_info
 
 
-def state_as_spec(_st: State, params: list[str], reduce_type):
+def state_as_spec(_st: State, params: list[str]):
     spec = FuncSpec()
-    st = _st.vartypes_to_spectypes()
-    #
-    st = st.reduce_state(reduce_type)
-    # 
+    st = _st.vartypes_to_spectypes()    
     for expr, bt in st.assignment.items():
         if expr not in params:
             continue
@@ -134,6 +131,9 @@ def state_as_spec(_st: State, params: list[str], reduce_type):
         spec.out_state.assignment[RETURN_NAME] = Basetype({PyType(type(None))})
         return spec
     spec.out_state.assignment[RETURN_NAME] = deepcopy(st.assignment[RETURN_NAME])
+    #
+    spec = spec.remove_irrelevant_vartypes() 
+    #
     return spec
 
 
