@@ -1517,6 +1517,15 @@ class StateSet(hset):
             retstr += rf'{state} \/ '
         retstr = retstr[0:-4]
         return retstr
+    
+    def str_as_list(self):
+        if len(self) == 0:
+            return '()'
+        retstr = ''
+        for state in self:
+            retstr += rf'{state}{os.linesep}'
+        # retstr = retstr[0:-4]
+        return retstr
 
     def __repr__(self):
         return self.__str__()
