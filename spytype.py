@@ -120,7 +120,7 @@ def run_infer_on_file(filepath, funclist=None):
     return func_info
 
 
-def state_as_spec(_st: State, params: list[str]):
+def state_as_spec(_st: State, params: list[str], reduce_type):
     spec = FuncSpec()
     st = _st.vartypes_to_spectypes()    
     for expr, bt in st.assignment.items():
@@ -132,7 +132,8 @@ def state_as_spec(_st: State, params: list[str]):
         return spec
     spec.out_state.assignment[RETURN_NAME] = deepcopy(st.assignment[RETURN_NAME])
     #
-    spec = spec.remove_irrelevant_vartypes() 
+    if reduce_type == ReduceTypes.RESTRICTIVE:
+        spec = spec.remove_irrelevant_vartypes()
     #
     return spec
 
@@ -171,21 +172,24 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', type=str, required=True, help='Path to the output file for writing results')
     parser.add_argument('-v', '--verbose', action='store_true', help='Show information in every CFG node (inferfunc_* images)')
     parser.add_argument(
-        '-r', '--reduce-type',
-        choices=['restrictive', 'generic', 'default'],
-        default='default',
-        help='(EXPERIMENTAL) Specify how types for function parameters are reduced. Choices are restrictive, generic, or default (default is chosen if this argument is omitted).'
+        '-r', '--restrictive',
+        action='store_true',
+        help='(EXPERIMENTAL) Apply a restrictive approach for function specification parameter types.'
     )
     args = parser.parse_args()
     #
-    if args.reduce_type == 'restrictive':
+    # if args.reduce_type == 'restrictive':
+    #     reduce_type = ReduceTypes.RESTRICTIVE
+    # elif args.reduce_type == 'generic':
+    #     reduce_type = ReduceTypes.GENERIC
+    # elif args.reduce_type == 'default':
+    #     reduce_type = ReduceTypes.DEFAULT
+    # else:
+    #     raise RuntimeError('Invalid reduce type')
+    if args.restrictive:
         reduce_type = ReduceTypes.RESTRICTIVE
-    elif args.reduce_type == 'generic':
-        reduce_type = ReduceTypes.GENERIC
-    elif args.reduce_type == 'default':
-        reduce_type = ReduceTypes.DEFAULT
     else:
-        raise RuntimeError('Invalid reduce type')
+        reduce_type = ReduceTypes.DEFAULT
     outpath = args.output
     start_time = time.time()
     # testpath = 'benchmarks/mine/benchfuncs_typpete.py'
