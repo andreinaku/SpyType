@@ -1,16 +1,13 @@
-def add_1(a):
-    '''
-    Tests inference with constraints added by a simple binary operator.
-    '''
-    b = a + 3.5
-    return b
+def f(a, b):
+    c = a >> b
+    reveal_type(c)
+    return c
 
-def add_1_annotated(a:float):
-    '''
-    Tests inference with constraints added by a simple binary operator.
-    '''
-    b = a + 3.5
-    return b
 
-reveal_type(add_1)
-reveal_type(add_1_annotated)
+def g(a:int, b:int):
+    c = a >> b
+    reveal_type(c)
+    return c
+
+reveal_type(f)
+reveal_type(g)
