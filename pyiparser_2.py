@@ -100,7 +100,8 @@ class CountClassFuncs(ast.NodeVisitor):
         self.func_list = []
 
     def visit_FunctionDef(self, node):
-        self.func_count += 1
+        if isinstance(node.body[0].value, ast.Constant) and node.body[0].value.value == Ellipsis:
+            self.func_count += 1
         self.func_list.append(tosrc(node))
 
     def get_func_count(self):
@@ -430,10 +431,12 @@ def filter_specs(spec_dict: dict[str, set[FuncSpec]]) -> dict[str, set[FuncSpec]
 
 def get_root_specs(stub_ast: ast.Module) -> dict[str, set[FuncSpec]]:
     spec_dict = dict()
+    all_roots = 0
     for node in stub_ast.body:
         if not isinstance(node, ast.FunctionDef):
             continue
         try:
+            all_roots += 1
             funcspec = ClassdefToBasetypes().parse_funcdef(node)
         except TypeError as te:
             continue
@@ -449,6 +452,11 @@ def generate_specs(stub_file):
     tree = ast.parse(open(stub_file, 'r').read())
     tree = TypeReplacer().visit(tree)
     ctb.visit(tree)
+    #
+    counter = CountClassFuncs()
+    counter.visit(tree)
+    print(f'All {stub_file} funcs: {counter.get_func_count()}')
+    #
     replaced_dict = filter_specs(ctb.spec_dict)
     if 'builtins' in replaced_dict:
         raise RuntimeError(f'Builtins class already exists in stub file. Aborting!')
@@ -465,6 +473,12 @@ def generate_specs(stub_file):
 
 if __name__ == "__main__":
     spec_dict = generate_specs('sheds/builtins.pyi')
+    # number of translated specifications 
+    nr_spec = 0
+    for funcname, funcspec in spec_dict.items():
+        nr_spec += len(funcspec)
+    print(f'Translated: {nr_spec} specifications.')
+    #
     # for testing purposes
     test_dict = generate_specs('sheds/test.pyi')
     for k, v in test_dict.items():

@@ -149,6 +149,10 @@ class TransferFunc(ast.NodeVisitor):
         self.state_set = deepcopy(new_state_set)
 
     def visit_Call(self, node: ast.Call):
+        # for testing purposes with static type checkers like mypy and pyright
+        if isinstance(node.func, ast.Name) and node.func.id == 'reveal_type':
+            return
+        #
         if isinstance(node.func, ast.Attribute):
             new_args = [deepcopy(node.func.value)] + deepcopy(node.args)
             new_call = ast.Call(ast.Name(id=node.func.attr), new_args, deepcopy(node.keywords))
