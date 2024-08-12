@@ -1128,11 +1128,21 @@ class SpecTestCases(unittest.TestCase):
         expected_result = StateSet.from_str(r'a:int /\ b:T1')
         self.assertEqual(result, expected_result)
 
-    def test_foo(self):
-        ss = StateSet.from_str(r'c:tuple < int + float >')
-        expr = "assign_1_prim(c)"
+    # def test_foo(self):
+    #     ss = StateSet.from_str(r'c:tuple < int + float >')
+    #     expr = "assign_1_prim(c)"
+    #     node = ast.parse(expr)
+    #     tf = TransferFunc(ss)
+    #     tf.visit(node)
+    #     result = tf.state_set
+    #     self.assertEqual(True, True)
+
+    def test_self_assign_1(self):
+        ss = StateSet.from_str(r'c:list < int >')
+        expr = "c = [c]"
         node = ast.parse(expr)
         tf = TransferFunc(ss)
         tf.visit(node)
         result = tf.state_set
-        self.assertEqual(True, True)
+        expected_result = None
+        self.assertEqual(result, expected_result)

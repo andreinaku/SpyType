@@ -124,6 +124,30 @@ def _set_apply_specset(state_set: StateSet, node: ast.BinOp | ast.Call, testmode
     return new_set
 
 
+class GetNames(ast.NodeVisitor):
+    def __init__(self):
+        self.names = set()
+
+    def visit_Name(self, node: ast.Name):
+        self.names.add(node.id)
+
+    def reset_names(self):
+        self.names = set()
+
+    def get_names(self):
+        return self.names
+
+
+class ReplaceNames(ast.NodeTransformer):
+    def __init__(self, name_replace: dict):
+        self.name_replace = name_replace
+
+    def visit_Name(self, node:ast.Name):
+        if node.id in self.name_replace:
+            node.id = self.name_replace[node.id]
+        return node
+
+
 class TransferFunc(ast.NodeVisitor):
     def __init__(self, _state_set: StateSet, _testmode=False):
         self.state_set = deepcopy(_state_set)
@@ -270,7 +294,34 @@ class TransferFunc(ast.NodeVisitor):
                 new_state.assignment[target_src] = deepcopy(new_state.assignment[value_src])
         return new_state
     
-    def visit_Assign(self, node: Assign):
+    def visit_Assign(self, _node: Assign):
+        # common lhs and rhs names
+        node = deepcopy(_node)
+        gn = GetNames()
+        gn.visit(node.value)
+        rhs_names = deepcopy(gn.get_names())
+        gn.reset_names()
+        lhs_names = set()
+        for target in node.targets:
+            gn.visit(target)
+            lhs_names |= deepcopy(gn.get_names())
+            gn.reset_names()
+        var_replace = dict()
+        new_ss = StateSet()
+        for state in self.state_set:
+            new_state = deepcopy(state)
+            for varname in rhs_names:
+                if varname not in lhs_names:
+                    continue
+                new_varname = varname + '_temp'
+                var_replace[varname] = deepcopy(new_varname)
+                new_state.assignment[new_varname] = deepcopy(state.assignment[varname])
+            new_ss.add(new_state)
+        self.state_set = deepcopy(new_ss)
+        # compose the new assign node
+        rn = ReplaceNames(var_replace)
+        rn.visit(node.value)
+        #
         self.visit(node.value)
         self.state_set.solve_states()
         for target in node.targets: 
