@@ -128,6 +128,35 @@ class RelOp(Enum):
 
 
 class GenericType:
+
+    def __le__(self, other_type: PyType | VarType) -> bool:
+        if isinstance(self, PyType) and isinstance(other_type, PyType):
+            if self.ptype == BottomType:
+                return True
+            elif other_type.ptype == TopType:
+                return True
+            if self.keys is None and other_type.keys is None:
+                if self.ptype == other_type.ptype:
+                    return True
+                else:
+                    return False
+            elif self.keys is not None and other_type.keys is not None:
+                if self.ptype != other_type.ptype:
+                    return False
+                if not self.keys <= other_type.keys:
+                    return False
+                if self.values is None and other_type.values is None:
+                    return True
+                elif self.values is not None and other_type.values is not None and self.values <= other_type.values:
+                    return True
+                return False
+            else:
+                return False
+        elif isinstance(self, VarType) and isinstance(other_type, VarType):
+            return self.varexp == other_type.varexp
+        else:
+            return False
+
     @classmethod
     def get_types_from_list(cls, instr: str, start_br, end_br, sep):
         # if contained between parantheses, remove them. (int) => int, (int+float) => int+float
@@ -297,6 +326,30 @@ class PyType(GenericType):
     def __repr__(self):
         return self.__str__()
     
+    # def __le__(self, other_pytype: PyType) -> bool:
+    #     if self.ptype == BottomType:
+    #         return True
+    #     elif other_pytype.ptype == TopType:
+    #         return True
+    #     if self.keys is None and other_pytype.keys is None:
+    #         if self.ptype == other_pytype.ptype:
+    #             return True
+    #         else:
+    #             return False
+    #     elif self.keys is not None and other_pytype.keys is not None:
+    #         if self.ptype != other_pytype.ptype:
+    #             return False
+    #         if not self.keys <= other_pytype.keys:
+    #             return False
+    #         if self.values is None and other_pytype.values is None:
+    #             return True
+    #         elif self.values is not None and other_pytype.values is not None and self.values <= other_pytype.values:
+    #             return True
+    #         return False
+    #     else:
+    #         return False
+
+
     def get_builtin_from_pytype(self) -> Basetype:
         new_bt = Basetype()
         if isinstance(self, VarType):
@@ -381,6 +434,12 @@ class Basetype(hset):
     
     def __or__(self, value: Basetype) -> Basetype:
         return Basetype.lub(self, value)
+
+    def __contains__(self, atom: PyType | VarType) -> bool:
+        for self_atom in self:
+            if atom <= self_atom:
+                return True
+        return False
 
     def flatten(self) -> Basetype:
         if self == Basetype({PyType(BottomType)}):
@@ -536,34 +595,60 @@ class Basetype(hset):
                     return True
         return False
     
-    def contains_atom(self, atom: PyType | VarType, recursive: bool = False) -> bool:
-        non_rec_found = self.simple_contains_atom(atom)
-        if non_rec_found is True:
+
+    # def contains_atom(self, atom: PyType | VarType, recursive: bool = False) -> bool:
+    #     # non_rec_found = self.simple_contains_atom(atom)
+    #     # if non_rec_found is True:
+    #     #     return True
+    #     # if not recursive:
+    #     #     return False
+    #     # self_atom: PyType | VarType
+    #     for self_atom in self:
+    #         if atom <= self_atom:
+    #             return True
+    #         # if not isinstance(self_atom, PyType):
+    #         #     continue
+    #         # if self_atom.keys is None or len(self_atom.keys) == 0:
+    #         #     continue
+    #         # found = self_atom.keys.contains_atom(atom, recursive)
+    #         # if found:
+    #         #     return True
+    #         # if self_atom.values is None or len(self_atom.values) == 0:
+    #         #     continue
+    #         # found = self_atom.values.contains_atom(atom, recursive)
+    #         # if found:
+    #         #     return True
+    #     return False
+    
+    # def contains_basetype(self, other_bt: Basetype, recursive: bool = False) -> bool:
+    #     other_atom: PyType | VarType
+    #     for other_atom in other_bt:
+    #         # if not self.contains_atom(other_atom, recursive):
+    #         if not other_atom in self:
+    #             return False
+    #     return True
+
+    def contains_basetype(self, other_bt: Basetype, recursive: bool = False) -> bool:
+        found = True
+        for atom in other_bt:
+            if atom not in self:
+                found = False
+                break
+        if found:
             return True
         if not recursive:
             return False
-        self_atom: PyType | VarType
-        for self_atom in self:
-            if not isinstance(self_atom, PyType):
+        for atom in self:
+            if not isinstance(atom, PyType):
                 continue
-            if self_atom.keys is None or len(self_atom.keys) == 0:
+            elif atom.keys is None:
                 continue
-            found = self_atom.keys.contains_atom(atom, recursive)
-            if found:
-                return True
-            if self_atom.values is None or len(self_atom.values) == 0:
-                continue
-            found = self_atom.values.contains_atom(atom, recursive)
-            if found:
-                return True
+            else:
+                if atom.keys.contains_basetype(other_bt, True):
+                    return True
+                elif atom.values is not None and atom.values.contains_basetype(other_bt, True):
+                    return True
         return False
-    
-    def contains_basetype(self, other_bt: Basetype, recursive: bool = False) -> bool:
-        other_atom: PyType | VarType
-        for other_atom in other_bt:
-            if not self.contains_atom(other_atom, recursive):
-                return False
-        return True
 
     def replace_basetype(self, to_replace: Basetype, replace_with: Basetype) -> Basetype:
         new_bt = Basetype()
@@ -593,21 +678,21 @@ class Basetype(hset):
             new_bt.add(aux_pytype)
         return new_bt
     
-    def __contains__(self, o: Basetype) -> bool:
-        return self.contains_basetype(o)
+    # def __contains__(self, o: Basetype) -> bool:
+    #     return self.contains_basetype(o)
 
     def __lt__(self, other_bt: Basetype) -> bool:
         return other_bt.contains_basetype(self) and not self.contains_basetype(other_bt)
         
     def __le__(self, other_bt: Basetype) -> bool:
-        if len(self) == 1 and self[0] == PyType(BottomType):
-            return True
         return other_bt.contains_basetype(self)
+        # return self in other_bt
 
     def __sub__(self, other_bt: Basetype) -> bool:
         new_bt = Basetype()
         for self_atom in self:
-            if other_bt.contains_atom(self_atom):
+            # if other_bt.contains_atom(self_atom):
+            if self_atom in other_bt:
                 continue
             new_bt.add(deepcopy(self_atom))
         return new_bt
@@ -773,15 +858,24 @@ class Assignment(hdict):
         return super().__hash__()
     
     def __eq__(self, other_asig: Assignment) -> bool:
+        return self <= other_asig and other_asig <= self
+        # for expr in self:
+        #     if expr not in other_asig:
+        #         return False
+        #     if self[expr] != other_asig[expr]:
+        #         return False
+        # for expr in other_asig:
+        #     if expr not in self:
+        #         return False
+        #     if other_asig[expr] != self[expr]:
+        #         return False
+        # return True
+    
+    def __le__(self, other_asig: Assignment) -> bool:
         for expr in self:
             if expr not in other_asig:
                 return False
-            if self[expr] != other_asig[expr]:
-                return False
-        for expr in other_asig:
-            if expr not in self:
-                return False
-            if other_asig[expr] != self[expr]:
+            if not self[expr] <= other_asig[expr]:
                 return False
         return True
 
@@ -1145,11 +1239,49 @@ class State:
     def __hash__(self):
         return hash((hash(self.assignment), hash(self.constraints)))
 
-    # def __eq__(self, other: State):
-    #     return hash(self) == hash(other)
+    @staticmethod
+    def _get_solution_pairs(state1: State, state2: State) -> tuple[State]:
+        try:
+            to_unpack = State.get_solution_replacements(state1, state2)
+        except RuntimeError:
+            return []
+        possibilities = []
+        if to_unpack is not None:
+            sols, sol_dicts = to_unpack
+            for dict_pair in sol_dicts:
+                new_state1 = state1.replace_vartype_from_solution(dict_pair[0])
+                new_state2 = state2.replace_vartype_from_solution(dict_pair[1])
+                possibilities.append((new_state1, new_state2))
+        return possibilities
+
+    def __eq__(self, other_state: State) -> bool:
+        if State.raw_eq(self, other_state):
+            return True
+        possibilities = State._get_solution_pairs(self, other_state)
+        if len(possibilities) == 0:
+            return False
+        for possibility in possibilities:
+            (new_state1, new_state2) = possibility
+            if (new_state1.assignment == new_state2.assignment) and (new_state1.constraints == new_state2.constraints):
+                return True
+        return False
+    
+    def __le__(self, other_state: State) -> bool:
+        if len(self.constraints) > 0 or len(other_state.constraints) > 0:
+            return False
+        if self.assignment <= other_state.assignment:
+            return True
+        possibilities = State._get_solution_pairs(self, other_state)
+        if len(possibilities) == 0:
+            return False
+        for possibility in possibilities:
+            (new_state1, new_state2) = possibility
+            if new_state1.assignment <= new_state2.assignment:
+                return True
+        return False
 
     def update_vt_index(self):
-        if self == BottomState():
+        if self.raw_eq(self, BottomState()):
             return
         all_vt = self.get_all_vartypes()
         numeric_list = []
@@ -1427,22 +1559,6 @@ class State:
             return True
         return False
 
-    def __eq__(self, other_state: State) -> bool:
-        if State.raw_eq(self, other_state):
-            return True
-        try:
-            to_unpack = State.get_solution_replacements(self, other_state)
-        except RuntimeError:
-            return False
-        if to_unpack is not None:
-            sols, sol_dicts = to_unpack
-            for dict_pair in sol_dicts:
-                new_state1 = self.replace_vartype_from_solution(dict_pair[0])
-                new_state2 = other_state.replace_vartype_from_solution(dict_pair[1])
-                if (new_state1.assignment == new_state2.assignment) and (new_state1.constraints == new_state2.constraints):
-                    return True
-        return False
-
     def is_same(self, other_state: State) -> bool:
         state1 = self.solve_constraints(strat1)
         state2 = other_state.solve_constraints(strat1)
@@ -1676,8 +1792,12 @@ class StateSet(hset):
         return new_stateset
 
     def __contains__(self, state: State) -> bool:
+        # for self_state in self:
+        #     if state == self_state:
+        #         return True
+        # return False
         for self_state in self:
-            if state == self_state:
+            if state <= self_state:
                 return True
         return False
     
