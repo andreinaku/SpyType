@@ -231,68 +231,6 @@ class TransferFunc(ast.NodeVisitor):
     def visit_Set(self, node: ast.Set):
         new_set = self.container_visit(node)
         self.state_set = new_set
-
-    def state_apply_assign(self, state: State, node: Assign):
-        new_state = deepcopy(state)
-        value_src = tosrc(node.value)
-        for target in node.targets:
-            lhs_is_container = isinstance(target, ast.List) or isinstance(target, ast.Tuple)
-            rhs_is_container = isinstance(node.value, ast.List) or isinstance(node.value, ast.Tuple)
-            target_src = tosrc(target)
-            if lhs_is_container:
-                if rhs_is_container:
-                    # a, b = c, d
-                    if len(target.elts) != len(node.value.elts):
-                        raise TypeError(f'{tosrc(target)} and {tosrc(node.value)} have different lengths')
-                    for i in range(0, len(target.elts)):
-                        target_elem_src = tosrc(target.elts[i])
-                        value_elem_src = tosrc(node.value.elts[i])
-                        new_state.assignment[target_elem_src] = deepcopy(new_state.assignment[value_elem_src])
-                else:
-                    # a, b = expr
-                    contained_bt = Basetype()
-                    value_bt = new_state.assignment[value_src]
-                    new_value_bt = Basetype()
-                    value_typevars = set()
-                    target_srcs = []
-                    for target_elem_node in target.elts:
-                        target_elem_src = tosrc(target_elem_node)
-                        if target_elem_src not in target_srcs:
-                            target_srcs.append(target_elem_src)
-                    for target_elem_src in target_srcs:
-                        if target_elem_src not in new_state.assignment:
-                            new_bt = Basetype({VarType(new_state.generate_id())})
-                            new_state.assignment[target_elem_src] = new_bt
-                    for ptip in value_bt:
-                        if isinstance(ptip, PyType) and ptip.keys is not None:
-                            contained_bt |= ptip.keys
-                            new_value_bt.add(deepcopy(ptip))
-                        elif ptip in extra_sequences:
-                            contained_bt |= extra_sequences[ptip]
-                            new_value_bt.add(deepcopy(ptip))
-                        elif isinstance(ptip, VarType):
-                            value_typevars.add(deepcopy(ptip))
-                            new_value_bt.add(deepcopy(ptip))
-                    if len(contained_bt) > 0 or len(value_typevars) > 0:
-                        # expr = container< ceva >
-                        if len(contained_bt) > 0:
-                            for target_elem_src in target_srcs:
-                                new_state.assignment[target_elem_src] = deepcopy(contained_bt)
-                        iterable_pytype = PyType(Iterable)
-                        iterable_contained = Basetype()
-                        for target_elem_src in target_srcs:
-                            iterable_contained |= deepcopy(new_state.assignment[target_elem_src])
-                        iterable_pytype.keys = iterable_contained
-                        value_condition = Basetype({iterable_pytype})
-                        if len(value_typevars) > 0: 
-                            for tv in value_typevars:
-                                aux_bt_tv = Basetype({deepcopy(tv)})
-                                new_state.constraints.add(Relation(RelOp.LEQ, aux_bt_tv, value_condition))
-                        new_state.assignment[value_src] = new_value_bt
-            else:  # todo: a = b here (no tuples)
-                new_state = deepcopy(state)
-                new_state.assignment[target_src] = deepcopy(new_state.assignment[value_src])
-        return new_state
     
     def visit_Assign(self, _node: Assign):
         # common lhs and rhs names
@@ -308,12 +246,16 @@ class TransferFunc(ast.NodeVisitor):
             gn.reset_names()
         var_replace = dict()
         new_ss = StateSet()
+        new_varnames = []
+        auxiliary_expressions = []
         for state in self.state_set:
             new_state = deepcopy(state)
             for varname in rhs_names:
                 if varname not in lhs_names:
                     continue
                 new_varname = varname + '_temp'
+                auxiliary_expressions.append(new_varname)
+                new_varnames.append(new_varname)
                 var_replace[varname] = deepcopy(new_varname)
                 new_state.assignment[new_varname] = deepcopy(state.assignment[varname])
             new_ss.add(new_state)
@@ -345,7 +287,8 @@ class TransferFunc(ast.NodeVisitor):
                     self.state_set = deepcopy(use_stateset)
                     self.visit(new_call)
                     call_expr = tosrc(new_call)
-                    self.state_set = self.state_set.remove_expr_from_assign(call_expr)
+                    auxiliary_expressions.append(call_expr)
+                    # self.state_set = self.state_set.remove_expr_from_assign(call_expr)
             else:
                 if not hasattr(node.value, 'elts'):                    
                     # spec with sequential assigns
@@ -362,13 +305,9 @@ class TransferFunc(ast.NodeVisitor):
                             new_state = deepcopy(state)
                             new_state.assignment[target_src] = TOP_BT
                             use_stateset.add(deepcopy(new_state))
-                        # new_transfer = TransferFunc(use_stateset)
-                        # new_transfer.visit(new_call)
-                        # aux = new_transfer.state_set
-                        # aux = aux.remove_expr_from_assign(call_expr)
                         self.state_set = deepcopy(use_stateset)
                         self.visit(new_call)
-                        self.state_set = self.state_set.remove_expr_from_assign(call_expr)
+                        auxiliary_expressions.append(call_expr)
                     # new end
 
                     # old start
@@ -441,7 +380,9 @@ class TransferFunc(ast.NodeVisitor):
                         self.state_set = deepcopy(use_stateset)
                         self.visit(new_call)
                         call_expr = tosrc(new_call)
-                        self.state_set = self.state_set.remove_expr_from_assign(call_expr)
+                        auxiliary_expressions.append(call_expr)
+        for aux_expr in auxiliary_expressions:
+            self.state_set = self.state_set.remove_expr_from_assign(aux_expr)        
 
     def visit_Return(self, node: ast.Return):
         new_set = StateSet()

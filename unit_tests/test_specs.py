@@ -1143,6 +1143,6 @@ class SpecTestCases(unittest.TestCase):
         node = ast.parse(expr)
         tf = TransferFunc(ss)
         tf.visit(node)
-        result = tf.state_set
-        expected_result = None
+        result = tf.state_set.remove_no_names()
+        expected_result = StateSet.from_str(r'c: list < list < int  > >')
         self.assertEqual(result, expected_result)
