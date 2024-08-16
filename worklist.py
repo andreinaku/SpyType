@@ -35,7 +35,8 @@ class WorklistAnalyzer:
         tf.visit(node_code)
         ret_set = tf.state_set
         ret_set = ret_set.solve_states() 
-        ret_set = tf.state_set.remove_no_names()
+        ret_set = ret_set.remove_no_names()
+        ret_set = ret_set.widen()
         return deepcopy(ret_set)
 
     def Iteration(self):

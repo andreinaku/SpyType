@@ -23,6 +23,8 @@ if getattr(sys, 'frozen', False):
 else:    
     INIT_MAUDE_PATH = os.getcwd() + os.sep + SOLVER_NAME
 DEFAULT_SOLVER_OUT = os.getcwd() + os.sep + 'solver.out'
+MAX_WIDTH = 5
+MAX_DEPTH = 5
 
 
 class ReduceTypes:
@@ -349,7 +351,6 @@ class PyType(GenericType):
     #     else:
     #         return False
 
-
     def get_builtin_from_pytype(self) -> Basetype:
         new_bt = Basetype()
         if isinstance(self, VarType):
@@ -396,6 +397,33 @@ class PyType(GenericType):
         if len(new_bt) == 0:
             new_bt.add(deepcopy(self))
         return new_bt
+    
+    def get_depth(self) -> int:
+        if self.keys is None:
+            return 1
+        if self.values is None:
+            return self.keys.get_depth() + 1
+        return max(self.keys.get_depth(), self.values.get_depth()) + 1
+    
+    def widen(self, max_width = MAX_WIDTH, max_depth = MAX_DEPTH) -> PyType:
+        new_pt = PyType(self.ptype)
+        topbt = Basetype({PyType(TopType)})
+        if self.keys is not None:
+            new_keys = None
+            new_values = None
+            if self.keys.get_depth() >= max_depth:
+                # >= because we already have depth 1 as a container
+                new_keys = deepcopy(topbt)
+            else:
+                new_keys = self.keys.widen(max_width, max_depth)
+            if self.values is not None:
+                if self.values.get_depth() >= max_depth:
+                    # >= because we already have depth 1 as a container
+                    new_values = deepcopy(topbt)
+                else:
+                    new_values = self.values.widen(max_width, max_depth)
+            new_pt = PyType(self.ptype, new_keys, new_values)
+        return new_pt
 
 
 class VarType(GenericType):
@@ -416,6 +444,12 @@ class VarType(GenericType):
 
     def __eq__(self, other):
         return hash(self) == hash(other)
+    
+    def get_depth(self) -> int:
+        return 1
+    
+    def widen(self, max_width=MAX_WIDTH, max_depth=MAX_DEPTH) -> VarType:
+        return deepcopy(self)
 
 
 class Basetype(hset):
@@ -455,10 +489,13 @@ class Basetype(hset):
         new_basetype = Basetype()
         already_added = set()
         bottom_bt = Basetype({PyType(BottomType)})
+        top_bt = Basetype({PyType(TopType)})
         if bt1 == bottom_bt and bt2 != bottom_bt:
             return deepcopy(bt2)
         if bt2 == bottom_bt and bt1 != bottom_bt:
             return deepcopy(bt1)
+        if bt1 == top_bt or bt2 == top_bt:
+            return deepcopy(top_bt)
         for atom1 in bt1:
             if isinstance(atom1, VarType) or (isinstance(atom1, PyType) and atom1.keys is None):
                 new_basetype.add(deepcopy(atom1))
@@ -830,6 +867,24 @@ class Basetype(hset):
             new_bt = new_bt.replace_vartype(vt1.varexp, vt2.varexp)
         return new_bt
 
+    def get_width(self) -> int:
+        return len(self)
+    
+    def get_depth(self) -> int:
+        depths = []
+        for atom in self:
+            depths.append(atom.get_depth())
+        return max(depths)
+
+    def widen(self, max_width = MAX_WIDTH, max_depth = MAX_DEPTH) -> Basetype:
+        topbt = Basetype({PyType(TopType)})
+        new_bt = Basetype()
+        if self.get_width() > max_width:
+            return deepcopy(topbt)
+        for atom in self:
+            new_bt.add(atom.widen(max_width, max_depth))
+        # print(f'widen {self} to {new_bt}')
+        return new_bt
 
 class Assignment(hdict):
 
@@ -1638,7 +1693,6 @@ class State:
         new_state.constraints = deepcopy(self.constraints)
         return new_state
 
-    
     def vartypes_to_spectypes(self):
         all_vartypes = self.assignment.get_all_vartypes()
         new_state = deepcopy(self)
@@ -1647,6 +1701,15 @@ class State:
             new_state = new_state.replace_vartype(vt.varexp, new_varexp)
         return new_state
         
+    def widen(self, max_width = MAX_WIDTH, max_depth = MAX_DEPTH) -> State:
+        new_st = State()
+        new_st.gen_id = self.gen_id
+        new_st.constraints = deepcopy(self.constraints)
+        for expr, bt in self.assignment.items():
+            new_st.assignment[expr] = deepcopy(bt.widen(max_width, max_depth))
+        return new_st
+
+    # !!! any function that "modifies" the current state must also carry gen_id !!!!!
 
 class BottomState(State):
     pass
@@ -1823,6 +1886,13 @@ class StateSet(hset):
         for state in self:
             new_state = state.replace_expr(to_replace, repl_with)
             new_ss.add(deepcopy(new_state))
+        return new_ss
+
+    def widen(self, max_width = MAX_WIDTH, max_depth = MAX_DEPTH):
+        new_ss = StateSet()
+        for st in self:
+            new_st = deepcopy(st.widen(max_width, max_depth))
+            new_ss.add(new_st)
         return new_ss
 
 

@@ -939,3 +939,130 @@ class BasetypeTests(unittest.TestCase):
         st2 = State.from_str(r'a:list < top > /\ b:int + float')
         result = st1 <= st2
         self.assertEqual(result, True)
+
+    def test_basetype_depth_1(self):
+        bt = Basetype.from_str(r'int + float + list < int >')
+        result = bt.get_depth()
+        self.assertEqual(result, 2)
+
+    def test_basetype_depth_2(self):
+        bt = Basetype.from_str(r'list < tuple < int > > + float + list < int >')
+        result = bt.get_depth()
+        self.assertEqual(result, 3)
+
+    def test_basetype_depth_3(self):
+        bt = Basetype.from_str(r'dict < int, list < tuple < float + int > > > + float + list < int >')
+        result = bt.get_depth()
+        self.assertEqual(result, 4)
+
+    def test_basetype_depth_4(self):
+        bt = Basetype.from_str(r'list < int >')
+        result = bt.get_depth()
+        self.assertEqual(result, 2)
+
+    def test_basetype_depth_5(self):
+        bt = Basetype.from_str(r'list < int + list < float > >')
+        result = bt.get_depth()
+        self.assertEqual(result, 3)
+
+    def test_basetype_depth_6(self):
+        bt = Basetype.from_str(r'dict < int, list < int > >')
+        result = bt.get_depth()
+        self.assertEqual(result, 3)
+
+    def test_basetype_widen_1(self):
+        '''
+        width > max_width
+        '''
+        bt = Basetype.from_str(r'int + float + complex')
+        result = bt.widen(max_width=2)
+        expected_result = Basetype.from_str(r'top')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_widen_2(self):
+        '''
+        widh > max_width inside container
+        '''
+        bt = Basetype.from_str(r'list < int + float + complex >')
+        result = bt.widen(max_width=2)
+        expected_result = Basetype.from_str(r'list < top >')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_widen_3(self):
+        '''
+        depth > max_depth
+        '''
+        bt = Basetype.from_str(r'list < list < int + float + complex > >')
+        result = bt.widen(max_depth=2)
+        expected_result = Basetype.from_str(r'list < top >')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_widen_4(self):
+        '''
+        width <= max_width and depth <= max_depth
+        '''
+        bt = Basetype.from_str(r'list < list < int + float + complex > >')
+        result = bt.widen(max_depth=3)
+        expected_result = Basetype.from_str(r'list < list < int + float + complex > >')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_widen_5(self):
+        '''
+        width > max_width on just keys
+        '''
+        bt = Basetype.from_str(r'dict < int + float + complex, str >')
+        result = bt.widen(max_width=2)
+        expected_result = Basetype.from_str(r'dict < top, str >')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_widen_6(self):
+        '''
+        width > max_width on just values
+        '''
+        bt = Basetype.from_str(r'dict < str, int + float + complex >')
+        result = bt.widen(max_width=2)
+        expected_result = Basetype.from_str(r'dict < str, top >')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_widen_7(self):
+        '''
+        max_depth 1 for dict
+        '''
+        bt = Basetype.from_str(r'dict < str, int + float + complex >')
+        result = bt.widen(max_width=1, max_depth=1)
+        expected_result = Basetype.from_str(r'dict < top, top >')
+        self.assertEqual(result, expected_result)
+
+    def test_basetype_widen_8(self):
+        '''
+        depth > max_depth for keys in dict
+        '''
+        bt = Basetype.from_str(r'dict < str, list < tuple < int > > >')
+        result = bt.widen(max_depth=3)
+        expected_result = Basetype.from_str(r'dict < str, top >')
+        self.assertEqual(result, expected_result)
+
+    def test_state_widen_1(self):
+        '''
+        width and depth exceeded 
+        '''
+        st = State.from_str(r'a:int + float + complex /\ b:list < list < list < int > > >')
+        result = st.widen(2, 2)
+        expected_result = State.from_str(r'a:top /\ b:list < top >')
+        self.assertEqual(result, expected_result)
+
+    def test_stateset_widen_1(self):
+        '''
+        width and depth exceeded for one state
+        '''
+        st = StateSet.from_str(
+            r'(a:int + float + complex /\ b:list < list < list < int > > >) \/ '
+            r'(a:int /\ b:float)'
+        )
+        result = st.widen(2, 2)
+        expected_result = StateSet.from_str(
+            r'(a:top /\ b:list < top >) \/ '
+            r'(a:int /\ b:float)'
+        )
+        self.assertEqual(result, expected_result)
+    

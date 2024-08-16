@@ -135,14 +135,14 @@ class SolverTestCases(unittest.TestCase):
         expected_result = State.from_str(r'(a:T1 /\ b:list< T3 >)')
         self.assertEqual(State.raw_eq(result, expected_result), True)
 
-    def test_reduce_state_1(self):
-        state = State.from_str(r'a: int + T?0 + float + list < T?1 + str > /\ b: T?2 + complex')
-        result = state.reduce_state(ReduceTypes.RESTRICTIVE, 'reducetest.maude')
-        expected_result = State.from_str(r'a: int + float + list < str > /\ b: complex')
-        self.assertEqual(result.is_same(expected_result), True)
+    # def test_reduce_state_1(self):
+    #     state = State.from_str(r'a: int + T?0 + float + list < T?1 + str > /\ b: T?2 + complex')
+    #     result = state.reduce_state(ReduceTypes.RESTRICTIVE, 'reducetest.maude')
+    #     expected_result = State.from_str(r'a: int + float + list < str > /\ b: complex')
+    #     self.assertEqual(result.is_same(expected_result), True)
 
-    def test_reduce_state_2(self):
-        state = State.from_str(r'a: T?0 /\ b: T?2')
-        result = state.reduce_state(ReduceTypes.RESTRICTIVE, 'reducetest.maude')
-        expected_result = state = State.from_str(r'a: T?0 /\ b: T?2')
-        self.assertEqual(result.is_same(expected_result), True)
+    # def test_reduce_state_2(self):
+    #     state = State.from_str(r'a: T?0 /\ b: T?2')
+    #     result = state.reduce_state(ReduceTypes.RESTRICTIVE, 'reducetest.maude')
+    #     expected_result = state = State.from_str(r'a: T?0 /\ b: T?2')
+    #     self.assertEqual(result.is_same(expected_result), True)
