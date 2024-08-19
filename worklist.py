@@ -11,7 +11,7 @@ from crackedcfg import CFG
 
 
 class WorklistAnalyzer:
-    def __init__(self, cfg: CFG, init: StateSet):
+    def __init__(self, cfg: CFG, init: StateSet, max_width: int, max_depth: int):
         self.W = []
         self.Analysis = dict()
         for id, entry in cfg.cfgdict.items():
@@ -27,6 +27,8 @@ class WorklistAnalyzer:
         self.blockinfo = cfg.cfgdict
         self.init_ss = deepcopy(init)
         self.merge = StateSet.lub
+        self.max_width = max_width
+        self.max_depth = max_depth
  
     def f(self, l: int):
         node_code = self.blockinfo[l]['statements'][0]
@@ -36,7 +38,7 @@ class WorklistAnalyzer:
         ret_set = tf.state_set
         ret_set = ret_set.solve_states() 
         ret_set = ret_set.remove_no_names()
-        ret_set = ret_set.widen()
+        ret_set = ret_set.widen(self.max_width, self.max_depth)
         return deepcopy(ret_set)
 
     def Iteration(self):

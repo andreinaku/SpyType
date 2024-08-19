@@ -82,7 +82,7 @@ def get_variable_names(node):
     return nv.get_names()
 
 
-def run_infer_on_func(cfg, funcname):
+def run_infer_on_func(cfg, funcname, max_width, max_depth):
     # get the function CFG based on the function name
     func_cfg = get_func_cfg(cfg, funcname, True)
     # construct the initial abstract state
@@ -95,25 +95,25 @@ def run_infer_on_func(cfg, funcname):
     for varname in names:
         new_state.assignment[varname] = Basetype.from_str('bot')
     init_ss.add(deepcopy(new_state))
-    aux = worklist.WorklistAnalyzer(func_cfg, init_ss)
+    aux = worklist.WorklistAnalyzer(func_cfg, init_ss, max_width, max_depth)
     aux.Iteration()
     mfp_in, mfp_out = aux.mfp_solution()
     return mfp_in, mfp_out
 
 
-def run_infer(filename, funcname):
+def run_infer(filename, funcname, max_width=5, max_depth=5):
     cfg = get_cfg(filename, makepng=False)
-    return run_infer_on_func(cfg, funcname)
+    return run_infer_on_func(cfg, funcname, max_width, max_depth)
 
 
-def run_infer_on_file(filepath, funclist=None):
+def run_infer_on_file(filepath, funclist=None, max_width=5, max_depth=5):
     cfg = get_cfg(filepath, makepng=False)
     func_info = dict()    
     for funcname in cfg.func_asts:
         if funclist is not None and funcname not in funclist:
             continue
         func_info[funcname] = dict()
-        func_info[funcname]['mfp_in'], func_info[funcname]['mfp_out'] = run_infer_on_func(cfg, funcname)
+        func_info[funcname]['mfp_in'], func_info[funcname]['mfp_out'] = run_infer_on_func(cfg, funcname, max_width, max_depth)
         func_cfg = get_func_cfg(cfg, funcname, True)
         final_id = func_cfg.finalblocks[0].id
         func_info[funcname]['final_state'] = func_info[funcname]['mfp_out'][final_id]
@@ -171,6 +171,8 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--functions', nargs='*', type=str, help='Optional list of functions to be inferred. If this is omitted, then all functions from the input file are inferred')
     parser.add_argument('-o', '--output', type=str, required=True, help='Path to the output file for writing results')
     parser.add_argument('-v', '--verbose', action='store_true', help='Show information in every CFG node (inferfunc_* images)')
+    parser.add_argument('-w', '--max-width', type=int, default=5, help='An integer value that represent the maximum type width')
+    parser.add_argument('-d', '--max-depth', type=int, default=5, help='An integer value that represent the maximum type depth')
     parser.add_argument(
         '-r', '--restrictive',
         action='store_true',
@@ -193,7 +195,7 @@ if __name__ == "__main__":
     outpath = args.output
     start_time = time.time()
     # testpath = 'benchmarks/mine/benchfuncs_typpete.py'
-    finfo = run_infer_on_file(args.input, args.functions)
+    finfo = run_infer_on_file(args.input, args.functions, args.max_width, args.max_depth)
     end_time = time.time()
     diff_time = end_time - start_time
     cfg = get_cfg(args.input, makepng=False)
