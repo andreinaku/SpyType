@@ -180,3 +180,4 @@ inferfunc_*
 benchmarks/mine/mopsa_test_1.py
 benchfuncs.spytype
 *.spytype
+*.json
