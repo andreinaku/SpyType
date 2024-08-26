@@ -1,6 +1,5 @@
 from code2flow import engine
-from anytree import Node, RenderTree, LevelOrderGroupIter, PostOrderIter
-from io import StringIO
+from anytree import Node, RenderTree, LevelOrderGroupIter
 import logging
 import json
 
