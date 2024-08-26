@@ -1,6 +1,10 @@
+def f():
+    return 'what?'
+
+
 class bar:
     @staticmethod
-    def lulu():
+    def f():
         return 42
 
 
@@ -8,14 +12,17 @@ class foo:
     def __init__(self, x):
         self.x = x
 
-    def sum(self):
-        return self.dif()
+    def f(self):
+        return self.g()
 
-    def dif(self):
-        return self.lali()
+    def g(self):
+        return self.h()
 
-    def lali(self):
+    def h(self):
         return len('abc')
 
     def qux(self):
-        return bar.lulu()
+        return bar.f()
+
+
+f()
