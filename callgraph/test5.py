@@ -25,4 +25,8 @@ class foo:
         return bar.f()
 
 
+class grx(foo):
+    def f2(self):
+        pass
+
 f()
