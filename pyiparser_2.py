@@ -133,6 +133,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
 
     def __init__(self):
         self.spec_dict = dict()
+        self.class_specs = dict()
         self.specs = dict()
         self.total_funcdefs = 0
         self.parsed_funcdefs = 0
@@ -341,16 +342,25 @@ class ClassdefToBasetypes(ast.NodeVisitor):
         except Exception as exc:
             ss = f'Cannot parse type for class {node.name} with exception {str(exc)}'
             mylogger.error(ss)
+        #
+        self.class_specs[node.name] = dict()
+        self.class_specs[node.name]['attributes'] = dict()
+        self.class_specs[node.name]['methods'] = dict()
+        #
         for body_node in node.body:
             try:
                 if not isinstance(body_node, ast.FunctionDef):
                     continue
+                funcname = body_node.name
                 try:
                     func_spec = self.parse_funcdef(body_node)
+                    if funcname not in self.class_specs[node.name]['methods']:
+                        self.class_specs[node.name]['methods'][funcname] = {func_spec}
+                    else:
+                        self.class_specs[node.name]['methods'][funcname].add(func_spec)
                 except TypeError as te:
                     mylogger.error(str(te))
                     continue
-                funcname = body_node.name
                 if funcname not in self.spec_dict:
                     self.spec_dict[funcname] = {func_spec}
                 else:
@@ -359,9 +369,11 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 ss = f'Cannot parse type for function {body_node.name} in class {node.name} with exception {str(exc)}'
                 mylogger.error(ss)
                 continue
+        if len(self.class_specs[node.name]['methods']) == 0:
+            del self.class_specs[node.name]
 
 
-def dump_specs(filename: str, united: dict[str, set[FuncSpec]], indent=4):
+def dump_specs(filename: str, united: dict[str, set[FuncSpec]], class_specs: dict, indent=4):
     def write_op_equivalences(f: IO):
         equiv_dict = {
             'ast.UnaryOp':
@@ -407,6 +419,22 @@ def dump_specs(filename: str, united: dict[str, set[FuncSpec]], indent=4):
                 f.write(writestr)
             f.write(f'{spaces}}},\n')
         f.write('\n}\n')
+    
+    def write_class_specs(f: IO):
+        f.write('class_specs = {\n')
+        spaces = ' ' * indent
+        for classname, classinfo in class_specs.items():
+            f.write(f"{spaces}\'{classname}\': {{\n")
+            f.write(f"{spaces * 2}\'attributes\': {classinfo['attributes']},\n")
+            f.write(f"{spaces * 2}\'methods\': {{\n")
+            for funcname, spec_set in classinfo['methods'].items():
+                f.write(f"{spaces * 3}\'{funcname}\': {{\n")
+                for spec in spec_set:
+                    f.write(f"{spaces * 4}\'{spec}\',\n")
+                f.write(f"{spaces * 3}}},\n")
+            f.write(f"{spaces * 2}}}\n")
+            f.write(f"{spaces}}},\n")
+        f.write("\n}\n")
 
     def write_headers(f: IO):
         f.write('import ast\n\n')
@@ -415,6 +443,7 @@ def dump_specs(filename: str, united: dict[str, set[FuncSpec]], indent=4):
         write_headers(of)
         write_op_equivalences(of)
         write_united_specs(of)
+        write_class_specs(of)
 
 
 def filter_specs(spec_dict: dict[str, set[FuncSpec]]) -> dict[str, set[FuncSpec]]:
@@ -458,6 +487,12 @@ def generate_specs(stub_file):
     print(f'All {stub_file} funcs: {counter.get_func_count()}')
     #
     replaced_dict = filter_specs(ctb.spec_dict)
+    replaced_classes = dict()
+    for classname, classinfo in ctb.class_specs.items():
+        replaced_classes[classname] = dict()
+        replaced_classes[classname]['attributes'] = deepcopy(classinfo['attributes'])
+        new_specs = filter_specs(classinfo['methods'])
+        replaced_classes[classname]['methods'] = deepcopy(new_specs)
     if 'builtins' in replaced_dict:
         raise RuntimeError(f'Builtins class already exists in stub file. Aborting!')
     # replaced_dict['builtins'] = get_root_specs(tree)
@@ -468,11 +503,11 @@ def generate_specs(stub_file):
         else:
             replaced_dict[funcname] |= funcspecs
     replaced_dict = filter_specs(replaced_dict)
-    return replaced_dict
+    return replaced_dict, replaced_classes
 
 
 if __name__ == "__main__":
-    spec_dict = generate_specs('sheds/builtins.pyi')
+    spec_dict, class_specs = generate_specs('sheds/builtins.pyi')
     # number of translated specifications 
     nr_spec = 0
     for funcname, funcspec in spec_dict.items():
@@ -480,7 +515,7 @@ if __name__ == "__main__":
     print(f'Translated: {nr_spec} specifications.')
     #
     # for testing purposes
-    test_dict = generate_specs('sheds/test.pyi')
+    test_dict, test_classes = generate_specs('sheds/test.pyi')
     for k, v in test_dict.items():
         spec_dict[k] = deepcopy(v)
     #
@@ -532,4 +567,4 @@ if __name__ == "__main__":
         FuncSpec.from_str(r'((start:int /\ stop:int /\ step:int) -> (return:range))')
     }
     #
-    dump_specs('united_specs.py', spec_dict)
+    dump_specs('united_specs.py', spec_dict, class_specs)
