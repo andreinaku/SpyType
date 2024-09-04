@@ -3,7 +3,8 @@ import ast
 fooclass = '''
 class foo:
     x: int
-
+    __hash__: ClassVar[None]
+    
     def __init__(self, y: int) -> None:
         self.y = 3.5
 '''
@@ -49,5 +50,5 @@ class object:
     def __subclasshook__(cls, __subclass: type) -> bool: ...
 '''
 
-tree = ast.parse(objectclass)
+tree = ast.parse(fooclass)
 print(ast.dump(tree, indent=4))

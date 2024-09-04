@@ -1,3 +1,4 @@
+import traceback
 import ast
 import astor
 import logging
@@ -57,7 +58,8 @@ TYPE_REPLACE = {'_PositiveInteger': 'int',
                 # 'SupportsIter': 'Iterable',
                 # '_SupportsNextT': 'SupportsNext', 'Sized': 'SupportsLen',
                 'FileDescriptorOrPath': 'str',
-                '_SupportsSumNoDefaultT': 'int'}
+                '_SupportsSumNoDefaultT': 'int',
+                'CodeType': 'TopType'}
 VARTYPE_REPLACE = {
     '_T': 'T?0', '_KT': 'T?1', '_VT': 'T?2', '_T_co': 'T?3',
     '_S': 'T?4', '_P': 'T?5', '_R_co': 'T?6', '_T_contra': 'T?7'
@@ -165,7 +167,10 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             elif new_name == 'BottomType':
                 bt = Basetype({PyType(BottomType)})
             else:
-                ptip = PyType(eval(new_name))
+                try:
+                    ptip = PyType(eval(new_name))
+                except NameError:
+                    ptip = PyType(TopType)
                 bt = Basetype({ptip})
                 # bt = get_builtin_basetype(ptip)
             return bt
@@ -175,6 +180,8 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             return bt
         elif isinstance(node, ast.Subscript):
             # list[int], dict[int, float], list[int | float], ...
+            if node.value.id == 'ClassVar':
+                return self.parse_node_type(node.slice)
             if not isinstance(node.value, ast.Name):
                 ss = f'{type(node.value)} is not yet supported'
                 mylogger.warning(ss)
@@ -184,7 +191,8 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             if container in ignore_list:
                 ss = f'ignored type (for now) <<{container}>> for {tosrc(node.value)}'
                 mylogger.warning(ss)
-                raise TypeError(ss)
+                return Basetype({PyType(TopType)})
+                # raise TypeError(ss)
             contained = node.slice
             kvtuple = False
             if container in MAPPING_BASES or container in DICT_SPECIFIC_TYPES:
