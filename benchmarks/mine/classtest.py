@@ -50,5 +50,15 @@ class object:
     def __subclasshook__(cls, __subclass: type) -> bool: ...
 '''
 
+inherit_1 = '''
+class A:
+    def __init__(self, x):
+        self.x = x
+
+
+class B(A):
+    pass
+'''
+
 tree = ast.parse(fooclass)
 print(ast.dump(tree, indent=4))
