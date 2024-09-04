@@ -344,29 +344,35 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             mylogger.error(ss)
         #
         self.class_specs[node.name] = dict()
-        self.class_specs[node.name]['attributes'] = dict()
+        self.class_specs[node.name]['attributes'] = State()
         self.class_specs[node.name]['methods'] = dict()
         #
         for body_node in node.body:
             try:
-                if not isinstance(body_node, ast.FunctionDef):
+                if not isinstance(body_node, ast.FunctionDef) and not isinstance(body_node, ast.AnnAssign):
                     continue
-                funcname = body_node.name
-                try:
-                    func_spec = self.parse_funcdef(body_node)
-                    if funcname not in self.class_specs[node.name]['methods']:
-                        self.class_specs[node.name]['methods'][funcname] = {func_spec}
+
+                if isinstance(body_node, ast.AnnAssign):
+                    new_bt = self.parse_node_type(body_node.annotation)
+                    self.class_specs[node.name]['attributes'].assignment[tosrc(body_node.target)] = deepcopy(new_bt)
+
+                if isinstance(node, ast.FunctionDef):
+                    funcname = body_node.name
+                    try:
+                        func_spec = self.parse_funcdef(body_node)
+                        if funcname not in self.class_specs[node.name]['methods']:
+                            self.class_specs[node.name]['methods'][funcname] = {func_spec}
+                        else:
+                            self.class_specs[node.name]['methods'][funcname].add(func_spec)
+                    except TypeError as te:
+                        mylogger.error(str(te))
+                        continue
+                    if funcname not in self.spec_dict:
+                        self.spec_dict[funcname] = {func_spec}
                     else:
-                        self.class_specs[node.name]['methods'][funcname].add(func_spec)
-                except TypeError as te:
-                    mylogger.error(str(te))
-                    continue
-                if funcname not in self.spec_dict:
-                    self.spec_dict[funcname] = {func_spec}
-                else:
-                    self.spec_dict[funcname].add(func_spec)
+                        self.spec_dict[funcname].add(func_spec)
             except Exception as exc:
-                ss = f'Cannot parse type for function {body_node.name} in class {node.name} with exception {str(exc)}'
+                ss = f'Cannot parse type for node {tosrc(body_node)} in class {node.name} with exception {str(exc)}'
                 mylogger.error(ss)
                 continue
         if len(self.class_specs[node.name]['methods']) == 0:
