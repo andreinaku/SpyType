@@ -142,6 +142,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
         self.class_stats = dict()
         self.current_class = None
         self.self_type = Basetype({PyType(type(None))})
+        self.incomplete_specs = 0
 
     @staticmethod
     def get_funcnode_from_name(classnode: ast.ClassDef, funcname: str) -> ast.FunctionDef:
@@ -191,8 +192,8 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             if container in ignore_list:
                 ss = f'ignored type (for now) <<{container}>> for {tosrc(node.value)}'
                 mylogger.warning(ss)
-                return Basetype({PyType(TopType)})
-                # raise TypeError(ss)
+                # return Basetype({PyType(TopType)})
+                raise TypeError(ss)
             contained = node.slice
             kvtuple = False
             if container in MAPPING_BASES or container in DICT_SPECIFIC_TYPES:
@@ -242,6 +243,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
         else:
             ss = f'{type(node)} is not yet supported here'
             mylogger.warning(ss)
+            # return Basetype({PyType(TopType)})
             raise TypeError(ss)
 
     def parse_funcdef(self, node: ast.FunctionDef) -> FuncSpec:
@@ -301,6 +303,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                        default_kwonly_list, [node.args.kwarg]]
         param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']  # order is important here! 
         func_spec = FuncSpec()
+        incomplete = False
         for i in range(0, len(param_lists)):
             parameters = param_lists[i]
             prefix = param_prefix[i]
@@ -314,9 +317,12 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                         param_basetype = self.self_type
                     else:
                         param_basetype = self.parse_node_type(param.annotation)
+                        incomplete = True
                 except NameError:
                     ss = f'This type is unsupported: {tosrc(param.annotation)}'
                     raise TypeError(ss)
+                except TypeError:
+                    param_basetype = Basetype({PyType(TopType)})
                 new_basetype = param_basetype.filter_pytypes(builtin_types)
                 if len(new_basetype) == 0:
                     raise TypeError(f'This basetype ({tosrc(param.annotation)}) '
@@ -324,12 +330,18 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 param_basetype = new_basetype
                 spec_param_name = f'{prefix}{param.arg}'
                 func_spec.in_state.assignment[spec_param_name] = deepcopy(param_basetype)
-        return_basetype = self.parse_node_type(node.returns)
+        try:
+            return_basetype = self.parse_node_type(node.returns)
+        except TypeError:
+            return_basetype = Basetype({PyType(TopType)})
+            incomplete = True
         new_basetype = return_basetype.filter_pytypes(builtin_types)
         if len(new_basetype) == 0:
             raise TypeError(f'This basetype (return) is fully unsupported: {return_basetype}')
         return_basetype = new_basetype
         func_spec.out_state.assignment[RETURN_VARNAME] = deepcopy(return_basetype)
+        if incomplete:
+            self.incomplete_specs += 1
         return func_spec
 
     def visit_ClassDef(self, node: ast.ClassDef):
@@ -337,6 +349,11 @@ class ClassdefToBasetypes(ast.NodeVisitor):
         str_type = node.name
         special_sequences = ['str', 'bytes', 'bytearray']
         for base in node.bases:
+            #
+            if tosrc(base).startswith('Protocol'):
+                mylogger.error(f"Protocols not yet supported: {tosrc(node)}")
+                return
+            #
             if (not isinstance(base, ast.Subscript)) or (node.name in special_sequences):
                 continue
             else:
@@ -361,10 +378,13 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                     continue
 
                 if isinstance(body_node, ast.AnnAssign):
-                    new_bt = self.parse_node_type(body_node.annotation)
+                    try:
+                        new_bt = self.parse_node_type(body_node.annotation)
+                    except TypeError:
+                        new_bt = Basetype({PyType(TopType)})
                     self.class_specs[node.name]['attributes'].assignment[tosrc(body_node.target)] = deepcopy(new_bt)
 
-                if isinstance(node, ast.FunctionDef):
+                if isinstance(body_node, ast.FunctionDef):
                     funcname = body_node.name
                     try:
                         func_spec = self.parse_funcdef(body_node)
@@ -439,7 +459,7 @@ def dump_specs(filename: str, united: dict[str, set[FuncSpec]], class_specs: dic
         spaces = ' ' * indent
         for classname, classinfo in class_specs.items():
             f.write(f"{spaces}\'{classname}\': {{\n")
-            f.write(f"{spaces * 2}\'attributes\': {classinfo['attributes']},\n")
+            f.write(f"{spaces * 2}\'attributes\': r\'{classinfo['attributes']}\',\n")
             f.write(f"{spaces * 2}\'methods\': {{\n")
             for funcname, spec_set in classinfo['methods'].items():
                 f.write(f"{spaces * 3}\'{funcname}\': {{\n")
@@ -457,6 +477,9 @@ def dump_specs(filename: str, united: dict[str, set[FuncSpec]], class_specs: dic
         write_headers(of)
         write_op_equivalences(of)
         write_united_specs(of)
+        # write_class_specs(of)
+
+    with open('class_specs.py', 'w') as of:
         write_class_specs(of)
 
 
@@ -517,19 +540,22 @@ def generate_specs(stub_file):
         else:
             replaced_dict[funcname] |= funcspecs
     replaced_dict = filter_specs(replaced_dict)
-    return replaced_dict, replaced_classes
+    return replaced_dict, replaced_classes, ctb.incomplete_specs
 
 
 if __name__ == "__main__":
-    spec_dict, class_specs = generate_specs('sheds/builtins.pyi')
+    #
+    # spec_dict, class_specs = generate_specs('sheds/problem.pyi')
+    #
+    spec_dict, class_specs, incompletes = generate_specs('sheds/builtins.pyi')
     # number of translated specifications 
     nr_spec = 0
     for funcname, funcspec in spec_dict.items():
         nr_spec += len(funcspec)
-    print(f'Translated: {nr_spec} specifications.')
+    print(f'Translated: {nr_spec} specifications. Complete specs: {nr_spec - incompletes} ({100 - (incompletes * 100/nr_spec)}%)')
     #
     # for testing purposes
-    test_dict, test_classes = generate_specs('sheds/test.pyi')
+    test_dict, test_classes, incompletes = generate_specs('sheds/test.pyi')
     for k, v in test_dict.items():
         spec_dict[k] = deepcopy(v)
     #
@@ -558,7 +584,7 @@ if __name__ == "__main__":
         FuncSpec.from_str(r'((x:tuple < T?0 > /\ y:T?1) -> (x:tuple < T?0 + T?1 > /\ return:NoneType))'),
         FuncSpec.from_str(r'((x:dict < T?0, T?1 > /\ y:T?2) -> (x:dict < T?0, T?1 + T?2 > /\ return:NoneType))')
     }
-    spec_dict['append'] = {\
+    spec_dict['append'] = {
         # FuncSpec.from_str(r'((self:list < T?0 > /\ __object:T?0) -> (return:NoneType))'),
         FuncSpec.from_str(r'((self:list < T?0 > /\ __object:T?1) -> (self:list < T?0 + T?1 > /\ return:NoneType))'),
         FuncSpec.from_str(r'((self:bytearray /\ __item:SupportsIndex) -> (return:NoneType))'),
