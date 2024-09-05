@@ -2,6 +2,7 @@ from ast import Assign, Compare, For, If, Subscript, While
 from typing import Any
 from statev2.basetype import *
 from united_specs import op_equiv, unitedspecs
+from class_specs import class_specs as cspecs
 from statev2.function_instance import FunctionInstance, ArgumentMismatchError
 
 
@@ -76,6 +77,20 @@ def find_spec(node: ast.BinOp | ast.Call) -> StateSet:
     else:
         raise TypeError(f'{tosrc(node)} is not a BinOp or a Call')
     return raw_set
+
+
+def find_spec_new(node: ast.BinOp | ast.Call) -> StateSet:
+    if isinstance(node, ast.BinOp):
+        funcname = op_equiv[ast.BinOp][type(node.op)]
+    elif isinstance(node, ast.Call):\
+        funcname = node.func.id
+    else:
+        raise TypeError(f'{tosrc(node)} is not a BinOp or a Call')
+    for classname, specdict in cspecs.items():
+        for fname, specset in specdict.items():
+            if fname == funcname:
+                ret_set |= deepcopy(specset)
+    return ret_set
 
 
 def get_specset(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:

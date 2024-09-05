@@ -480,6 +480,8 @@ def dump_specs(filename: str, united: dict[str, set[FuncSpec]], class_specs: dic
         # write_class_specs(of)
 
     with open('class_specs.py', 'w') as of:
+        write_headers(of)
+        write_op_equivalences(of)
         write_class_specs(of)
 
 
