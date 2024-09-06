@@ -86,8 +86,9 @@ def find_spec_new(node: ast.BinOp | ast.Call) -> StateSet:
         funcname = node.func.id
     else:
         raise TypeError(f'{tosrc(node)} is not a BinOp or a Call')
+    ret_set = StateSet()
     for classname, specdict in cspecs.items():
-        for fname, specset in specdict.items():
+        for fname, specset in specdict['methods'].items():
             if fname == funcname:
                 ret_set |= deepcopy(specset)
     return ret_set
