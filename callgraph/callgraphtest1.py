@@ -38,7 +38,8 @@ def foo(raw_source_paths, language=None,
     return content
 
 
-path = 'callgraph/test5.py'
+# path = 'callgraph/test5.py'
+path = 'benchmarks/shedskin/sokoban/sokoban.py'
 bar = foo(path, language="py", no_trimming=True)
 open('out.json', 'w').write(bar)
 js = json.loads(bar)
