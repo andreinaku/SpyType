@@ -124,11 +124,13 @@ class bytearray(MutableSequence[int]):
         funcnode = ast.parse(code).body[0]
         # funcnode = TypeReplacer().visit(funcnode)
         result = False
-        try:
-            aux = ClassdefToBasetypes().parse_funcdef(funcnode)
-        except TypeError as te:
-            result = True
-        self.assertEqual(result, True)
+        # try:
+        #     aux = ClassdefToBasetypes().parse_funcdef(funcnode)
+        # except TypeError as te:
+        #     result = True
+        result = ClassdefToBasetypes().parse_funcdef(funcnode)
+        expected_result = FuncSpec.from_str(r'((__obj:top) -> (return:int))')
+        self.assertEqual(result, expected_result)
 
     def test_parse_funcdef_6(self):
         code = r'def f(a: int, b: bool, c: float = 3.5) -> int: ...'

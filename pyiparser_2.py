@@ -536,6 +536,9 @@ def generate_specs(stub_file):
         raise RuntimeError(f'Builtins class already exists in stub file. Aborting!')
     # replaced_dict['builtins'] = get_root_specs(tree)
     root_specs = get_root_specs(tree)
+    replaced_classes['builtins'] = dict()
+    replaced_classes['builtins']['attributes'] = State()
+    replaced_classes['builtins']['methods'] = deepcopy(root_specs)
     for funcname, funcspecs in root_specs.items():
         if funcname not in replaced_dict:
             replaced_dict[funcname] = deepcopy(funcspecs)
@@ -560,42 +563,54 @@ if __name__ == "__main__":
     test_dict, test_classes, incompletes = generate_specs('sheds/test.pyi')
     for k, v in test_dict.items():
         spec_dict[k] = deepcopy(v)
+    class_specs['testclasses'] = dict()
+    class_specs['testclasses']['attributes'] = State()
+    class_specs['testclasses']['methods'] = deepcopy(test_dict)
     #
 
     # custom specifications for type inference
-    spec_dict['simpleassign'] = {
+    simpleassign_spec = {
         FuncSpec.from_str(r'((x:top /\ y:T?0) -> (x:T?0 /\ return:NoneType))'),
     }
-    spec_dict['tupleassign'] = {
+    tupleassign_spec = {
         FuncSpec.from_str(
             r'((__va_args:Iterable < top > /\ y:Iterable < T?0 > + str) -> (__va_args:Iterable < T?0 + str > /\ return:NoneType))',
         ),
     }
-    spec_dict['seqassign'] = {
+    seqassign_spec = {
         FuncSpec.from_str(r'((x:top /\ y:Iterable < T?0 >) -> (x:T?0 /\ return:NoneType))'),
         FuncSpec.from_str(r'((x:top /\ y:str) -> (x:str /\ return:NoneType))')
     }
-    spec_dict['simple_subscript'] = {
+    simple_subscript_spec = {
         FuncSpec.from_str(r'((a:Iterable < T?0 > /\ b:int) -> (return:T?0))'),
         FuncSpec.from_str(r'((a:dict< T?0, T?1 > /\ b:T?0) -> (return:T?1))')
     }
-    spec_dict['subscriptassign'] = {
+    subscriptassign_spec = {
         FuncSpec.from_str(r'((x:list < T?0 > /\ y:T?1) -> (x:list < T?0 + T?1 > /\ return:NoneType))'),
         FuncSpec.from_str(r'((x:set < T?0 > /\ y:T?1) -> (x:set < T?0 + T?1 > /\ return:NoneType))'),
         FuncSpec.from_str(r'((x:frozenset < T?0 > /\ y:T?1) -> (x:frozenset < T?0 + T?1 > /\ return:NoneType))'),
         FuncSpec.from_str(r'((x:tuple < T?0 > /\ y:T?1) -> (x:tuple < T?0 + T?1 > /\ return:NoneType))'),
         FuncSpec.from_str(r'((x:dict < T?0, T?1 > /\ y:T?2) -> (x:dict < T?0, T?1 + T?2 > /\ return:NoneType))')
     }
-    spec_dict['append'] = {
+    append_spec = {
         # FuncSpec.from_str(r'((self:list < T?0 > /\ __object:T?0) -> (return:NoneType))'),
         FuncSpec.from_str(r'((self:list < T?0 > /\ __object:T?1) -> (self:list < T?0 + T?1 > /\ return:NoneType))'),
         FuncSpec.from_str(r'((self:bytearray /\ __item:SupportsIndex) -> (return:NoneType))'),
         FuncSpec.from_str(r'((self:list < bot > /\ __object:T?0) -> (self:list < T?0 > /\ return:NoneType))'),
     }
-    spec_dict['assign_1_prim'] = {
+    #
+    list_append_spec = {
+        FuncSpec.from_str(r'((self:list < T?0 > /\ __object:T?1) -> (self:list < T?0 + T?1 > /\ return:NoneType))'),
+        FuncSpec.from_str(r'((self:list < bot > /\ __object:T?0) -> (self:list < T?0 > /\ return:NoneType))'),
+    }
+    bytearray_append_spec = {
+        FuncSpec.from_str(r'((self:bytearray /\ __item:SupportsIndex) -> (return:NoneType))'),
+    }
+    #
+    assign_1_prim_spec = {
         FuncSpec.from_str(r'((c:str + tuple < T?0 + T?1 >) -> (return:tuple < T?0 + T?1 + str >))')
     }
-    spec_dict['for_parse'] = {
+    for_parse_spec = {
         FuncSpec.from_str(r'((target:top /\ iter:Iterable < T?0 >) -> (target:T?0))'),
         FuncSpec.from_str(r'((target:top /\ iter:str) -> (target:str))'),
         FuncSpec.from_str(r'((target:top /\ iter:bytearray) -> (target:int))'),
@@ -603,10 +618,42 @@ if __name__ == "__main__":
         FuncSpec.from_str(r'((target:top /\ iter:range) -> (target:int))'),
         FuncSpec.from_str(r'((target:top /\ iter:memoryview) -> (target:int))'),
     }
-    spec_dict['range'] = {
+    range_spec = {
         FuncSpec.from_str(r'((stop:int) -> (return:range))'),
         FuncSpec.from_str(r'((start:int /\ stop:int) -> (return:range))'),
         FuncSpec.from_str(r'((start:int /\ stop:int /\ step:int) -> (return:range))')
     }
+
+
+    class_specs['custom'] = dict()
+    class_specs['custom']['attributes'] = State()
+    class_specs['custom']['methods'] = dict()
+    spec_dict['simpleassign'] = simpleassign_spec
+    class_specs['custom']['methods']['simpleassign'] = simpleassign_spec
+
+    spec_dict['tupleassign'] = tupleassign_spec
+    class_specs['custom']['methods']['tupleassign'] = tupleassign_spec
+    
+    spec_dict['seqassign'] = seqassign_spec
+    class_specs['custom']['methods']['seqassign'] = seqassign_spec
+
+    spec_dict['simple_subscript'] = simple_subscript_spec
+    class_specs['custom']['methods']['simple_subscript'] = simple_subscript_spec
+
+    spec_dict['subscriptassign'] = subscriptassign_spec
+    class_specs['custom']['methods']['subscriptassign'] = subscriptassign_spec
+    
+    spec_dict['append'] = append_spec
+    class_specs['list']['methods']['append'] = list_append_spec
+    class_specs['bytearray']['methods']['append'] = bytearray_append_spec
+
+    spec_dict['assign_1_prim'] = assign_1_prim_spec
+    class_specs['bytearray']['methods']['assign_1_prim'] = assign_1_prim_spec
+
+    spec_dict['for_parse'] = for_parse_spec
+    class_specs['bytearray']['methods']['for_parse'] = for_parse_spec
+
+    spec_dict['range'] = range_spec
+    class_specs['bytearray']['methods']['range'] = range_spec
     #
     dump_specs('united_specs.py', spec_dict, class_specs)

@@ -86,7 +86,7 @@ def find_spec_new(node: ast.BinOp | ast.Call) -> StateSet:
         funcname = node.func.id
     else:
         raise TypeError(f'{tosrc(node)} is not a BinOp or a Call')
-    ret_set = StateSet()
+    ret_set = set()
     for classname, specdict in cspecs.items():
         for fname, specset in specdict['methods'].items():
             if fname == funcname:
@@ -97,7 +97,8 @@ def find_spec_new(node: ast.BinOp | ast.Call) -> StateSet:
 def get_specset(node: ast.BinOp | ast.Call) -> hset[FuncSpec]:
     if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):
         raise TypeError(f'Node {tosrc(node)} not supported yet')
-    raw_set = find_spec(node)
+    # raw_set = find_spec(node)
+    raw_set = find_spec_new(node)
     spec_set = hset()
     for str_spec in raw_set:
         spec = FuncSpec.from_str(str_spec)
