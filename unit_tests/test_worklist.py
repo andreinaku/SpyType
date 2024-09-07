@@ -70,3 +70,11 @@ class WorklistTestCases(unittest.TestCase):
         os.chdir(PROJECT_DIR)
         mfp_in, mfp_out = run_infer(sourcepath, 'try_1')
         pprint_mfp(mfp_in, mfp_out)
+
+    def test_11(self):
+        os.chdir(PROJECT_DIR)
+        init_ss = StateSet.from_str(r'(a:int /\ b:int)')
+        code = 'c = a + b'
+        tree = ast.parse(code)
+        result = run_infer_on_tree(tree, init_ss, 5, 5)
+        print(result)

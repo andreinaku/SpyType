@@ -215,9 +215,11 @@ class CFGBuilder(ast.NodeVisitor):
             self.cfg.cfgdict[converging_block.id]['parents'] = converging_parents
             self.cfg.cfgdict[converging_block.id]['statements'] = converging_block.statements
             self.cfg.converging_id = converging_block.id
+            self.cfg.cfgdict[converging_block.id]['successors'] = []
             for finalnode in finalnodes:
                 self.add_exit(finalnode, converging_block)
                 converging_parents.append(finalnode.id)
+                self.cfg.cfgdict[finalnode.id]['successors'].append(converging_block.id)
         return self.cfg
 
     def build_from_src(self, name, src):

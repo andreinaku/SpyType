@@ -443,6 +443,9 @@ class TransferFunc(ast.NodeVisitor):
         self.visit(new_call)
         self.state_set = self.state_set.remove_expr_from_assign(new_call_expr)
 
+    def visit_Pass(self, node: ast.Pass):
+        self.generic_visit(node)
+
     def set_apply_specset(self, node: ast.BinOp | ast.Call, testmode: bool = False) -> StateSet:
         if not isinstance(node, ast.BinOp) and not isinstance(node, ast.Call):
             raise TypeError(f'Node {tosrc(node)} cannot have specs to apply (afaik)')

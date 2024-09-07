@@ -82,7 +82,7 @@ def get_variable_names(node):
     return nv.get_names()
 
 
-def run_infer_on_func(cfg, funcname, max_width, max_depth):
+def run_infer_on_func(cfg, funcname, max_width, max_depth) -> tuple:
     # get the function CFG based on the function name
     func_cfg = get_func_cfg(cfg, funcname, True)
     # construct the initial abstract state
@@ -99,6 +99,15 @@ def run_infer_on_func(cfg, funcname, max_width, max_depth):
     aux.Iteration()
     mfp_in, mfp_out = aux.mfp_solution()
     return mfp_in, mfp_out
+
+
+def run_infer_on_tree(tree: ast.AST, init_ss: StateSet, max_width: int, max_depth: int) -> StateSet:
+    cfg = CFGBuilder(separate=True).build('test', tree)
+    worky = worklist.WorklistAnalyzer(cfg, init_ss, max_width, max_depth)
+    worky.Iteration()
+    mfp_in, mfp_out = worky.mfp_solution()
+    # return mfp_in, mfp_out
+    return mfp_out[cfg.converging_id]
 
 
 def run_infer(filename, funcname, max_width=5, max_depth=5):
