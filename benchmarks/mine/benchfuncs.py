@@ -114,3 +114,10 @@ def for_2(x, y):
     for foo in y:
         bar = bar + (foo >> 2)
     return bar
+
+
+def assign_multiple_1(x, y, z):
+    '''
+    Tests correct assignment of type variables in sequence assignments (verbose)
+    '''
+    a, b, c = x, y, z
