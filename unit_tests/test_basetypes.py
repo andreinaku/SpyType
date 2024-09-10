@@ -1066,3 +1066,8 @@ class BasetypeTests(unittest.TestCase):
         )
         self.assertEqual(result, expected_result)
     
+    def test_state_remove_no_names(self):
+        st = State.from_str(r"a:int /\ self.x:int /\ self.y():float")
+        result = st.remove_no_names()
+        expected_result = State.from_str(r"a:int /\ self.x:int")
+        self.assertEqual(result, expected_result)

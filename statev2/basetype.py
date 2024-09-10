@@ -1681,7 +1681,7 @@ class State:
         new_state.constraints = deepcopy(self.constraints)
         for expr, bt in self.assignment.items():
             expr_ast = ast.parse(expr).body[0].value
-            if not isinstance(expr_ast, ast.Name) and expr != RETURN_NAME:
+            if (not isinstance(expr_ast, ast.Name) and expr != RETURN_NAME) and not (isinstance(expr_ast, ast.Attribute) and expr_ast.value != "self"):
                 continue
             new_state.assignment[expr] = deepcopy(bt)
         return new_state
@@ -1991,7 +1991,19 @@ class FuncSpec:
                 # todo: better solution for this cornercase
                 new_funcspec.in_state.assignment[expr] = deepcopy(bt)
         return new_funcspec
-            
+    
+
+class ClassSpec:
+    def __init__(self, name: str, attributes: State = None, methods: dict[str, StateSet] = None):
+        self.name = name
+        if not attributes:
+            self.attributes = State()
+        else:
+            self.attributes  = attributes
+        if not methods:
+            self.methods = dict()
+        else:
+            self.methods = methods
 
 
 # for later use, sequences with implicit types contained

@@ -30,6 +30,21 @@ class ClassAttributeNames(ast.NodeVisitor):
         return self.attr_names
     
 
+class ClassAstFromModule(ast.NodeVisitor):
+    def __init__(self, class_name: str, module_ast: ast.AST):
+        self.class_name = class_name
+        self.module_ast = module_ast
+        self.class_ast = None
+
+    def visit_ClassDef(self, node: ast.ClassDef):
+        if node.name == self.class_name:
+            self.class_ast = node
+    
+    def get_ast(self):
+        self.visit(self.module_ast)
+        return self.class_ast
+    
+
 if __name__ == "__main__":
     code = '''
 class Direction:

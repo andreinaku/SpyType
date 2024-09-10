@@ -7,6 +7,7 @@ from crackedcfg.builder import NameReplacer
 from statev2.basetype import *
 from statev2.transfer import *
 import worklist as worklist
+from callgraph.classinfer import ClassAttributeNames
 
 
 class NameVisitor(ast.NodeVisitor):
@@ -20,7 +21,6 @@ class NameVisitor(ast.NodeVisitor):
 
     def get_names(self):
         return self.names
-    
 
 class SSFlow:
     def __init__(self, params=None):
@@ -113,6 +113,10 @@ def run_infer_on_tree(tree: ast.AST, init_ss: StateSet, max_width: int, max_dept
 def run_infer(filename, funcname, max_width=5, max_depth=5):
     cfg = get_cfg(filename, makepng=False)
     return run_infer_on_func(cfg, funcname, max_width, max_depth)
+
+
+def run_infer_on_class(cfg: CFG, classname: str, max_width: int, max_depth: int) -> dict:
+    pass
 
 
 def run_infer_on_file(filepath, funclist=None, max_width=5, max_depth=5):

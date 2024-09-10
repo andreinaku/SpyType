@@ -78,3 +78,15 @@ class WorklistTestCases(unittest.TestCase):
         tree = ast.parse(code)
         result = run_infer_on_tree(tree, init_ss, 5, 5)
         print(result)
+
+    def test_12(self):
+        os.chdir(PROJECT_DIR)
+        init_ss = StateSet.from_str(r'self:_TestClass /\ x:T1')
+        code = '''
+class _TestClass:
+    def __init__(self, x):
+        self.x = x
+'''
+        tree = ast.parse(code)
+        result = run_infer_on_tree(tree, init_ss)
+        print(result)
