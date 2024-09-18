@@ -1,15 +1,21 @@
-import importlib
-import types
+import ast
 
-module_code = '''
-class foo:
-    pass
+
+code = '''
+class TypeName:
+    def __init__(self, tname: str):
+        self.tname = tname
+
+    def __str__(self):
+        return self.tname
+    
+    def __repr__(self):
+        return self.__str__()
+
+        
+a = 3
+b = TypeName('salut')
 '''
 
-module_name = "dynamic_module"
-module = types.ModuleType(module_name)
-exec(module_code, module.__dict__)
-
-# aux = importlib.import_module(exec(code))
-
-print(eval("module.foo"))
+tree = ast.parse(code)
+print(ast.dump(tree, indent=4))
