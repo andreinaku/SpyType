@@ -182,3 +182,6 @@ benchfuncs.spytype
 *.spytype
 *.json
 class_specs.py
+typings/
+benchmarks/mine/custom_classes/monkeytype.sqlite3
+benchmarks/compare/monkeytype.sqlite3
