@@ -6,9 +6,7 @@ import astor
 class AddClassTypes(ast.NodeVisitor):
 
     @staticmethod
-    def generate_template(classname: str, basenames: list[str], parentnames: list[str]) -> str:
-        if len(parentnames) > 0:
-            raise RuntimeError("Inheritance not yet supported")
+    def generate_template(classname: str, basenames: list[str]) -> str:
         basestr = ''
         for basename in basenames:
             basestr += basename + ", "
@@ -22,7 +20,7 @@ class AddClassTypes(ast.NodeVisitor):
         basenames = []
         for basenode in node.bases:
             basenames.append(astor.to_source(basenode))
-        temp_code = self.generate_template(node.name, basenames, [])
+        temp_code = self.generate_template(node.name, basenames)
         exec(temp_code, globals())
 
 
