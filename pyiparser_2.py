@@ -4,6 +4,8 @@ import logging
 from statev2.basetype import *
 from typing_extensions import *
 from statev2.supported_types import builtin_types
+import inspect
+
 
 # from typing_extensions import (
 #     Concatenate,
@@ -25,8 +27,21 @@ BIG_SELF = 'Self'
 SMALL_SELF = 'self'
 SMALL_CLS = 'cls'
 RETURN_VARNAME = 'return'
-ignore_list = ['slice', 'GenericAlias', 'Callable', 'ellipsis', 'TracebackType', '_SupportsWriteAndFlush', 'CodeType',
-               '_ClassInfo', '_Opener', 'type', 'super', 'SupportsAbs']
+# ignore_list = ['slice', 'GenericAlias', 'Callable', 'ellipsis', 'TracebackType', '_SupportsWriteAndFlush', 'CodeType', '_ClassInfo', '_Opener', 'type', 'super', 'SupportsAbs']
+ignore_list = [
+    'slice',
+    'GenericAlias', 
+    'Callable',
+    'ellipsis',
+    'TracebackType',
+    '_SupportsWriteAndFlush',
+    'CodeType',
+    '_ClassInfo',
+    '_Opener',
+    # 'type',
+    'super',
+    'SupportsAbs'
+]
 IGNORED_CLASSES = ['object', 'staticmethod', 'classmethod', 'ellipsis', '_FormatMapMapping',
                    '_TranslateTable', 'function', '_PathLike', '_SupportsSynchronousAnext',
                    '_GetItemIterable', '_SupportsWriteAndFlush', 'SupportsSomeKindOfPow',
@@ -68,10 +83,21 @@ OUTPUT_FILE = 'specs_shed.py'
 MAPPING_BASES = ['Mapping', 'MutableMapping', 'dict']
 
 
+class WarningOnlyFilter(logging.Filter):
+    def filter(self, record):
+        return record.levelno == logging.WARNING
+    
+
+class InfoOnlyFilter(logging.Filter):
+    def filter(self, record):
+        return record.levelno == logging.INFO
+
+
 def get_logger(
         LOG_FORMAT='%(levelname)-4s %(message)s',
         LOG_NAME='',
         LOG_FILE_INFO='test.log',
+        LOG_FILE_WARN='test.warn',
         LOG_FILE_ERROR='test.err'):
     log = logging.getLogger(LOG_NAME)
     log_formatter = logging.Formatter(LOG_FORMAT)
@@ -79,7 +105,14 @@ def get_logger(
     file_handler_info = logging.FileHandler(LOG_FILE_INFO, mode='w')
     file_handler_info.setFormatter(log_formatter)
     file_handler_info.setLevel(logging.INFO)
+    file_handler_info.addFilter(InfoOnlyFilter())
     log.addHandler(file_handler_info)
+
+    file_handler_warn = logging.FileHandler(LOG_FILE_WARN, mode='w')
+    file_handler_warn.setFormatter(log_formatter)
+    file_handler_warn.setLevel(logging.WARNING)
+    file_handler_warn.addFilter(WarningOnlyFilter())
+    log.addHandler(file_handler_warn)
 
     file_handler_error = logging.FileHandler(LOG_FILE_ERROR, mode='w')
     file_handler_error.setFormatter(log_formatter)
@@ -157,7 +190,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             if new_name.startswith('_') and len(new_name) <= MAX_VARTYPE_LEN:
                 ptip = VarType(new_name)
                 bt = Basetype({ptip})
-            elif new_name == BIG_SELF:
+            elif new_name in [BIG_SELF, SMALL_CLS, SMALL_SELF]:
                 bt = deepcopy(self.self_type)
             elif new_name == 'TopType':
                 bt = Basetype({PyType(TopType)})
@@ -175,30 +208,31 @@ class ClassdefToBasetypes(ast.NodeVisitor):
         elif isinstance(node, ast.Subscript):
             # list[int], dict[int, float], list[int | float], ...
             if not isinstance(node.value, ast.Name):
-                ss = f'{type(node.value)} is not yet supported'
-                mylogger.warning(ss)
+                # todo: tosrc(node.value) daca nu e nume
+                ss = f'{inspect.currentframe().f_lineno}: {tosrc(node.value)} is not yet supported'
+                # mylogger.warning(ss)
                 raise TypeError(ss)
             container = TYPE_REPLACE[node.value.id] if node.value.id in TYPE_REPLACE else node.value.id
             # container = node.value.id
             if container in ignore_list:
-                ss = f'ignored type (for now) <<{container}>> for {tosrc(node.value)}'
-                mylogger.warning(ss)
+                ss = f'{inspect.currentframe().f_lineno}: ignored type (for now) <<{container}>> for {tosrc(node.value)}'
+                # mylogger.warning(ss)
                 raise TypeError(ss)
             contained = node.slice
             kvtuple = False
             if container in MAPPING_BASES or container in DICT_SPECIFIC_TYPES:
                 kvtuple = True
             if not isinstance(node.value, ast.Name):
-                ss = f'{type(node.value)} is not yet supported here'
-                mylogger.warning(ss)
+                ss = f'{inspect.currentframe().f_lineno}: {type(node.value)} is not yet supported here'
+                # mylogger.warning(ss)
                 raise TypeError(ss)
             contained_str = ''
-            # todo: are there Protocol containers used anywhere? 
+            # todo: try except on eval
             container_ptip = PyType(eval(container))
             if isinstance(contained, ast.Name) or isinstance(contained, ast.BinOp):
                 if kvtuple:
                     ss = f'Type {tosrc(node)} is not compatible with key-value pairs'
-                    mylogger.warning(ss)
+                    # mylogger.warning(ss)
                     raise TypeError(ss)
                 container_ptip.keys = self.parse_node_type(contained)
                 return Basetype({container_ptip})
@@ -211,28 +245,28 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 else:
                     if len(contained.elts) != 2:
                         ss = f'{tosrc(node)} type not supported for key-value pairs'
-                        mylogger.warning(ss)
+                        # mylogger.warning(ss)
                         raise TypeError(ss)
                     container_ptip.keys = self.parse_node_type(contained.elts[0])
                     container_ptip.values = self.parse_node_type(contained.elts[1])
                 return Basetype({container_ptip})
             else:
-                ss = f'Slice for {tosrc(node).strip()} is not yet supported'
-                mylogger.warning(ss)
+                ss = f'{inspect.currentframe().f_lineno}: Slice for {tosrc(node).strip()} is not yet supported'
+                # mylogger.warning(ss)
                 raise TypeError(ss)
         elif isinstance(node, ast.BinOp):
             # int | float, complex | list[int], ...
             if not isinstance(node.op, ast.BitOr):
                 ss = f'{node.op} operation not supported for types {node.left} and {node.right}'
-                mylogger.warning(ss)
+                # mylogger.warning(ss)
                 raise TypeError(ss)
             bt = Basetype()
             bt |= self.parse_node_type(node.left)
             bt |= self.parse_node_type(node.right)
             return bt
         else:
-            ss = f'{type(node)} is not yet supported here'
-            mylogger.warning(ss)
+            ss = f'{inspect.currentframe().f_lineno}: {type(node)} is not yet supported here'
+            # mylogger.warning(ss)
             raise TypeError(ss)
 
     def parse_funcdef(self, node: ast.FunctionDef) -> FuncSpec:
@@ -301,7 +335,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 continue  # no vararg or kwarg
             for param in parameters:
                 try:
-                    if param.arg == SMALL_SELF and param.annotation is None:
+                    if param.arg in [SMALL_SELF, SMALL_CLS] and param.annotation is None:
                         param_basetype = self.self_type
                     else:
                         param_basetype = self.parse_node_type(param.annotation)
@@ -348,7 +382,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 try:
                     func_spec = self.parse_funcdef(body_node)
                 except TypeError as te:
-                    mylogger.error(str(te))
+                    mylogger.warning(f"Function {body_node.name}: {str(te)}")
                     continue
                 funcname = body_node.name
                 if funcname not in self.spec_dict:

@@ -11,6 +11,9 @@ builtins = [builtin_types, builtin_seqs, builtin_dicts]
 
 
 def is_supported_type(tip, strict=True) -> bool:
+    # todo: update this
+    return True
+    #
     if strict and tip in builtin_types:
         return True
     if not strict and isinstance(tip, type):
