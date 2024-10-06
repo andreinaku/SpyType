@@ -9,3 +9,7 @@ class bar(foo):
 
 class int:
     pass
+
+
+class baz(int, bar):
+    pass
