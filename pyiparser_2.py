@@ -5,6 +5,7 @@ from statev2.basetype import *
 from typing_extensions import *
 from statev2.supported_types import builtin_types
 import inspect
+import types
 
 
 # from typing_extensions import (
@@ -26,6 +27,10 @@ NAME_LITERAL = 'Literal'
 BIG_SELF = 'Self'
 SMALL_SELF = 'self'
 SMALL_CLS = 'cls'
+WEIRD_SELF = 'type[_typeshed.Self]'
+WEIRD_SELF_2 = '_typeshed.Self'
+TYPE_SELF = 'type[Self]'
+SELFS = [BIG_SELF, SMALL_SELF, SMALL_CLS, WEIRD_SELF, WEIRD_SELF_2, TYPE_SELF]
 RETURN_VARNAME = 'return'
 # ignore_list = ['slice', 'GenericAlias', 'Callable', 'ellipsis', 'TracebackType', '_SupportsWriteAndFlush', 'CodeType', '_ClassInfo', '_Opener', 'type', 'super', 'SupportsAbs']
 ignore_list = [
@@ -52,27 +57,25 @@ DEFAULT_TYPEVAR = '_T'
 # SPEC_DEFAULT_TYPEVAR = 'T?0'
 # param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
 PREFIX_POSONLY, PREFIX_ARGS, PREFIX_VARARG, PREFIX_KWONLY, PREFIX_KWARG = range(5)
-TYPE_REPLACE = {'_PositiveInteger': 'int',
-                '_NegativeInteger': 'int',
-                'object': 'TopType',
-                'ReadOnlyBuffer': 'bytes',
-                'Any': 'TopType',
-                'WriteableBuffer': 'bytearray | memoryview',
-                'ReadableBuffer': 'bytes | bytearray | memoryview',
-                '_TranslateTable': 'dict[int, str | int]',
-                '_FormatMapMapping': 'dict[str, int]',
-                'LiteralString': 'str',
-                'SupportsKeysAndGetItem': 'dict',
-                'AbstractSet': 'set',
-                '_PathLike': 'str | bytes',
-                # '_GetItemIterable': 'GetItemIterable',
-                # '_SupportsPow2': 'SupportsSomeKindOfPow', '_SupportsPow3NoneOnly': 'SupportsSomeKindOfPow',
-                # '_SupportsPow3': 'SupportsSomeKindOfPow', '_SupportsRound1': 'SupportsRound',
-                # '_SupportsRound2': 'SupportsRound',
-                # 'SupportsIter': 'Iterable',
-                # '_SupportsNextT': 'SupportsNext', 'Sized': 'SupportsLen',
-                'FileDescriptorOrPath': 'str',
-                '_SupportsSumNoDefaultT': 'int'}
+TYPE_REPLACE = {
+    '_PositiveInteger': 'int',
+    '_NegativeInteger': 'int',
+    'object': 'TopType',
+    'ReadOnlyBuffer': 'bytes',
+    'Any': 'TopType',
+    'WriteableBuffer': 'bytearray | memoryview',
+    'ReadableBuffer': 'bytes | bytearray | memoryview',
+    '_TranslateTable': 'dict[int, str | int]',
+    '_FormatMapMapping': 'dict[str, int]',
+    'LiteralString': 'str',
+    'SupportsKeysAndGetItem': 'dict',
+    'AbstractSet': 'set',
+    '_PathLike': 'str | bytes',
+    'FileDescriptorOrPath': 'str',
+    '_SupportsSumNoDefaultT': 'int',
+    'SupportsTrunc': 'int | float',
+    WEIRD_SELF: 'Self',
+}
 VARTYPE_REPLACE = {
     '_T': 'T?0', '_KT': 'T?1', '_VT': 'T?2', '_T_co': 'T?3',
     '_S': 'T?4', '_P': 'T?5', '_R_co': 'T?6', '_T_contra': 'T?7'
@@ -190,7 +193,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             if new_name.startswith('_') and len(new_name) <= MAX_VARTYPE_LEN:
                 ptip = VarType(new_name)
                 bt = Basetype({ptip})
-            elif new_name in [BIG_SELF, SMALL_CLS, SMALL_SELF]:
+            elif new_name in SELFS:
                 bt = deepcopy(self.self_type)
             elif new_name == 'TopType':
                 bt = Basetype({PyType(TopType)})
@@ -207,32 +210,40 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             return bt
         elif isinstance(node, ast.Subscript):
             # list[int], dict[int, float], list[int | float], ...
+            if hasattr(node.slice, "elts"):
+                slice_len = len(node.slice.elts)
+                if slice_len != 2:
+                    ss = f'{inspect.currentframe().f_lineno}: {tosrc(node)} is not yet supported'
+                    mylogger.warning(ss)
+                    raise TypeError(ss)
             if not isinstance(node.value, ast.Name):
                 # todo: tosrc(node.value) daca nu e nume
-                ss = f'{inspect.currentframe().f_lineno}: {tosrc(node.value)} is not yet supported'
+                container = tosrc(node.value)
+                # ss = f'{inspect.currentframe().f_lineno}: {tosrc(node.value)} is not yet supported'
                 # mylogger.warning(ss)
-                raise TypeError(ss)
-            container = TYPE_REPLACE[node.value.id] if node.value.id in TYPE_REPLACE else node.value.id
+                # raise TypeError(ss)
+            else:
+                container = TYPE_REPLACE[node.value.id] if node.value.id in TYPE_REPLACE else node.value.id
             # container = node.value.id
             if container in ignore_list:
                 ss = f'{inspect.currentframe().f_lineno}: ignored type (for now) <<{container}>> for {tosrc(node.value)}'
-                # mylogger.warning(ss)
+                mylogger.warning(ss)
                 raise TypeError(ss)
             contained = node.slice
             kvtuple = False
             if container in MAPPING_BASES or container in DICT_SPECIFIC_TYPES:
                 kvtuple = True
-            if not isinstance(node.value, ast.Name):
-                ss = f'{inspect.currentframe().f_lineno}: {type(node.value)} is not yet supported here'
-                # mylogger.warning(ss)
-                raise TypeError(ss)
+            # if not isinstance(node.value, ast.Name):
+            #     ss = f'{inspect.currentframe().f_lineno}: {type(node.value)} is not yet supported here'
+            #     mylogger.warning(ss)
+            #     raise TypeError(ss)
             contained_str = ''
             # todo: try except on eval
             container_ptip = PyType(eval(container))
             if isinstance(contained, ast.Name) or isinstance(contained, ast.BinOp):
                 if kvtuple:
                     ss = f'Type {tosrc(node)} is not compatible with key-value pairs'
-                    # mylogger.warning(ss)
+                    mylogger.warning(ss)
                     raise TypeError(ss)
                 container_ptip.keys = self.parse_node_type(contained)
                 return Basetype({container_ptip})
@@ -245,28 +256,32 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 else:
                     if len(contained.elts) != 2:
                         ss = f'{tosrc(node)} type not supported for key-value pairs'
-                        # mylogger.warning(ss)
+                        mylogger.warning(ss)
                         raise TypeError(ss)
                     container_ptip.keys = self.parse_node_type(contained.elts[0])
                     container_ptip.values = self.parse_node_type(contained.elts[1])
                 return Basetype({container_ptip})
             else:
                 ss = f'{inspect.currentframe().f_lineno}: Slice for {tosrc(node).strip()} is not yet supported'
-                # mylogger.warning(ss)
+                mylogger.warning(ss)
                 raise TypeError(ss)
         elif isinstance(node, ast.BinOp):
             # int | float, complex | list[int], ...
             if not isinstance(node.op, ast.BitOr):
                 ss = f'{node.op} operation not supported for types {node.left} and {node.right}'
-                # mylogger.warning(ss)
+                mylogger.warning(ss)
                 raise TypeError(ss)
             bt = Basetype()
             bt |= self.parse_node_type(node.left)
             bt |= self.parse_node_type(node.right)
             return bt
         else:
+            # exceptions from the rule <3
+            annotation_str = tosrc(node)
+            if annotation_str in SELFS:  # return: Self and others like that
+                return self.self_type
             ss = f'{inspect.currentframe().f_lineno}: {type(node)} is not yet supported here'
-            # mylogger.warning(ss)
+            mylogger.warning(ss)
             raise TypeError(ss)
 
     def parse_funcdef(self, node: ast.FunctionDef) -> FuncSpec:
@@ -335,12 +350,12 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 continue  # no vararg or kwarg
             for param in parameters:
                 try:
-                    if param.arg in [SMALL_SELF, SMALL_CLS] and param.annotation is None:
+                    if param.arg in [SMALL_SELF, SMALL_CLS]:  # and param.annotation is None:
                         param_basetype = self.self_type
                     else:
                         param_basetype = self.parse_node_type(param.annotation)
                 except NameError:
-                    ss = f'This type is unsupported: {tosrc(param.annotation)}'
+                    ss = f'{inspect.currentframe().f_lineno}: This type is unsupported: {tosrc(param.annotation)}'
                     raise TypeError(ss)
                 new_basetype = param_basetype.filter_pytypes(builtin_types)
                 if len(new_basetype) == 0:
@@ -382,7 +397,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 try:
                     func_spec = self.parse_funcdef(body_node)
                 except TypeError as te:
-                    mylogger.warning(f"Function {body_node.name}: {str(te)}")
+                    mylogger.warning(f"Function {node.name}.{body_node.name}: {str(te)}")
                     continue
                 funcname = body_node.name
                 if funcname not in self.spec_dict:
@@ -507,6 +522,7 @@ def generate_specs(stub_file):
 
 if __name__ == "__main__":
     spec_dict = generate_specs('sheds/builtins.pyi')
+    # spec_dict = generate_specs('sheds/bugs.pyi')
     # number of translated specifications 
     nr_spec = 0
     for funcname, funcspec in spec_dict.items():
