@@ -7,6 +7,7 @@ from statev2.supported_types import builtin_types
 import inspect
 import types
 
+from types import CodeType, TracebackType
 
 # from typing_extensions import (
 #     Concatenate,
@@ -22,6 +23,7 @@ import types
 # )
 
 MAX_VARTYPE_LEN = 6
+CALLABLE_TYPE = 'Callable'
 BUILTIN_CATEGORY = 'builtins'
 NAME_LITERAL = 'Literal'
 BIG_SELF = 'Self'
@@ -36,7 +38,7 @@ RETURN_VARNAME = 'return'
 ignore_list = [
     'slice',
     'GenericAlias', 
-    'Callable',
+    # 'Callable',
     'ellipsis',
     'TracebackType',
     '_SupportsWriteAndFlush',
@@ -76,6 +78,7 @@ TYPE_REPLACE = {
     'SupportsTrunc': 'int | float',
     # WEIRD_SELF: 'Self',
     '_ExceptionT': 'Exception',
+    '_BaseExceptionT_co': 'Exception',
 }
 VARTYPE_REPLACE = {
     '_T': 'T?0', '_KT': 'T?1', '_VT': 'T?2', '_T_co': 'T?3',
@@ -231,6 +234,8 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 ss = f'{inspect.currentframe().f_lineno}: ignored type (for now) <<{container}>> for {tosrc(node.value)}'
                 mylogger.warning(ss)
                 raise TypeError(ss)
+            if container.startswith("Callable"):
+                return Basetype({PyType(Callable)})
             contained = node.slice
             kvtuple = False
             if slice_len == 2 and (container in MAPPING_BASES or container in DICT_SPECIFIC_TYPES):
@@ -385,6 +390,11 @@ class ClassdefToBasetypes(ast.NodeVisitor):
         str_type = node.name
         special_sequences = ['str', 'bytes', 'bytearray']
         for base in node.bases:
+            if 'Protocol' in tosrc(base):
+                ss = f"Class ignored (Protocol): {node.name}"
+                mylogger.warning(ss)
+                return
+        for base in node.bases:
             if (not isinstance(base, ast.Subscript)) or (node.name in special_sequences):
                 continue
             else:
@@ -529,8 +539,8 @@ def generate_specs(stub_file):
 
 
 if __name__ == "__main__":
-    # spec_dict = generate_specs('sheds/builtins.pyi')
-    spec_dict = generate_specs('sheds/bugs.pyi')
+    spec_dict = generate_specs('sheds/builtins.pyi')
+    # spec_dict = generate_specs('sheds/bugs.pyi')
     # number of translated specifications 
     nr_spec = 0
     for funcname, funcspec in spec_dict.items():
