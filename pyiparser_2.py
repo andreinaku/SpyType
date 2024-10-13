@@ -74,7 +74,8 @@ TYPE_REPLACE = {
     'FileDescriptorOrPath': 'str',
     '_SupportsSumNoDefaultT': 'int',
     'SupportsTrunc': 'int | float',
-    WEIRD_SELF: 'Self',
+    # WEIRD_SELF: 'Self',
+    '_ExceptionT': 'Exception',
 }
 VARTYPE_REPLACE = {
     '_T': 'T?0', '_KT': 'T?1', '_VT': 'T?2', '_T_co': 'T?3',
@@ -210,12 +211,13 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             return bt
         elif isinstance(node, ast.Subscript):
             # list[int], dict[int, float], list[int | float], ...
+            slice_len = 0
             if hasattr(node.slice, "elts"):
                 slice_len = len(node.slice.elts)
-                if slice_len != 2:
-                    ss = f'{inspect.currentframe().f_lineno}: {tosrc(node)} is not yet supported'
-                    mylogger.warning(ss)
-                    raise TypeError(ss)
+                # if slice_len != 2:
+                #     ss = f'{inspect.currentframe().f_lineno}: {tosrc(node)} is not yet supported'
+                #     mylogger.warning(ss)
+                #     raise TypeError(ss)
             if not isinstance(node.value, ast.Name):
                 # todo: tosrc(node.value) daca nu e nume
                 container = tosrc(node.value)
@@ -231,7 +233,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 raise TypeError(ss)
             contained = node.slice
             kvtuple = False
-            if container in MAPPING_BASES or container in DICT_SPECIFIC_TYPES:
+            if slice_len == 2 and (container in MAPPING_BASES or container in DICT_SPECIFIC_TYPES):
                 kvtuple = True
             # if not isinstance(node.value, ast.Name):
             #     ss = f'{inspect.currentframe().f_lineno}: {type(node.value)} is not yet supported here'
@@ -247,6 +249,9 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                     raise TypeError(ss)
                 container_ptip.keys = self.parse_node_type(contained)
                 return Basetype({container_ptip})
+            elif isinstance(contained, ast.Attribute) and tosrc(contained) == WEIRD_SELF_2:
+                container_ptip.keys = deepcopy(self.self_type)
+                return Basetype({container_ptip})
             elif isinstance(contained, ast.Tuple):
                 if not kvtuple:
                     contained_bt = Basetype()
@@ -261,6 +266,9 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                     container_ptip.keys = self.parse_node_type(contained.elts[0])
                     container_ptip.values = self.parse_node_type(contained.elts[1])
                 return Basetype({container_ptip})
+            elif isinstance(contained, ast.Constant) and container == NAME_LITERAL:
+                constant_bt = Basetype({PyType(type(contained.value))})
+                return constant_bt
             else:
                 ss = f'{inspect.currentframe().f_lineno}: Slice for {tosrc(node).strip()} is not yet supported'
                 mylogger.warning(ss)
@@ -521,8 +529,8 @@ def generate_specs(stub_file):
 
 
 if __name__ == "__main__":
-    spec_dict = generate_specs('sheds/builtins.pyi')
-    # spec_dict = generate_specs('sheds/bugs.pyi')
+    # spec_dict = generate_specs('sheds/builtins.pyi')
+    spec_dict = generate_specs('sheds/bugs.pyi')
     # number of translated specifications 
     nr_spec = 0
     for funcname, funcspec in spec_dict.items():
