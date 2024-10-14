@@ -76,6 +76,7 @@ TYPE_REPLACE = {
     'FileDescriptorOrPath': 'str',
     '_SupportsSumNoDefaultT': 'int',
     'SupportsTrunc': 'int | float',
+    'SupportsLenAndGetItem': 'str | bytes | bytearray | memoryview | tuple | list | dict | range',
     # WEIRD_SELF: 'Self',
     '_ExceptionT': 'Exception',
     '_BaseExceptionT_co': 'Exception',
@@ -179,6 +180,7 @@ class ClassdefToBasetypes(ast.NodeVisitor):
         self.class_stats = dict()
         self.current_class = None
         self.self_type = Basetype({PyType(type(None))})
+        self.special_sequences = ['str', 'bytes', 'bytearray', 'range']
 
     @staticmethod
     def get_funcnode_from_name(classnode: ast.ClassDef, funcname: str) -> ast.FunctionDef:
@@ -188,6 +190,32 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             if node.name == funcname:
                 return node
         return None
+
+    @classmethod
+    def _get_binop_operands(cls, node: ast.BinOp) -> list[ast.AST]:
+        op_list = set()
+        if isinstance(node.left, ast.BinOp):
+            op_list |= cls._get_binop_operands(node.left)
+        else:
+            op_list.add(deepcopy(node.left))
+        if isinstance(node.right, ast.BinOp):
+            op_list |= cls._get_binop_operands(node.right)
+        else:
+            op_list.add(deepcopy(node.right))
+        return op_list
+    
+    @classmethod
+    def _build_binop_from_ops(cls, node_list: list[ast.AST]) -> ast.BinOp:
+        if len(node_list) < 2:
+            raise ValueError("Node list must contain at least two elements")
+        if len(node_list) == 2:
+            new_left = node_list.pop()
+            new_right = node_list.pop()
+            new_node = ast.BinOp(left=deepcopy(new_left), op=ast.BitOr(), right=deepcopy(new_right))
+            return new_node
+        new_right = node_list.pop()
+        new_node = ast.BinOp(left=cls._build_binop_from_ops(node_list), op=ast.BitOr(), right=deepcopy(new_right))
+        return new_node
 
     def parse_node_type(self, node: ast.expr) -> Basetype:
         if isinstance(node, ast.Name):
@@ -217,18 +245,24 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             slice_len = 0
             if hasattr(node.slice, "elts"):
                 slice_len = len(node.slice.elts)
-                # if slice_len != 2:
-                #     ss = f'{inspect.currentframe().f_lineno}: {tosrc(node)} is not yet supported'
-                #     mylogger.warning(ss)
-                #     raise TypeError(ss)
-            if not isinstance(node.value, ast.Name):
-                # todo: tosrc(node.value) daca nu e nume
-                container = tosrc(node.value)
-                # ss = f'{inspect.currentframe().f_lineno}: {tosrc(node.value)} is not yet supported'
-                # mylogger.warning(ss)
-                # raise TypeError(ss)
-            else:
+            if isinstance(node.value, ast.Name):
                 container = TYPE_REPLACE[node.value.id] if node.value.id in TYPE_REPLACE else node.value.id
+            elif isinstance(node.value, ast.Attribute):
+                container = tosrc(node.value)
+            elif isinstance(node.value, ast.BinOp):
+                # (list | tuple)[_T] for example
+                # -> list[_T] | tuple[_T]
+                operand_list = self._get_binop_operands(node.value)
+                new_operand_list = []
+                for operand in operand_list:
+                    operand_str = tosrc(operand)
+                    if operand_str in self.special_sequences:
+                        new_operand = operand
+                    else:
+                        new_operand = ast.Subscript(value=operand, slice=deepcopy(node.slice))
+                    new_operand_list.append(new_operand)
+                new_node = self._build_binop_from_ops(new_operand_list)
+                return self.parse_node_type(new_node)
             # container = node.value.id
             if container in ignore_list:
                 ss = f'{inspect.currentframe().f_lineno}: ignored type (for now) <<{container}>> for {tosrc(node.value)}'
@@ -240,18 +274,15 @@ class ClassdefToBasetypes(ast.NodeVisitor):
             kvtuple = False
             if slice_len == 2 and (container in MAPPING_BASES or container in DICT_SPECIFIC_TYPES):
                 kvtuple = True
-            # if not isinstance(node.value, ast.Name):
-            #     ss = f'{inspect.currentframe().f_lineno}: {type(node.value)} is not yet supported here'
-            #     mylogger.warning(ss)
-            #     raise TypeError(ss)
-            contained_str = ''
-            # todo: try except on eval
             container_ptip = PyType(eval(container))
             if isinstance(contained, ast.Name) or isinstance(contained, ast.BinOp):
                 if kvtuple:
                     ss = f'Type {tosrc(node)} is not compatible with key-value pairs'
                     mylogger.warning(ss)
                     raise TypeError(ss)
+                container_ptip.keys = self.parse_node_type(contained)
+                return Basetype({container_ptip})
+            elif isinstance(contained, ast.Subscript):
                 container_ptip.keys = self.parse_node_type(contained)
                 return Basetype({container_ptip})
             elif isinstance(contained, ast.Attribute) and tosrc(contained) == WEIRD_SELF_2:
@@ -388,14 +419,14 @@ class ClassdefToBasetypes(ast.NodeVisitor):
     def visit_ClassDef(self, node: ast.ClassDef):
         global mylogger
         str_type = node.name
-        special_sequences = ['str', 'bytes', 'bytearray']
+        
         for base in node.bases:
             if 'Protocol' in tosrc(base):
                 ss = f"Class ignored (Protocol): {node.name}"
                 mylogger.warning(ss)
                 return
         for base in node.bases:
-            if (not isinstance(base, ast.Subscript)) or (node.name in special_sequences):
+            if (not isinstance(base, ast.Subscript)) or (node.name in self.special_sequences):
                 continue
             else:
                 str_slice = tosrc(base.slice)

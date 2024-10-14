@@ -1,5 +1,3 @@
-class BaseExceptionGroup(BaseException, Generic[_BaseExceptionT_co]):
+class reversed(Iterator[_T], Generic[_T]):
     @overload
-    def subgroup(
-        self, __condition: type[_ExceptionT] | tuple[type[_ExceptionT], ...]
-    ) -> ExceptionGroup[_ExceptionT] | None: ...
+    def __init__(self, __sequence: SupportsLenAndGetItem[_T]) -> None: ...
