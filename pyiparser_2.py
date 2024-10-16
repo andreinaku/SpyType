@@ -41,7 +41,7 @@ ignore_list = [
     # 'Callable',
     'ellipsis',
     'TracebackType',
-    '_SupportsWriteAndFlush',
+    # '_SupportsWriteAndFlush',
     'CodeType',
     '_ClassInfo',
     '_Opener',
@@ -90,6 +90,7 @@ TYPE_REPLACE = {
     'SupportsAbs': 'int | float | complex',
     'sys._ExitCode': 'int | str | None',
     'NoReturn': 'BottomType',
+    '_SupportsWriteAndFlush': 'TopType',
 }
 VARTYPE_REPLACE = {
     '_T': 'T?0', '_KT': 'T?1', '_VT': 'T?2', '_T_co': 'T?3',
@@ -338,9 +339,13 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 return self.parse_node_type(annotation_node)
             if annotation_str in SELFS:  # return: Self and others like that
                 return self.self_type
-            ss = f'{inspect.currentframe().f_lineno}: {type(node)} is not yet supported here'
-            mylogger.warning(ss)
-            raise TypeError(ss)
+            try:
+                newtype = eval(annotation_str)
+                return Basetype({PyType(newtype)})
+            except:    
+                ss = f'{inspect.currentframe().f_lineno}: {type(node)} is not yet supported here'
+                mylogger.warning(ss)
+                raise TypeError(ss)
 
     def parse_funcdef(self, node: ast.FunctionDef) -> FuncSpec:
         # mark positionals which have default values
@@ -594,8 +599,8 @@ def generate_specs(stub_file):
 
 
 if __name__ == "__main__":
-    # spec_dict = generate_specs('sheds/builtins.pyi')
-    spec_dict = generate_specs('sheds/bugs.pyi')
+    spec_dict = generate_specs('sheds/builtins.pyi')
+    # spec_dict = generate_specs('sheds/bugs.pyi')
     # number of translated specifications 
     nr_spec = 0
     for funcname, funcspec in spec_dict.items():
