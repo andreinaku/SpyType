@@ -47,14 +47,21 @@ ignore_list = [
     '_Opener',
     # 'type',
     'super',
-    'SupportsAbs'
+    # 'SupportsAbs'
 ]
-IGNORED_CLASSES = ['object', 'staticmethod', 'classmethod', 'ellipsis', '_FormatMapMapping',
-                   '_TranslateTable', 'function', '_PathLike', '_SupportsSynchronousAnext',
-                   '_GetItemIterable', '_SupportsWriteAndFlush', 'SupportsSomeKindOfPow',
-                   '_SupportsPow2', '_SupportsPow3NoneOnly', '_SupportsPow3', '_SupportsRound1', '_SupportsRound2',
-                   'BaseExceptionGroup', 'ExceptionGroup', '_SupportsSumWithNoDefaultGiven', 'type', 'super',
-                   'memoryview']
+# IGNORED_CLASSES = ['object', 'staticmethod', 'classmethod', 'ellipsis', '_FormatMapMapping',
+#                    '_TranslateTable', 'function', '_PathLike', '_SupportsSynchronousAnext',
+#                    '_GetItemIterable', '_SupportsWriteAndFlush', 'SupportsSomeKindOfPow',
+#                    '_SupportsPow2', '_SupportsPow3NoneOnly', '_SupportsPow3', '_SupportsRound1', '_SupportsRound2',
+#                    'BaseExceptionGroup', 'ExceptionGroup', '_SupportsSumWithNoDefaultGiven', 'type', 'super',
+#                    'memoryview']
+IGNORED_CLASSES = [
+    "BaseExceptionGroup",
+    "ExceptionGroup"
+]
+IGNORED_METHODS = [
+    "__prepare__"
+]
 DEFAULT_TYPEVAR = '_T'
 # SPEC_DEFAULT_TYPEVAR = 'T?0'
 # param_prefix = ['__po_', '', '__va_', '__ko_', '__kw_']
@@ -80,6 +87,9 @@ TYPE_REPLACE = {
     # WEIRD_SELF: 'Self',
     '_ExceptionT': 'Exception',
     '_BaseExceptionT_co': 'Exception',
+    'SupportsAbs': 'int | float | complex',
+    'sys._ExitCode': 'int | str | None',
+    'NoReturn': 'BottomType',
 }
 VARTYPE_REPLACE = {
     '_T': 'T?0', '_KT': 'T?1', '_VT': 'T?2', '_T_co': 'T?3',
@@ -322,6 +332,10 @@ class ClassdefToBasetypes(ast.NodeVisitor):
         else:
             # exceptions from the rule <3
             annotation_str = tosrc(node)
+            if annotation_str in TYPE_REPLACE:
+                annotation_str = TYPE_REPLACE[annotation_str]
+                annotation_node = ast.parse(annotation_str, mode="eval").body
+                return self.parse_node_type(annotation_node)
             if annotation_str in SELFS:  # return: Self and others like that
                 return self.self_type
             ss = f'{inspect.currentframe().f_lineno}: {type(node)} is not yet supported here'
@@ -419,7 +433,12 @@ class ClassdefToBasetypes(ast.NodeVisitor):
     def visit_ClassDef(self, node: ast.ClassDef):
         global mylogger
         str_type = node.name
-        
+        #
+        if node.name in IGNORED_CLASSES:
+            ss = f"Class ignored (Blocklist): {node.name}"
+            mylogger.warning(ss)
+            return 
+        #
         for base in node.bases:
             if 'Protocol' in tosrc(base):
                 ss = f"Class ignored (Protocol): {node.name}"
@@ -444,7 +463,12 @@ class ClassdefToBasetypes(ast.NodeVisitor):
                 if not isinstance(body_node, ast.FunctionDef):
                     continue
                 try:
+                    if body_node.name in IGNORED_METHODS:
+                        raise RuntimeError
                     func_spec = self.parse_funcdef(body_node)
+                except RuntimeError as re:
+                    mylogger.warning(f"Function {node.name}.{body_node.name} blocklisted: {str(re)}")
+                    continue
                 except TypeError as te:
                     mylogger.warning(f"Function {node.name}.{body_node.name}: {str(te)}")
                     continue
@@ -570,8 +594,8 @@ def generate_specs(stub_file):
 
 
 if __name__ == "__main__":
-    spec_dict = generate_specs('sheds/builtins.pyi')
-    # spec_dict = generate_specs('sheds/bugs.pyi')
+    # spec_dict = generate_specs('sheds/builtins.pyi')
+    spec_dict = generate_specs('sheds/bugs.pyi')
     # number of translated specifications 
     nr_spec = 0
     for funcname, funcspec in spec_dict.items():
