@@ -164,7 +164,7 @@ def pprint_set(seth):
     return to_print
 
 
-if __name__ == "__main__":
+def run():
     # arguments
     parser = argparse.ArgumentParser(description='A POC for Python function type inference using Maude solver.')
     parser.add_argument('-i', '--input', type=str, required=True, help='Input file containing Python functions')
@@ -179,15 +179,6 @@ if __name__ == "__main__":
         help='(EXPERIMENTAL) Apply a restrictive approach for function specification parameter types.'
     )
     args = parser.parse_args()
-    #
-    # if args.reduce_type == 'restrictive':
-    #     reduce_type = ReduceTypes.RESTRICTIVE
-    # elif args.reduce_type == 'generic':
-    #     reduce_type = ReduceTypes.GENERIC
-    # elif args.reduce_type == 'default':
-    #     reduce_type = ReduceTypes.DEFAULT
-    # else:
-    #     raise RuntimeError('Invalid reduce type')
     if args.restrictive:
         reduce_type = ReduceTypes.RESTRICTIVE
     else:
@@ -219,3 +210,11 @@ if __name__ == "__main__":
         to_print += f'{os.linesep}{os.linesep}'
     to_print += f'Time: {diff_time:4f}s'
     open(outpath, 'w').write(to_print)
+
+
+def test(funclist: list[str]):
+    finfo = run_infer_on_file("benchmarks\\mine\\benchfuncs.py", funclist, 5, 5)
+
+if __name__ == "__main__":
+    run()
+    # test(["assign_1"])
