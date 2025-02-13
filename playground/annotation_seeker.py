@@ -50,9 +50,12 @@ class ProtocolSeeker(ast.NodeVisitor):
             return
         str_bases = []
         for base in node.bases:
-            if not isinstance(base, ast.Name):
+            if isinstance(base, ast.Name):
+                str_bases.append(base.id)
+            elif isinstance(base, ast.Subscript) and isinstance(base.value, ast.Name):
+                str_bases.append(base.value.id)
+            else:
                 continue
-            str_bases.append(base.id)
         if self.parent_name not in str_bases:
             return
         def_str = astor.to_source(node).strip()
@@ -124,7 +127,7 @@ class AnnotationSeeker(ast.NodeVisitor):
                 self.goodies.append(argstr)
             except Exception as e:
                 # print(f"not evalled {argstr}")
-                self.problems.append(argstr)
+                self.problems.append(f"{argstr}: {str(e)}")
 
     def collect(self) -> list[str]:
         self.visit(self.tree)
@@ -139,10 +142,10 @@ def seek_from_stubs(fname: str) -> list[str]:
     good_annotations = []
     bad_annotations = []
     for _node in tree.body:    
-        TypeAliasSeeker(tree).gather_typealiases()
-        ProtocolSeeker(tree).gather_protocols()
-        TypeVarSeeker(tree).gather_typevars()
-        g, b = AnnotationSeeker(tree).collect()
+        TypeAliasSeeker(_node).gather_typealiases()
+        ProtocolSeeker(_node).gather_protocols()
+        TypeVarSeeker(_node).gather_typevars()
+        g, b = AnnotationSeeker(_node).collect()
         good_annotations += deepcopy(g)
         bad_annotations += deepcopy(b)
     good_annotations = list(set(good_annotations))
@@ -151,8 +154,7 @@ def seek_from_stubs(fname: str) -> list[str]:
 
 
 if __name__ == "__main__":
-    fname = "/Users/andrei/work/doctorat/SpyType/playground/fakeins.pyi"
-    eval("SupportsNext")
+    fname = "playground/fakeins.pyi"
     goodlist, badlist = seek_from_stubs(fname)
     print(f"good = {len(goodlist)} items\nbad = {len(badlist)} items")
     with open("badseeks.json", "w") as f:
