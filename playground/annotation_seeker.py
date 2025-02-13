@@ -1,3 +1,4 @@
+from __future__ import annotations
 import ast
 import astor
 import typing
@@ -5,6 +6,9 @@ from typing import *
 # from _fakeshed import *
 import json
 import _ast
+from copy import deepcopy
+import types
+
 
 from _fakeshed import (
     AnyStr_co,
@@ -53,7 +57,7 @@ class ProtocolSeeker(ast.NodeVisitor):
             return
         def_str = astor.to_source(node).strip()
         exec(def_str, globals())
-        print(f"evalled {def_str}")
+        # print(f"evalled {def_str}")
     
     def gather_protocols(self):
         self.visit(self.tree)
@@ -79,9 +83,28 @@ class TypeVarSeeker(ast.NodeVisitor):
             return
         assign_str = astor.to_source(node).strip()
         exec(assign_str, globals())
-        print(f"execced {assign_str}")
+        # print(f"execced {assign_str}")
 
     def gather_typevars(self):
+        self.visit(self.tree)
+
+
+class TypeAliasSeeker(ast.NodeVisitor):
+    def __init__(self, tree: ast.AST):
+        self.tree = tree
+
+    def visit_AnnAssign(self, node: ast.AnnAssign):
+        if not hasattr(node.annotation, "id"):
+            return
+        if node.annotation.id != "TypeAlias":
+            return
+        node_src = astor.to_source(node).strip()
+        try:
+            exec(node_src, globals())
+        except:
+            print(f"possibly recursive: {node_src}")
+
+    def gather_typealiases(self):
         self.visit(self.tree)
 
 
@@ -105,19 +128,26 @@ class AnnotationSeeker(ast.NodeVisitor):
 
     def collect(self) -> list[str]:
         self.visit(self.tree)
-        self.goodies = list(set(self.goodies))
-        self.problems = list(set(self.problems))
+        # self.goodies = list(set(self.goodies))
+        # self.problems = list(set(self.problems))
         return self.goodies, self.problems
 
 
 def seek_from_stubs(fname: str) -> list[str]:
     with open(fname, 'r') as f:
         tree = ast.parse(f.read())
-    ProtocolSeeker(tree).gather_protocols()
-    TypeVarSeeker(tree).gather_typevars()
-    aux = AnnotationSeeker(tree).collect()
-    return aux
-
+    good_annotations = []
+    bad_annotations = []
+    for _node in tree.body:    
+        TypeAliasSeeker(tree).gather_typealiases()
+        ProtocolSeeker(tree).gather_protocols()
+        TypeVarSeeker(tree).gather_typevars()
+        g, b = AnnotationSeeker(tree).collect()
+        good_annotations += deepcopy(g)
+        bad_annotations += deepcopy(b)
+    good_annotations = list(set(good_annotations))
+    bad_annotations = list(set(bad_annotations))
+    return good_annotations, bad_annotations
 
 
 if __name__ == "__main__":
