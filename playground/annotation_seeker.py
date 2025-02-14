@@ -39,6 +39,14 @@ from _fakeshed import (
 )
 
 
+annotation_exceptions = {
+    "_SupportsSomeKindOfPow": "_SupportsSomeKindOfPow: TypeAlias = _SupportsPow2[Any, Any] | _SupportsPow3NoneOnly[Any, Any] | _SupportsPow3[Any, Any, Any]",
+}
+
+selftypes = {"Self", "_typeshed.Self"}
+
+
+
 class ProtocolSeeker(ast.NodeVisitor):
     def __init__(self, tree: ast.AST):
         self.tree = tree
@@ -96,6 +104,15 @@ class TypeAliasSeeker(ast.NodeVisitor):
     def __init__(self, tree: ast.AST):
         self.tree = tree
 
+    def visit_Assign(self, node: ast.Assign):
+        if not isinstance(node.targets[0], ast.Name) and node.targets[0] not in annotation_exceptions:
+            return
+        node_src = astor.to_source(node).strip()
+        try:
+            exec(node_src, globals())
+        except:
+            print(f"possibly recursive: {node_src}")
+
     def visit_AnnAssign(self, node: ast.AnnAssign):
         if not hasattr(node.annotation, "id"):
             return
@@ -116,6 +133,12 @@ class AnnotationSeeker(ast.NodeVisitor):
         self.tree = tree
         self.problems = []
         self.goodies = []
+        self.current_class = None
+
+    def visit_ClassDef(self, node: ast.ClassDef):
+        self.current_class = node
+        self.generic_visit(node)
+        self.current_class = None
 
     def visit_FunctionDef(self, node: ast.FunctionDef):
         for arg in node.args.args:
@@ -123,6 +146,8 @@ class AnnotationSeeker(ast.NodeVisitor):
                 continue
             try:
                 argstr = astor.to_source(arg.annotation).strip()
+                if argstr in selftypes:  # the type is the class name, for self-ish annotations
+                    argstr = self.current_class.name
                 eval(argstr)
                 self.goodies.append(argstr)
             except Exception as e:
