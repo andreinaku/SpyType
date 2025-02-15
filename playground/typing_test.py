@@ -121,8 +121,6 @@ class AtomType(BaseType):
 def is_atom_type(ptip: type):
     if isinstance(ptip, type):
         return True
-    # if isinstance(ptip, typing._LiteralGenericAlias):
-    #     return True
     return False
 
 
