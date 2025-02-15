@@ -23,6 +23,8 @@ dict_types = [typing.Dict,  # from typing
               ]
 literal_types = [typing.Literal]
 
+skip_types = [Ellipsis]
+
 
 class BaseType(ABC):
     def __init__(self, ptip):
@@ -35,6 +37,8 @@ class ContainerType(BaseType):
         self.__origin__ = create_basetype(ptip.__origin__)
         self.__args__ = []
         for arg in ptip.__args__:
+            if arg in skip_types:
+                continue
             self.__args__.append(create_basetype(arg))
     
     def __str__(self):
@@ -53,6 +57,8 @@ class ProductType(BaseType):
         self.ptip = ptip
         self.__args__ = []
         for arg in ptip.__args__:
+            if arg in skip_types:
+                continue
             self.__args__.append(create_basetype(arg))
 
     def __str__(self):
@@ -118,8 +124,29 @@ class AtomType(BaseType):
         return str(self)
 
 
+class TypevarType(BaseType):
+    def __init__(self, ptip: TypeVar):
+        self.ptip = ptip
+
+    @property
+    def __name__(self):
+        return self.ptip.__name__
+
+    def __str__(self):
+        return f"{self.ptip.__name__}"
+    
+    def __repr__(self):
+        return str(self)
+
+
 def is_atom_type(ptip: type):
     if isinstance(ptip, type):
+        return True
+    return False
+
+
+def is_var_type(ptip: type):
+    if isinstance(ptip, typing.TypeVar):
         return True
     return False
 
@@ -174,7 +201,9 @@ def is_union_type(ptip: type):
 def create_basetype(ptip):
     if is_atom_type(ptip):
         return AtomType(ptip)
-    if is_literal_type(ptip):
+    elif is_var_type(ptip):
+        return TypevarType(ptip)
+    elif is_literal_type(ptip):
         new_ptip = get_literal_args(ptip)
         return create_basetype(new_ptip)
     elif is_container_type(ptip):
@@ -185,6 +214,8 @@ def create_basetype(ptip):
         return DictType(ptip)
     elif is_union_type(ptip):
         return SumType(ptip)
+    elif ptip is None:
+        return create_basetype(type(ptip))
     else:
         raise TypeError(f"Unknown type {ptip}")
 

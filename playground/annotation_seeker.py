@@ -185,3 +185,6 @@ if __name__ == "__main__":
     print(f"good = {len(goodlist)} items\nbad = {len(badlist)} items")
     with open("badseeks.json", "w") as f:
         json.dump(badlist, f, indent=4)
+    for goodstr in goodlist:
+        _good = create_basetype(eval(goodstr))
+        print(_good)
