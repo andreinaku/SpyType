@@ -2,6 +2,8 @@ from typing import *
 import typing
 import types
 from abc import ABC
+from copy import deepcopy
+
 
 '''
 type: int, float, str, ....
@@ -25,21 +27,6 @@ literal_types = [typing.Literal]
 class BaseType(ABC):
     def __init__(self, ptip):
         ...
-
-
-class AtomType(BaseType):
-    def __init__(self, ptip):
-        self.ptip = ptip
-
-    @property
-    def __name__(self):
-        return self.ptip.__name__
-
-    def __str__(self):
-        return f"{self.ptip.__name__}"
-    
-    def __repr__(self):
-        return str(self)
 
 
 class ContainerType(BaseType):
@@ -114,6 +101,21 @@ class SumType(BaseType):
     
     def __repr__(self):
         return str(self)
+    
+
+class AtomType(BaseType):
+    def __init__(self, ptip):
+        self.ptip = ptip
+
+    @property
+    def __name__(self):
+        return self.ptip.__name__
+
+    def __str__(self):
+        return f"{self.ptip.__name__}"
+    
+    def __repr__(self):
+        return str(self)
 
 
 def is_atom_type(ptip: type):
@@ -122,6 +124,21 @@ def is_atom_type(ptip: type):
     # if isinstance(ptip, typing._LiteralGenericAlias):
     #     return True
     return False
+
+
+def is_literal_type(ptip: type):
+    if isinstance(ptip, typing._LiteralGenericAlias):
+        return True
+
+
+def get_literal_args(ptip: typing._LiteralGenericAlias) -> type:
+    typelist = []
+    if len(ptip.__args__) == 1:
+        return type(ptip.__args__[0])
+    newtype = type(ptip.__args__[0])
+    for i in range(1, len(ptip.__args__)):
+        newtype = newtype | type(ptip.__args__[i])
+    return newtype
 
 
 def is_container_type(ptip: type):
@@ -157,9 +174,11 @@ def is_union_type(ptip: type):
 
 
 def create_basetype(ptip):
-    # to do: Literal types
-    if isinstance(ptip, type):
+    if is_atom_type(ptip):
         return AtomType(ptip)
+    if is_literal_type(ptip):
+        new_ptip = get_literal_args(ptip)
+        return create_basetype(new_ptip)
     elif is_container_type(ptip):
         return ContainerType(ptip)
     elif is_product_type(ptip):
@@ -201,5 +220,14 @@ if __name__ == "__main__":
     _tip = create_basetype(eval(tip))
     print(_tip)
     tip = "types.MappingProxyType[int, float]"
+    _tip = create_basetype(eval(tip))
+    print(_tip)
+    tip = 'Literal["w"]'
+    _tip = create_basetype(eval(tip))
+    print(_tip)
+    tip = 'Literal["w", 3]'
+    _tip = create_basetype(eval(tip))
+    print(_tip)
+    tip = 'Literal[3, "w"]'
     _tip = create_basetype(eval(tip))
     print(_tip)
