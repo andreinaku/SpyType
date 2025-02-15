@@ -45,7 +45,7 @@ annotation_exceptions = {
 }
 
 selftypes = {"Self", "_typeshed.Self"}
-
+skips = ["Callable"]
 
 
 class ProtocolSeeker(ast.NodeVisitor):
@@ -149,6 +149,9 @@ class AnnotationSeeker(ast.NodeVisitor):
                 argstr = astor.to_source(arg.annotation).strip()
                 if argstr in selftypes:  # the type is the class name, for self-ish annotations
                     argstr = self.current_class.name
+                for skip in skips:
+                    if skip in argstr:
+                        raise TypeError("(skipped)")
                 eval(argstr)
                 self.goodies.append(argstr)
             except Exception as e:
@@ -185,6 +188,9 @@ if __name__ == "__main__":
     print(f"good = {len(goodlist)} items\nbad = {len(badlist)} items")
     with open("badseeks.json", "w") as f:
         json.dump(badlist, f, indent=4)
+    good_dict = dict()
     for goodstr in goodlist:
         _good = create_basetype(eval(goodstr))
-        print(_good)
+        good_dict[goodstr] = str(_good)
+    with open("goodtypes.json", "w") as f:
+        json.dump(good_dict, f, indent=4)

@@ -3,7 +3,8 @@ import typing
 import types
 from abc import ABC
 from copy import deepcopy
-
+from os import PathLike
+import collections.abc
 
 '''
 type: int, float, str, ....
@@ -19,11 +20,16 @@ product_types = [typing.Tuple,  # from typing
                  tuple  # from types
                  ]
 dict_types = [typing.Dict,  # from typing
-              dict  # from types
+              dict,  # from types
+              collections.abc.Mapping, collections.abc.MutableMapping
               ]
 literal_types = [typing.Literal]
 
 skip_types = [Ellipsis]
+
+generalized_types = {
+    typing.LiteralString: str,
+}
 
 
 class BaseType(ABC):
@@ -179,6 +185,8 @@ def is_container_type(ptip: type):
 def is_product_type(ptip: type):
     if not isinstance(ptip, (typing._GenericAlias, types.GenericAlias)):
         return False
+    if is_dict_type(ptip):
+        return False
     if ptip.__origin__ in product_types:
         return True
     if len(ptip.__args__) > 1:
@@ -199,7 +207,9 @@ def is_union_type(ptip: type):
 
 
 def create_basetype(ptip):
-    if is_atom_type(ptip):
+    if ptip in generalized_types:
+        return create_basetype(generalized_types[ptip])
+    elif is_atom_type(ptip):
         return AtomType(ptip)
     elif is_var_type(ptip):
         return TypevarType(ptip)
@@ -242,13 +252,13 @@ if __name__ == "__main__":
     tip = "tuple[int | float]"    
     _tip = create_basetype(eval(tip))
     print(_tip)
-    tip = "dict[int, float]"    
+    tip = "dict[int, float]"
     _tip = create_basetype(eval(tip))
     print(_tip)
     tip = "Iterable[int]"
     _tip = create_basetype(eval(tip))
     print(_tip)
-    tip = "types.MappingProxyType[int, float]"
+    tip = "collections.abc.Mapping[int, float]"
     _tip = create_basetype(eval(tip))
     print(_tip)
     tip = 'Literal["w"]'
