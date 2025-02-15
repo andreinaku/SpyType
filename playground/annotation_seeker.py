@@ -8,6 +8,7 @@ import json
 import _ast
 from copy import deepcopy
 import types
+from typing_test import create_basetype
 
 
 from _fakeshed import (

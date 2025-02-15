@@ -19,6 +19,7 @@ product_types = [typing.Tuple,  # from typing
 dict_types = [typing.Dict,  # from typing
               dict  # from types
               ]
+literal_types = [typing.Literal]
 
 
 class BaseType(ABC):
@@ -115,16 +116,57 @@ class SumType(BaseType):
         return str(self)
 
 
+def is_atom_type(ptip: type):
+    if isinstance(ptip, type):
+        return True
+    # if isinstance(ptip, typing._LiteralGenericAlias):
+    #     return True
+    return False
+
+
+def is_container_type(ptip: type):
+    if not isinstance(ptip, (typing._GenericAlias, types.GenericAlias)):
+        return False
+    if ptip.__origin__ in container_types:
+        return True
+    if len(ptip.__args__) == 1:
+        return True
+    return False
+
+
+def is_product_type(ptip: type):
+    if not isinstance(ptip, (typing._GenericAlias, types.GenericAlias)):
+        return False
+    if ptip.__origin__ in product_types:
+        return True
+    if len(ptip.__args__) > 1:
+        return True
+    return False
+
+
+def is_dict_type(ptip: type):
+    if not isinstance(ptip, (typing._GenericAlias, types.GenericAlias)):
+        return False
+    if ptip.__origin__ in dict_types:
+        return True
+    return False
+
+
+def is_union_type(ptip: type):
+    return isinstance(ptip, (typing._UnionGenericAlias, types.UnionType))
+
+
 def create_basetype(ptip):
+    # to do: Literal types
     if isinstance(ptip, type):
         return AtomType(ptip)
-    elif isinstance(ptip, (typing._GenericAlias, types.GenericAlias)) and ptip.__origin__ in container_types:
+    elif is_container_type(ptip):
         return ContainerType(ptip)
-    elif isinstance(ptip, (typing._GenericAlias, types.GenericAlias)) and ptip.__origin__ in product_types:
+    elif is_product_type(ptip):
         return ProductType(ptip)
-    elif isinstance(ptip, (typing._GenericAlias, types.GenericAlias)) and ptip.__origin__ in dict_types:
+    elif is_dict_type(ptip):
         return DictType(ptip)
-    elif isinstance(ptip, (typing._UnionGenericAlias, types.UnionType)):
+    elif is_union_type(ptip):
         return SumType(ptip)
     else:
         raise TypeError(f"Unknown type {ptip}")
@@ -153,5 +195,11 @@ if __name__ == "__main__":
     _tip = create_basetype(eval(tip))
     print(_tip)
     tip = "dict[int, float]"    
+    _tip = create_basetype(eval(tip))
+    print(_tip)
+    tip = "Iterable[int]"
+    _tip = create_basetype(eval(tip))
+    print(_tip)
+    tip = "types.MappingProxyType[int, float]"
     _tip = create_basetype(eval(tip))
     print(_tip)
