@@ -27,7 +27,7 @@ literal_types = [typing.Literal]
 
 skip_types = [Ellipsis]
 
-generalized_types = {
+approximated_types = {
     typing.LiteralString: str,
 }
 
@@ -207,8 +207,8 @@ def is_union_type(ptip: type):
 
 
 def create_basetype(ptip):
-    if ptip in generalized_types:
-        return create_basetype(generalized_types[ptip])
+    if ptip in approximated_types:
+        return create_basetype(approximated_types[ptip])
     elif is_atom_type(ptip):
         return AtomType(ptip)
     elif is_var_type(ptip):
