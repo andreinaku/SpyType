@@ -1,7 +1,7 @@
 from typing import *
 import typing
 import types
-from abc import ABC
+from abc import ABC, abstractmethod
 from copy import deepcopy
 from os import PathLike
 import collections.abc
@@ -33,7 +33,12 @@ approximated_types = {
 
 
 class BaseType(ABC):
+    @abstractmethod
     def __init__(self, ptip):
+        ...
+
+    @abstractmethod
+    def __hash__(self):
         ...
 
 
@@ -46,6 +51,7 @@ class ContainerType(BaseType):
             if arg in skip_types:
                 continue
             self.__args__.append(create_basetype(arg))
+        self.__args__ = tuple(self.__args__)
     
     def __str__(self):
         retstr = f"{self.__origin__.__name__} < "
@@ -56,6 +62,9 @@ class ContainerType(BaseType):
     
     def __repr__(self):
         return str(self)
+    
+    def __hash__(self):
+        return hash((self.__origin__, self.__args__))
 
 
 class ProductType(BaseType):
@@ -66,6 +75,7 @@ class ProductType(BaseType):
             if arg in skip_types:
                 continue
             self.__args__.append(create_basetype(arg))
+        self.__args__ = tuple(self.__args__)
 
     def __str__(self):
         retstr = "("
@@ -76,15 +86,18 @@ class ProductType(BaseType):
     
     def __repr__(self):
         return str(self)
+    
+    def __hash__(self):
+        return hash(self.__args__)
 
 
 class DictType(BaseType):
     def __init__(self, ptip):
         self.ptip = ptip
         self.__origin__ = create_basetype(ptip.__origin__)
-        self.__args__ = []
-        for arg in ptip.__args__:
-            self.__args__.append(create_basetype(arg))
+        if len(ptip.__args__) != 2:
+            raise TypeError(f"{ptip} is not a dictionary type")
+        self.__args__ = (create_basetype(ptip.__args__[0]), create_basetype(ptip.__args__[1]))
     
     def __str__(self):
         retstr = f"{self.__origin__.__name__} < "
@@ -95,6 +108,9 @@ class DictType(BaseType):
     
     def __repr__(self):
         return str(self)
+    
+    def __hash__(self):
+        return hash((self.__origin__, self.__args__))
 
 
 class SumType(BaseType):
@@ -103,6 +119,7 @@ class SumType(BaseType):
         self.__args__ = []
         for arg in ptip.__args__:
             self.__args__.append(create_basetype(arg))
+        self.__args__ = tuple(self.__args__)
 
     def __str__(self):
         retstr = ""
@@ -113,6 +130,9 @@ class SumType(BaseType):
     
     def __repr__(self):
         return str(self)
+    
+    def __hash__(self):
+        return hash(self.__args__)
     
 
 class AtomType(BaseType):
@@ -128,6 +148,9 @@ class AtomType(BaseType):
     
     def __repr__(self):
         return str(self)
+    
+    def __hash__(self):
+        return hash(self.__name__)
 
 
 class TypevarType(BaseType):
@@ -143,6 +166,9 @@ class TypevarType(BaseType):
     
     def __repr__(self):
         return str(self)
+    
+    def __hash__(self):
+        return hash(self.__name__)
 
 
 def is_atom_type(ptip: type):
