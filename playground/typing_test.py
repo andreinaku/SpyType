@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from copy import deepcopy
 from os import PathLike
 import collections.abc
+import ast
 
 '''
 type: int, float, str, ....
@@ -171,6 +172,34 @@ class TypevarType(BaseType):
         return hash(self.__name__)
 
 
+class AbstractState(dict):
+    def __str__(self):
+        retstr = ''
+        for k, v in self.items():
+            retstr += f'{k}:{v} /\ '
+        if retstr:
+            retstr = retstr[:-4]
+        return retstr
+    
+    def __repr__(self):
+        return str(self)
+
+    def __hash__(self):
+        tuppled = tuple(self.items())
+        return hash(tuppled)
+
+
+class FunctionSpec(tuple):
+    def __new__(cls, first, second):
+        return super().__new__(cls, (first, second))
+
+    def __str__(self):
+        return f'({self[0]}) -> ({self[1]})'
+
+    def __repr__(self):
+        return str(self)    
+
+
 def is_atom_type(ptip: type):
     if isinstance(ptip, type):
         return True
@@ -296,3 +325,13 @@ if __name__ == "__main__":
     tip = 'Literal[3, "w"]'
     _tip = create_basetype(eval(tip))
     print(_tip)
+    #
+    as1 = AbstractState()
+    as1['a'] = create_basetype(int)
+    as1['b'] = create_basetype(float)
+    print(as1)
+    as2 = AbstractState()
+    as2['return'] = create_basetype(list[int])
+    print(as2)
+    fs = FunctionSpec(as1, as2)
+    print(fs)

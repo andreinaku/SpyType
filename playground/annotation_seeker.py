@@ -8,7 +8,7 @@ import json
 import _ast
 from copy import deepcopy
 import types
-from typing_test import create_basetype
+from typing_test import create_basetype, AbstractState, FunctionSpec
 from collections import defaultdict
 
 
@@ -156,7 +156,7 @@ class AnnotationSeeker(ast.NodeVisitor):
         self.generic_visit(node)
         self.current_class = None
 
-    def visit_FunctionDef(self, node: ast.FunctionDef):
+    def parse_FunctionDef(self, node:ast.FunctionDef, collect_mode=True):
         if node in visited_nodes:
             return
         if self.current_class is None:
@@ -165,33 +165,76 @@ class AnnotationSeeker(ast.NodeVisitor):
             stats_key = self.current_class.name
         class_stats[stats_key]['total'] += 1            
         visited_nodes.append(node)
-        arg_lists = [node.args.args, node.args.posonlyargs, node.args.kwonlyargs]
+        arg_lists = [node.args.posonlyargs, node.args.args, node.args.kwonlyargs]
         is_translatable = True
+        as_in = AbstractState()
+        as_out = AbstractState()
         for arg_list in arg_lists:
-            for arg in arg_list:
-                if not hasattr(arg, "annotation") or arg.annotation is None:
+            if not collect_mode and not is_translatable:
+                break
+            for _arg in arg_list:
+                if not hasattr(_arg, "annotation") or _arg.annotation is None:
                     continue
                 try:
-                    argstr = astor.to_source(arg.annotation).strip()
+                    argstr = astor.to_source(_arg.annotation).strip()
                     if argstr in selftypes:  # the type is the class name, for self-ish annotations
                         argstr = self.current_class.name
                     for skip in skips:
                         if skip in argstr:
                             raise TypeError("(skipped)")
                     evalled = eval(argstr)
-                    auxbt = create_basetype(evalled)
+                    as_in[_arg.arg] = create_basetype(evalled)
                     self.goodies.append(argstr)
                 except Exception as e:
                     self.problems.append(f"{argstr}: {str(e)}")
                     is_translatable = False
+                    if not collect_mode:
+                        break
+
         if is_translatable:
             class_stats[stats_key]['translatable'] += 1
+
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        self.parse_FunctionDef(node, False)
+        # if node in visited_nodes:
+        #     return
+        # if self.current_class is None:
+        #     stats_key = 'indie'
+        # else:
+        #     stats_key = self.current_class.name
+        # class_stats[stats_key]['total'] += 1            
+        # visited_nodes.append(node)
+        # arg_lists = [node.args.posonlyargs, node.args.args, node.args.kwonlyargs]
+        # is_translatable = True
+        # as_in = AbstractState()
+        # as_out = AbstractState()
+        # for arg_list in arg_lists:
+        #     for _arg in arg_list:
+        #         if not hasattr(_arg, "annotation") or _arg.annotation is None:
+        #             continue
+        #         try:
+        #             argstr = astor.to_source(_arg.annotation).strip()
+        #             if argstr in selftypes:  # the type is the class name, for self-ish annotations
+        #                 argstr = self.current_class.name
+        #             for skip in skips:
+        #                 if skip in argstr:
+        #                     raise TypeError("(skipped)")
+        #             evalled = eval(argstr)
+        #             as_in[_arg.arg] = create_basetype(evalled)
+        #             # auxbt = create_basetype(evalled)
+        #             self.goodies.append(argstr)
+        #         except Exception as e:
+        #             self.problems.append(f"{argstr}: {str(e)}")
+        #             is_translatable = False
+        # if is_translatable:
+        #     class_stats[stats_key]['translatable'] += 1
 
 
     def collect(self) -> list[str]:
         self.visit(self.tree)
         return self.goodies, self.problems
-    
+
 
 def seek_from_stubs(fname: str) -> list[str]:
     with open(fname, 'r') as f:
