@@ -30,6 +30,7 @@ skip_types = [Ellipsis]
 
 approximated_types = {
     typing.LiteralString: str,
+    typing.Sized: collections.abc.Sized
 }
 
 
@@ -228,7 +229,7 @@ def get_literal_args(ptip: typing._LiteralGenericAlias) -> type:
 
 
 def is_container_type(ptip: type):
-    if not isinstance(ptip, (typing._GenericAlias, types.GenericAlias)):
+    if not isinstance(ptip, (typing._BaseGenericAlias, types.GenericAlias)):
         return False
     if ptip.__origin__ in container_types:
         return True
@@ -238,7 +239,7 @@ def is_container_type(ptip: type):
 
 
 def is_product_type(ptip: type):
-    if not isinstance(ptip, (typing._GenericAlias, types.GenericAlias)):
+    if not isinstance(ptip, (typing._BaseGenericAlias, types.GenericAlias)):
         return False
     if is_dict_type(ptip):
         return False
@@ -250,7 +251,7 @@ def is_product_type(ptip: type):
 
 
 def is_dict_type(ptip: type):
-    if not isinstance(ptip, (typing._GenericAlias, types.GenericAlias)):
+    if not isinstance(ptip, (typing._BaseGenericAlias, types.GenericAlias)):
         return False
     if ptip.__origin__ in dict_types:
         return True

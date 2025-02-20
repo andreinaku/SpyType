@@ -1,15 +1,17 @@
 from __future__ import annotations
 import ast
 import astor
-import typing
 from typing import *
+import typing
+from types import *
+import types
 # from _fakeshed import *
 import json
 import _ast
 from copy import deepcopy
-import types
-from typing_test import create_basetype, AbstractState, FunctionSpec
-from collections import defaultdict
+# from typing_test import create_basetype, AbstractState, FunctionSpec
+from typing_test import *
+from io import *
 
 
 from _fakeshed import (
@@ -51,6 +53,7 @@ skips = ["Callable"]
 visited_nodes = []
 class_stats = dict()
 class_stats = {'indie': {'translatable': 0, 'total': 0}}
+class_dict = dict()
 
 
 class ProtocolSeeker(ast.NodeVisitor):
@@ -141,6 +144,13 @@ class TypeAliasSeeker(ast.NodeVisitor):
         self.visit(self.tree)
 
 
+def add_to_class_dict(key, value):
+    if key in class_dict:
+        class_dict[key].append(value)
+    else:
+        class_dict[key] = [value]
+
+
 class AnnotationSeeker(ast.NodeVisitor):
     def __init__(self, tree: ast.AST):
         self.tree = tree
@@ -157,6 +167,7 @@ class AnnotationSeeker(ast.NodeVisitor):
         self.generic_visit(node)
         self.current_class = None
 
+
     def parse_FunctionDef(self, node:ast.FunctionDef, collect_mode=True):
         if node in visited_nodes:
             return
@@ -164,7 +175,7 @@ class AnnotationSeeker(ast.NodeVisitor):
             stats_key = 'indie'
         else:
             stats_key = self.current_class.name
-        class_stats[stats_key]['total'] += 1            
+        class_stats[stats_key]['total'] += 1   
         visited_nodes.append(node)
         arg_lists = [node.args.posonlyargs, node.args.args, node.args.kwonlyargs]
         is_translatable = True
@@ -191,45 +202,30 @@ class AnnotationSeeker(ast.NodeVisitor):
                     is_translatable = False
                     if not collect_mode:
                         break
-
+        if not is_translatable:
+            return
+        try:
+            ret_str = astor.to_source(node.returns).strip()
+            if ret_str in selftypes:  # the type is the class name, for self-ish annotations
+                ret_str = self.current_class.name
+            for skip in skips:
+                if skip in ret_str:
+                    raise TypeError("(skipped)")
+            evalled = eval(ret_str)
+            as_out['return'] = create_basetype(evalled)
+        except Exception as e: 
+            self.problems.append(f"{ret_str}: {str(e)}")
+            is_translatable = False
+            if not collect_mode:
+                return
+        fs = FunctionSpec(as_in, as_out)
+        add_to_class_dict(stats_key, fs)
         if is_translatable:
             class_stats[stats_key]['translatable'] += 1
 
 
     def visit_FunctionDef(self, node: ast.FunctionDef):
         self.parse_FunctionDef(node, False)
-        # if node in visited_nodes:
-        #     return
-        # if self.current_class is None:
-        #     stats_key = 'indie'
-        # else:
-        #     stats_key = self.current_class.name
-        # class_stats[stats_key]['total'] += 1            
-        # visited_nodes.append(node)
-        # arg_lists = [node.args.posonlyargs, node.args.args, node.args.kwonlyargs]
-        # is_translatable = True
-        # as_in = AbstractState()
-        # as_out = AbstractState()
-        # for arg_list in arg_lists:
-        #     for _arg in arg_list:
-        #         if not hasattr(_arg, "annotation") or _arg.annotation is None:
-        #             continue
-        #         try:
-        #             argstr = astor.to_source(_arg.annotation).strip()
-        #             if argstr in selftypes:  # the type is the class name, for self-ish annotations
-        #                 argstr = self.current_class.name
-        #             for skip in skips:
-        #                 if skip in argstr:
-        #                     raise TypeError("(skipped)")
-        #             evalled = eval(argstr)
-        #             as_in[_arg.arg] = create_basetype(evalled)
-        #             # auxbt = create_basetype(evalled)
-        #             self.goodies.append(argstr)
-        #         except Exception as e:
-        #             self.problems.append(f"{argstr}: {str(e)}")
-        #             is_translatable = False
-        # if is_translatable:
-        #     class_stats[stats_key]['translatable'] += 1
 
 
     def collect(self) -> list[str]:
