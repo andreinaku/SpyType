@@ -73,6 +73,7 @@ class ProtocolSeeker(ast.NodeVisitor):
         if self.parent_name not in str_bases:
             return
         def_str = astor.to_source(node).strip()
+        def_str = f"@runtime_checkable\n{def_str}"
         exec(def_str, globals())
         # print(f"evalled {def_str}")
     
