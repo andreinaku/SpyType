@@ -6,6 +6,7 @@ from copy import deepcopy
 from os import PathLike
 import collections.abc
 import ast
+import json
 
 '''
 type: int, float, str, ....
@@ -41,6 +42,14 @@ class BaseType(ABC):
 
     @abstractmethod
     def __hash__(self):
+        ...
+
+    @abstractmethod
+    def __str__(self):
+        ...
+
+    @abstractmethod
+    def __repr__(self):
         ...
 
 
@@ -174,10 +183,23 @@ class TypevarType(BaseType):
 
 
 class AbstractState(dict):
+    def __init__(self, initial_data=None):
+        super().__init__()
+        if initial_data:
+            for k, v in initial_data.items():
+                self.__setitem__(k, v)
+
+    def __setitem__(self, key, value):
+        if not isinstance(key, str):
+            raise TypeError(f"{key} is not str")
+        if not isinstance(value, BaseType):
+            raise TypeError(f"{value} is not BaseType")
+        super().__setitem__(key, value)
+
     def __str__(self):
         retstr = ''
         for k, v in self.items():
-            retstr += f'{k}:{v} /\ '
+            retstr += rf'{k}:{v} /\ '
         if retstr:
             retstr = retstr[:-4]
         return retstr
@@ -192,6 +214,10 @@ class AbstractState(dict):
 
 class FunctionSpec(tuple):
     def __new__(cls, first, second):
+        if not isinstance(first, AbstractState):
+            raise TypeError(f"{first} is not an AbstractState")
+        if not isinstance(second, AbstractState):
+            raise TypeError(f"{second} is not an AbstractState")
         return super().__new__(cls, (first, second))
 
     def __str__(self):
@@ -199,6 +225,28 @@ class FunctionSpec(tuple):
 
     def __repr__(self):
         return str(self)    
+
+
+# class FunctionSpecJSONEncoder(json.JSONEncoder):
+#     def default(self, o):
+#         if isinstance(o, FunctionSpec):
+#             return [self.serialize_abstract_state(abs_state) for abs_state in o]
+#         if isinstance(o, AbstractState):
+#             return self.serialize_abstract_state(o)
+#         if isinstance(o, BaseType):
+#             return self.serialize_basetype(o)
+#         return super().default(o)
+
+#     def serialize_abstract_state(self, abs_state):
+#         if not isinstance(abs_state, AbstractState):
+#             raise TypeError(f"cannot serialize {abs_state} because it is not an AbstractState")
+#         return {key: self.serialize_basetype(value) for key, value in abs_state.items()}
+        
+    
+#     def serialize_basetype(self, bt):
+#         if not isinstance(bt, BaseType):
+#             raise TypeError(f"cannot serialize {bt} because it is not a BaseType")
+#         return str(bt)
 
 
 def is_atom_type(ptip: type):
@@ -286,10 +334,7 @@ def create_basetype(ptip):
         raise TypeError(f"Unknown type {ptip}")
 
 
-if __name__ == "__main__":
-    title = "Simple typing converter"
-    print(title)
-    print("=" * len(title))
+def str_tests():
     tip = "int"
     _tip = create_basetype(eval(tip))
     print(_tip)
@@ -336,3 +381,24 @@ if __name__ == "__main__":
     print(as2)
     fs = FunctionSpec(as1, as2)
     print(fs)
+
+
+def encode_tests():
+    as1 = AbstractState()
+    as1['a'] = create_basetype(int)
+    as1['b'] = create_basetype(float)
+    print(as1)
+    as2 = AbstractState()
+    as2['return'] = create_basetype(list[int])
+    print(as2)
+    fs = FunctionSpec(as1, as2)
+    json_str = json.dumps(str(fs), indent=4)
+    print(json_str)
+
+
+if __name__ == "__main__":
+    title = "Simple typing converter"
+    print(title)
+    print("=" * len(title))
+    str_tests()
+    encode_tests()
