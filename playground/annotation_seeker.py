@@ -44,6 +44,23 @@ from _fakeshed import (
 )
 
 
+def is_protocol_classdef(node: ast.ClassDef) -> bool:
+    protocol_base = "Protocol"
+    if len(node.bases) < 1:
+        return False
+    str_bases = []
+    for base in node.bases:
+        if isinstance(base, ast.Name):
+            str_bases.append(base.id)
+        elif isinstance(base, ast.Subscript) and isinstance(base.value, ast.Name):
+            str_bases.append(base.value.id)
+        else:
+            continue
+    if protocol_base not in str_bases:
+        return False
+    return True
+
+
 class ProtocolSeeker(ast.NodeVisitor):
     def __init__(self, tree: ast.AST, visited_nodes: list[ast.AST]):
         self.tree = tree
@@ -54,17 +71,7 @@ class ProtocolSeeker(ast.NodeVisitor):
     def visit_ClassDef(self, node: ast.ClassDef):
         if node in self.visited_nodes:
             return
-        if len(node.bases) < 1:
-            return
-        str_bases = []
-        for base in node.bases:
-            if isinstance(base, ast.Name):
-                str_bases.append(base.id)
-            elif isinstance(base, ast.Subscript) and isinstance(base.value, ast.Name):
-                str_bases.append(base.value.id)
-            else:
-                continue
-        if self.parent_name not in str_bases:
+        if not is_protocol_classdef(node):
             return
         def_str = astor.to_source(node).strip()
         def_str = f"@runtime_checkable\n{def_str}"
@@ -165,6 +172,8 @@ class AnnotationSeeker(ast.NodeVisitor):
         self.collect_mode = collect_mode
 
     def visit_ClassDef(self, node: ast.ClassDef):
+        if is_protocol_classdef(node):
+            return
         if node in self.visited_nodes:
             return
         self.visited_nodes.append(node)
