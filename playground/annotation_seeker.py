@@ -13,6 +13,7 @@ from copy import deepcopy
 from typing_test import *
 from io import *
 import re
+from dataclasses import dataclass
 
 
 from _fakeshed import (
@@ -42,6 +43,11 @@ from _fakeshed import (
     SupportsRichComparisonT,
     SupportsWrite
 )
+
+@dataclass
+class Context:
+    skips: list[str]
+    selftypes: list[str]
 
 
 def is_protocol_classdef(node: ast.ClassDef) -> bool:
@@ -154,6 +160,207 @@ class TypeAliasSeeker(ast.NodeVisitor):
 
 
 class AnnotationSeeker(ast.NodeVisitor):
+    def __init__(self, tree: ast.AST, class_stats: dict[str, dict[str, int]], context: Context):
+        self.tree = tree
+        self.problems = []
+        self.goodies = []
+        self.selftypes = context.selftypes
+        self.skips = context.skips
+        self.class_stats = class_stats
+        self.current_class = None
+
+    def visit_ClassDef(self, node):
+        if is_protocol_classdef(node):
+            return
+        self.current_class = node
+        self.class_stats[self.current_class.name] = {'translatable': 0, 'total': 0}
+        self.generic_visit(node)
+        self.current_class = None
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+
+        def get_annotation_str(annot_node: ast.AST) -> str:
+            if not hasattr(annot_node, "annotation"):
+                return None
+            if annot_node.annotation is None:
+                if annot_node.arg == "self":
+                    return self.current_class.name
+            argstr = astor.to_source(annot_node.annotation).strip()
+            if argstr in self.selftypes:  # the type is the class name, for self-ish annotations
+                argstr = self.current_class.name
+            for skip in self.skips:
+                if skip in argstr:
+                    raise TypeError(f"{argstr}: (skipped)")
+            return argstr
+        
+        def annotation_to_basetype(argstr: str) -> BaseType | None:
+            if argstr is None:
+                return None
+            try:
+                evalled = eval(argstr)
+            except Exception as e:
+                raise Exception(f"{argstr}: {str(e)}")
+            return create_basetype(evalled)
+        
+        def parse_annotation(_arg: ast.AST) -> bool:
+            try:
+                argstr = get_annotation_str(_arg)
+                bt = annotation_to_basetype(argstr)
+                if bt is not None:
+                    self.goodies.append(argstr)
+                return True
+            except Exception as e:
+                self.problems.append(str(e))
+                return False
+
+        if self.current_class is None:
+            stats_key = 'indie'
+        else:
+            stats_key = self.current_class.name
+        is_translatable = True
+        self.class_stats[stats_key]['total'] += 1   
+        arg_lists = [node.args.posonlyargs, node.args.args]
+        for arg_list in arg_lists:
+            for _arg in arg_list:
+                is_translatable &= parse_annotation(_arg)
+                
+        _arg = node.args.vararg
+        is_translatable &= parse_annotation(_arg)
+
+        for _arg in node.args.kwonlyargs:
+            is_translatable &= parse_annotation(_arg)
+
+        _arg = node.args.kwarg
+        is_translatable &= parse_annotation(_arg)
+        
+        _arg = node.returns
+        is_translatable &= parse_annotation(_arg)
+        if is_translatable:
+            self.class_stats[stats_key]['translatable'] += 1
+    
+    def collect(self) -> list[str]:
+        self.visit(self.tree)
+        return self.goodies, self.problems
+    
+
+class AnnotationTranslator(ast.NodeVisitor):
+    def __init__(self, tree: ast.AST, class_dict: dict[str, dict[str, list[FunctionSpec]]], context: Context):
+        self.tree = tree
+        self.selftypes = context.selftypes
+        self.skips = context.skips
+        self.class_dict = class_dict
+    
+    def visit_ClassDef(self, node):
+        if is_protocol_classdef(node):
+            return
+        self.current_class = node
+        self.generic_visit(node)
+        self.current_class = None
+    
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        def add_to_class_dict(classname: str, funcname: str, funcspec: FunctionSpec):
+            if classname in self.class_dict:
+                if funcname in self.class_dict[classname]:
+                    self.class_dict[classname][funcname].append(funcspec)
+                else:
+                    self.class_dict[classname][funcname] = [funcspec]
+            else:
+                self.class_dict[classname] = {funcname: [funcspec]}
+
+        def has_annotation(_node: ast.arg):
+            if not hasattr(_node, "annotation") or _node.annotation is None:
+                return False
+            return True
+        
+        def can_be_translated(_node: ast.arg):
+            if not has_annotation(_node) and _node.arg != "self":
+                return False
+            return True
+
+        def get_string_from_annotation(_annot: ast.AST):
+            annot_str = astor.to_source(_annot).strip()
+            if annot_str in self.selftypes:  # the type is the class name, for self-ish annotations
+                annot_str = self.current_class.name
+            for skip in self.skips:
+                if skip in annot_str:
+                    raise TypeError(f"{annot_str}: (skipped)")
+            return annot_str
+
+        def str_type_from_node(annot_node: ast.arg) -> str:
+            if not has_annotation(annot_node) and annot_node.arg == "self":
+                return self.current_class.name
+            return get_string_from_annotation(annot_node.annotation)
+        
+        def annotation_to_basetype(argstr: str) -> BaseType | None:
+            try:
+                evalled = eval(argstr)
+            except Exception as e:
+                raise Exception(f"{argstr}: {str(e)}")
+            return create_basetype(evalled)
+        
+        def parse_annotation(_arg: ast.arg) -> tuple[str, BaseType]:
+            if not can_be_translated(_arg):
+                raise RuntimeError(f"cannot translate {astor.to_source(_arg).strip()}")
+            annot_str = str_type_from_node(_arg)
+            arg_str = _arg.arg
+            bt = annotation_to_basetype(annot_str)
+            return arg_str, bt
+
+        if self.current_class is None:
+            stats_key = 'indie'
+        else:
+            stats_key = self.current_class.name
+        as_in = AbstractState()
+        as_out = AbstractState()
+
+        arg_lists = [node.args.posonlyargs, node.args.args]
+        for arg_list in arg_lists:
+            for _arg in arg_list:
+                try:
+                    argstr, bt = parse_annotation(_arg)
+                    as_in[argstr] = bt
+                except Exception:
+                    return
+
+        _arg = node.args.vararg
+        try:
+            if _arg is not None:
+                argstr, bt = parse_annotation(_arg)
+                as_in['*' + argstr] = bt
+        except Exception as e:
+            return
+
+        for _arg in node.args.kwonlyargs:
+            try:
+                argstr, bt = parse_annotation(_arg)
+                as_in[argstr] = bt
+            except Exception:
+                return
+
+        _arg = node.args.kwarg
+        try:
+            if _arg is not None:
+                argstr, bt = parse_annotation(_arg)
+                as_in['**' + argstr] = bt
+        except Exception:
+            return
+        
+        _arg = node.returns
+        try:
+            if _arg is not None:
+                annot_str = get_string_from_annotation(_arg)
+                bt = annotation_to_basetype(annot_str)
+                as_out["return"] = bt
+        except Exception:
+            return
+        fs = FunctionSpec(first=as_in, second=as_out)
+        add_to_class_dict(stats_key, node.name, fs)
+
+    def go_translate(self):
+        self.visit(self.tree)
+
+
+class old_AnnotationSeeker(ast.NodeVisitor):
     def __init__(self, tree: ast.AST,
                  visited_nodes: list[ast.AST],
                  class_stats: dict[str, dict[str, int]],
@@ -308,6 +515,12 @@ def seek_from_stubs(fname: str,
                     collect_mode: bool) -> list[str]:
     with open(fname, 'r') as f:
         tree = ast.parse(f.read())
+    context = Context(
+        skips = ["Callable"],
+        selftypes = ["Self", "_typeshed.Self", "type[Self]", "type[_typeshed.Self]", "list[_typeshed.Self]"]
+    )
+    # self.selftypes = {"Self", "_typeshed.Self", "type[Self]", "type[_typeshed.Self]", "list[_typeshed.Self]"}
+    # self.skips = ["Callable"]
     good_annotations = []
     bad_annotations = []
     for _node in tree.body:
@@ -316,11 +529,13 @@ def seek_from_stubs(fname: str,
         TypeAliasSeeker(_node, visited_nodes).gather_typealiases()
         ProtocolSeeker(_node, visited_nodes).gather_protocols()
         TypeVarSeeker(_node, visited_nodes).gather_typevars()
-        g, b = AnnotationSeeker(_node, visited_nodes, class_stats, class_dict, collect_mode).collect()
+        # g, b = AnnotationSeeker(_node, visited_nodes, class_stats, class_dict, collect_mode).collect()
+        g, b = AnnotationSeeker(_node, class_stats, context).collect()
         good_annotations += deepcopy(g)
         bad_annotations += deepcopy(b)
     good_annotations = list(set(good_annotations))
     bad_annotations = list(set(bad_annotations))
+    AnnotationTranslator(tree, class_dict, context).go_translate()
     return good_annotations, bad_annotations
 
 
