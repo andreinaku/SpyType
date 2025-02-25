@@ -76,11 +76,25 @@ class ContainerType(BaseType):
     
     def __hash__(self):
         return hash((self.__origin__, self.__args__))
+    
+    def __eq__(self, other) -> bool:
+        if self.__origin__ != other.__origin__:
+            return False
+        if len(self.__args__) != len(other.__args__):
+            return False
+        for item in self.__args__:
+            if item not in other.__args__:
+                return False
+        for item in other.__args__:
+            if item not in self.__args__:
+                return False
+        return True
 
 
 class ProductType(BaseType):
     def __init__(self, ptip):
         self.ptip = ptip
+        self.__origin__ = create_basetype(ptip.__origin__)
         self.__args__ = []
         for arg in ptip.__args__:
             if arg in skip_types:
@@ -100,6 +114,16 @@ class ProductType(BaseType):
     
     def __hash__(self):
         return hash(self.__args__)
+    
+    def __eq__(self, other) -> bool:
+        if self.__origin__ != other.__origin__:
+            return False
+        if len(self.__args__) != len(other.__args__):
+            return False
+        for i in range(0, len(self.__args__)):
+            if self.__args__[i] != other.__args__[i]:
+                return False
+        return True
 
 
 class DictType(BaseType):
@@ -122,6 +146,16 @@ class DictType(BaseType):
     
     def __hash__(self):
         return hash((self.__origin__, self.__args__))
+    
+    def __eq__(self, other) -> bool:
+        if self.__origin__ != other.__origin__:
+            return False
+        if len(self.__args__) != len(other.__args__):
+            return False
+        for i in range(0, len(self.__args__)):
+            if self.__args__[i] != other.__args__[i]:
+                return False
+        return True
 
 
 class SumType(BaseType):
@@ -145,6 +179,22 @@ class SumType(BaseType):
     def __hash__(self):
         return hash(self.__args__)
     
+    def __contains__(self, elem: BaseType) -> bool:
+        for item in self.__args__:
+            if elem == item:
+                return True
+        return False
+    
+    def __eq__(self, other) -> bool:
+        for elem in self:
+            if elem not in other:
+                return False
+        for elem in other:
+            if elem not in self:
+                return False
+        return True
+
+    
 
 class AtomType(BaseType):
     def __init__(self, ptip):
@@ -163,6 +213,9 @@ class AtomType(BaseType):
     def __hash__(self):
         return hash(self.__name__)
 
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
 
 class TypevarType(BaseType):
     def __init__(self, ptip: TypeVar):
@@ -180,6 +233,10 @@ class TypevarType(BaseType):
     
     def __hash__(self):
         return hash(self.__name__)
+    
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
 
 
 class AbstractState(dict):
@@ -210,6 +267,14 @@ class AbstractState(dict):
     def __hash__(self):
         tuppled = tuple(self.items())
         return hash(tuppled)
+    
+    def __eq__(self, other):
+        if self.keys() != other.keys():
+            return False
+        for k, bt in self.items():
+            if bt != other[k]:
+                return False
+        return True
 
 
 class FunctionSpec(tuple):
@@ -224,7 +289,10 @@ class FunctionSpec(tuple):
         return f'({self[0]}) -> ({self[1]})'
 
     def __repr__(self):
-        return str(self)    
+        return str(self)
+    
+    def __eq__(self, other) -> bool:
+        return self[0] == other[0] and self[1] == other[1]
 
 
 # class FunctionSpecJSONEncoder(json.JSONEncoder):
