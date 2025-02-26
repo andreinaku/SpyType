@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import *
 import typing
 import types
@@ -54,15 +55,20 @@ class BaseType(ABC):
 
 
 class ContainerType(BaseType):
-    def __init__(self, ptip):
-        self.ptip = ptip
-        self.__origin__ = create_basetype(ptip.__origin__)
+    def __init__(self):
+        self.__origin__ = None
         self.__args__ = []
+
+    @classmethod
+    def from_type(cls, ptip: type) -> ProductType:
+        new_instance = cls()
+        new_instance.__origin__ = create_basetype(ptip.__origin__)
         for arg in ptip.__args__:
             if arg in skip_types:
                 continue
-            self.__args__.append(create_basetype(arg))
-        self.__args__ = tuple(self.__args__)
+            new_instance.__args__.append(create_basetype(arg))
+        new_instance.__args__ = tuple(new_instance.__args__)
+        return new_instance
     
     def __str__(self):
         retstr = f"{self.__origin__.__name__} < "
@@ -78,6 +84,8 @@ class ContainerType(BaseType):
         return hash((self.__origin__, self.__args__))
     
     def __eq__(self, other) -> bool:
+        if not isinstance(other, ContainerType):
+            return False
         if self.__origin__ != other.__origin__:
             return False
         if len(self.__args__) != len(other.__args__):
@@ -92,15 +100,20 @@ class ContainerType(BaseType):
 
 
 class ProductType(BaseType):
-    def __init__(self, ptip):
-        self.ptip = ptip
-        self.__origin__ = create_basetype(ptip.__origin__)
+    def __init__(self):
+        self.__origin__ = None
         self.__args__ = []
+
+    @classmethod
+    def from_type(cls, ptip: type) -> ProductType:
+        new_instance = cls()
+        new_instance.__origin__ == create_basetype(ptip.__origin__)
         for arg in ptip.__args__:
             if arg in skip_types:
                 continue
-            self.__args__.append(create_basetype(arg))
-        self.__args__ = tuple(self.__args__)
+            new_instance.__args__.append(create_basetype(arg))
+        new_instance.__args__ = tuple(new_instance.__args__)
+        return new_instance
 
     def __str__(self):
         retstr = "("
@@ -116,6 +129,8 @@ class ProductType(BaseType):
         return hash(self.__args__)
     
     def __eq__(self, other) -> bool:
+        if not isinstance(other, ProductType):
+            return False
         if self.__origin__ != other.__origin__:
             return False
         if len(self.__args__) != len(other.__args__):
@@ -127,12 +142,18 @@ class ProductType(BaseType):
 
 
 class DictType(BaseType):
-    def __init__(self, ptip):
-        self.ptip = ptip
-        self.__origin__ = create_basetype(ptip.__origin__)
+    def __init__(self):
+        self.__origin__ = None
+        self.__args__ = []
+    
+    @classmethod
+    def from_type(cls, ptip: type) -> DictType:
+        new_instance = cls()
+        new_instance.__origin__ = create_basetype(ptip.__origin__)
         if len(ptip.__args__) != 2:
             raise TypeError(f"{ptip} is not a dictionary type")
-        self.__args__ = (create_basetype(ptip.__args__[0]), create_basetype(ptip.__args__[1]))
+        new_instance.__args__ = (create_basetype(ptip.__args__[0]), create_basetype(ptip.__args__[1]))
+        return new_instance
     
     def __str__(self):
         retstr = f"{self.__origin__.__name__} < "
@@ -148,6 +169,8 @@ class DictType(BaseType):
         return hash((self.__origin__, self.__args__))
     
     def __eq__(self, other) -> bool:
+        if not isinstance(other, DictType):
+            return False
         if self.__origin__ != other.__origin__:
             return False
         if len(self.__args__) != len(other.__args__):
@@ -159,12 +182,15 @@ class DictType(BaseType):
 
 
 class SumType(BaseType):
-    def __init__(self, ptip):
-        self.ptip = ptip
+    def __init__(self, type_seq: Sequence[type]):
         self.__args__ = []
-        for arg in ptip.__args__:
+        for arg in type_seq:
             self.__args__.append(create_basetype(arg))
         self.__args__ = tuple(self.__args__)
+
+    @classmethod
+    def from_type(cls, ptip: type):
+        return cls(ptip.__args__)
 
     def __str__(self):
         retstr = ""
@@ -186,15 +212,18 @@ class SumType(BaseType):
         return False
     
     def __eq__(self, other) -> bool:
-        for elem in self:
-            if elem not in other:
+        if not isinstance(other, SumType):
+            if isinstance(other, AtomType) and len(self.__args__) == 1:
+                return self.__args__[0] == other
+            return False
+        for elem in self.__args__:
+            if elem not in other.__args__:
                 return False
-        for elem in other:
-            if elem not in self:
+        for elem in other.__args__:
+            if elem not in self.__args__:
                 return False
         return True
 
-    
 
 class AtomType(BaseType):
     def __init__(self, ptip):
@@ -214,9 +243,15 @@ class AtomType(BaseType):
         return hash(self.__name__)
 
     def __eq__(self, other):
+        if not isinstance(other, AtomType):
+            if isinstance(other, SumType) and len(other.__args__) == 1:
+                return self == other.__args__[0]
+            return False
         return hash(self) == hash(other)
-
-
+    
+    # def __add__(self, other: AtomType | SumType) -> SumType:
+    #     if isinstance(other, AtomType):
+            
 class TypevarType(BaseType):
     def __init__(self, ptip: TypeVar):
         self.ptip = ptip
@@ -295,28 +330,6 @@ class FunctionSpec(tuple):
         return self[0] == other[0] and self[1] == other[1]
 
 
-# class FunctionSpecJSONEncoder(json.JSONEncoder):
-#     def default(self, o):
-#         if isinstance(o, FunctionSpec):
-#             return [self.serialize_abstract_state(abs_state) for abs_state in o]
-#         if isinstance(o, AbstractState):
-#             return self.serialize_abstract_state(o)
-#         if isinstance(o, BaseType):
-#             return self.serialize_basetype(o)
-#         return super().default(o)
-
-#     def serialize_abstract_state(self, abs_state):
-#         if not isinstance(abs_state, AbstractState):
-#             raise TypeError(f"cannot serialize {abs_state} because it is not an AbstractState")
-#         return {key: self.serialize_basetype(value) for key, value in abs_state.items()}
-        
-    
-#     def serialize_basetype(self, bt):
-#         if not isinstance(bt, BaseType):
-#             raise TypeError(f"cannot serialize {bt} because it is not a BaseType")
-#         return str(bt)
-
-
 def is_atom_type(ptip: type):
     if isinstance(ptip, type):
         return True
@@ -389,13 +402,13 @@ def create_basetype(ptip):
         new_ptip = get_literal_args(ptip)
         return create_basetype(new_ptip)
     elif is_container_type(ptip):
-        return ContainerType(ptip)
+        return ContainerType.from_type(ptip)
     elif is_product_type(ptip):
-        return ProductType(ptip)
+        return ProductType.from_type(ptip)
     elif is_dict_type(ptip):
-        return DictType(ptip)
+        return DictType.from_type(ptip)
     elif is_union_type(ptip):
-        return SumType(ptip)
+        return SumType.from_type(ptip)
     elif ptip is None:
         return create_basetype(type(ptip))
     else:

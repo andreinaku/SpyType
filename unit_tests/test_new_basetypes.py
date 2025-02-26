@@ -65,3 +65,14 @@ class NewTypeTester(unittest.TestCase):
         dt2 = ProductType(dict[int])
         self.assertEqual(dt1, dt2)
     
+    def test_eq_atomsumtype_1(self):
+        at1 = AtomType(int)
+        st1 = SumType(int | float)
+        st1.__args__ = (create_basetype(int),)
+        self.assertEqual(at1, st1)
+
+    def test_eq_atomsumtype_2(self):
+        at1 = AtomType(int)
+        st1 = SumType(int | float)
+        st1.__args__ = (create_basetype(int),)
+        self.assertEqual(st1, at1)
