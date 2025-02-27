@@ -50,6 +50,10 @@ class Context:
     selftypes: list[str]
 
 
+class NotTranslatableException(Exception):
+    pass
+
+
 def is_protocol_classdef(node: ast.ClassDef) -> bool:
     protocol_base = "Protocol"
     if len(node.bases) < 1:
@@ -261,12 +265,16 @@ class AnnotationTranslator(ast.NodeVisitor):
         def add_to_class_dict(classname: str, funcname: str, funcspec: FunctionSpec):
             if classname in self.class_dict:
                 if funcname in self.class_dict[classname]:
-                    if funcspec not in self.class_dict[classname][funcname]:
-                        self.class_dict[classname][funcname].append(funcspec)
+                    # if funcspec not in self.class_dict[classname][funcname]:
+                    #     self.class_dict[classname][funcname].append(funcspec)
+                    if (funcspec, astor.to_source(node).strip()) not in self.class_dict[classname][funcname]:
+                        self.class_dict[classname][funcname].append((funcspec, astor.to_source(node).strip()))
                 else:
-                    self.class_dict[classname][funcname] = [funcspec]
+                    # self.class_dict[classname][funcname] = [funcspec]
+                    self.class_dict[classname][funcname] = [(funcspec, astor.to_source(node).strip())]
             else:
-                self.class_dict[classname] = {funcname: [funcspec]}
+                # self.class_dict[classname] = {funcname: [funcspec]}
+                self.class_dict[classname] = {funcname: [(funcspec, astor.to_source(node).strip())]}
 
         def has_annotation(_node: ast.arg):
             if not hasattr(_node, "annotation") or _node.annotation is None:
@@ -314,46 +322,49 @@ class AnnotationTranslator(ast.NodeVisitor):
         as_in = AbstractState()
         as_out = AbstractState()
 
-        arg_lists = [node.args.posonlyargs, node.args.args]
-        for arg_list in arg_lists:
-            for _arg in arg_list:
+        try:
+            arg_lists = [node.args.posonlyargs, node.args.args]
+            for arg_list in arg_lists:
+                for _arg in arg_list:
+                    try:
+                        argstr, bt = parse_annotation(_arg)
+                        as_in[argstr] = bt
+                    except Exception:
+                        raise NotTranslatableException("not translatable")
+
+            _arg = node.args.vararg
+            try:
+                if _arg is not None:
+                    argstr, bt = parse_annotation(_arg)
+                    as_in['*' + argstr] = bt
+            except Exception as e:
+                raise NotTranslatableException("not translatable")
+
+            for _arg in node.args.kwonlyargs:
                 try:
                     argstr, bt = parse_annotation(_arg)
                     as_in[argstr] = bt
                 except Exception:
-                    return
+                    raise NotTranslatableException("not translatable")
 
-        _arg = node.args.vararg
-        try:
-            if _arg is not None:
-                argstr, bt = parse_annotation(_arg)
-                as_in['*' + argstr] = bt
-        except Exception as e:
-            return
-
-        for _arg in node.args.kwonlyargs:
+            _arg = node.args.kwarg
             try:
-                argstr, bt = parse_annotation(_arg)
-                as_in[argstr] = bt
+                if _arg is not None:
+                    argstr, bt = parse_annotation(_arg)
+                    as_in['**' + argstr] = bt
             except Exception:
-                return
-
-        _arg = node.args.kwarg
-        try:
-            if _arg is not None:
-                argstr, bt = parse_annotation(_arg)
-                as_in['**' + argstr] = bt
-        except Exception:
-            return
-        
-        _arg = node.returns
-        try:
-            if _arg is not None:
-                annot_str = get_string_from_annotation(_arg)
-                bt = annotation_to_basetype(annot_str)
-                as_out["return"] = bt
-        except Exception:
-            return
+                raise NotTranslatableException("not translatable")
+            
+            _arg = node.returns
+            try:
+                if _arg is not None:
+                    annot_str = get_string_from_annotation(_arg)
+                    bt = annotation_to_basetype(annot_str)
+                    as_out["return"] = bt
+            except Exception:
+                raise NotTranslatableException("not translatable")
+        except NotTranslatableException:
+            add_to_class_dict(stats_key, node.name, FunctionSpec(AbstractState(), AbstractState()))
         fs = FunctionSpec(first=as_in, second=as_out)
         add_to_class_dict(stats_key, node.name, fs)
 
