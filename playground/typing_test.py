@@ -17,7 +17,7 @@ _GenericAlias:
 '''
 
 container_types = [typing.List, typing.Set, typing.FrozenSet,  # from typing
-                   list, set, frozenset  # from types
+                   list, set, frozenset,  # from types
                    ]
 product_types = [typing.Tuple,  # from typing
                  tuple  # from types
@@ -101,6 +101,7 @@ class ContainerType(BaseType):
 
 class ProductType(BaseType):
     def __init__(self):
+        self.ptip = None
         self.__origin__ = None
         self.__args__ = []
 
@@ -113,7 +114,14 @@ class ProductType(BaseType):
                 continue
             new_instance.__args__.append(create_basetype(arg))
         new_instance.__args__ = tuple(new_instance.__args__)
+        new_instance.ptip = ptip
         return new_instance
+
+    def to_type(self):
+        if self.ptip is not None:
+            return self.ptip
+        new_type = types.GenericAlias(tuple, [_arg.to_type() for _arg in self.__args__])
+        return new_type
 
     def __str__(self):
         retstr = "("
@@ -143,6 +151,7 @@ class ProductType(BaseType):
 
 class DictType(BaseType):
     def __init__(self):
+        self.ptip = None
         self.__origin__ = None
         self.__args__ = []
     
@@ -153,8 +162,15 @@ class DictType(BaseType):
         if len(ptip.__args__) != 2:
             raise TypeError(f"{ptip} is not a dictionary type")
         new_instance.__args__ = (create_basetype(ptip.__args__[0]), create_basetype(ptip.__args__[1]))
+        new_instance.ptip = ptip
         return new_instance
     
+    def to_type(self):
+        if self.ptip is not None:
+            return self.ptip
+        new_type = types.GenericAlias(dict, [self.__args__[0].to_type(), self.__args__[1].to_type()])
+        return new_type
+
     def __str__(self):
         retstr = f"{self.__origin__.__name__} < "
         for arg in self.__args__:
@@ -183,6 +199,7 @@ class DictType(BaseType):
 
 class SumType(BaseType):
     def __init__(self, type_seq: Sequence[type]):
+        self.ptip = None
         self.__args__ = []
         for arg in type_seq:
             self.__args__.append(create_basetype(arg))
@@ -190,7 +207,18 @@ class SumType(BaseType):
 
     @classmethod
     def from_type(cls, ptip: type):
-        return cls(ptip.__args__)
+        new_instance = cls(ptip.__args__)
+        new_instance.ptip = ptip
+        return new_instance
+    
+    def to_type(self):
+        if self.ptip is not None:
+            return self.ptip
+        new_type = types.UnionType()
+        new_type = self.__args__[0]
+        for i in range(1, self.__args__):
+            new_type = new_type | self.__args__[i]
+        return new_type
 
     def __str__(self):
         retstr = ""
@@ -249,6 +277,9 @@ class AtomType(BaseType):
             return False
         return hash(self) == hash(other)
     
+    def to_type(self):
+        return self.ptip
+    
     # def __add__(self, other: AtomType | SumType) -> SumType:
     #     if isinstance(other, AtomType):
             
@@ -272,6 +303,8 @@ class TypevarType(BaseType):
     def __eq__(self, other):
         return hash(self) == hash(other)
 
+    def to_type(self):
+        return self.ptip
 
 
 class AbstractState(dict):
@@ -362,7 +395,7 @@ def is_container_type(ptip: type):
         return False
     if ptip.__origin__ in container_types:
         return True
-    if len(ptip.__args__) == 1:
+    if len(ptip.__args__) == 1 and ptip.__origin__ not in product_types:
         return True
     return False
 
@@ -431,9 +464,11 @@ def str_tests():
     tip = "tuple[int, float]"    
     _tip = create_basetype(eval(tip))
     print(_tip)
+    print(_tip.to_type())
     tip = "tuple[int | float]"    
     _tip = create_basetype(eval(tip))
     print(_tip)
+    print(_tip.to_type())
     tip = "dict[int, float]"
     _tip = create_basetype(eval(tip))
     print(_tip)
