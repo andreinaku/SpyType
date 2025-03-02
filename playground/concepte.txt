@@ -1,0 +1,36 @@
+class _PathLike(Protocol[AnyStr_co]):
+    def __fspath__(self) -> AnyStr_co: ...
+
+class _PathLike2(Protocol[AnyStr_co]):
+    def __fspath__(self) -> AnyStr_co: ...
+    def __add__(self) -> bool: ...
+
+
+class protocol1(protocol):
+    def __add__(): ...
+
+int << protocol1 - alta relatie de subtip decat intre tipuri
+
+class protocol2:
+    def __add__(): ...
+    def __mul__(): ...
+
+int.has_attribute(protocol1)
+str.has_attribute(protocol1)
+int.has_attribute(protocol2)
+
+protocol1.has_attribute(protocol2)
+
+x <= protocol1 and x <= protocol2 ..... x <= protocol1
+
+
+T_1 <= protocol1 /\ T_1 <= protocol2
+
+
+concepte:
+* protocols si clase abstracte reprezinta toate tipurile definite (similar cu interfata), doar ca extinde acest concept prin atribute
+? relatii dintre tipuri, protocoale si clase abstracte
+  - conformitate intre protocoale
+  - subclase intre clase abstracte
+  - tip.matches(protocol) -> de cautat daca exista deja un termen
+  - tip.implements(abstract_class)
