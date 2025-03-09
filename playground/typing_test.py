@@ -53,8 +53,19 @@ class BaseType(ABC):
     def __repr__(self):
         ...
 
+    @abstractmethod
+    def to_type(self):
+        ...
+
 
 class ContainerType(BaseType):
+    def validate(self):
+        if not isinstance(self.__origin__, BaseType):
+            raise TypeError(f"{self}'s origin, {self.__origin__}, is not a BaseType")
+        for _arg in self.__args__:
+            if not isinstance(_arg, BaseType):
+                raise TypeError(f"{self}'s argument, {_arg}, is not a BaseType")
+
     def __init__(self):
         self.__pythontype__ = None
         self.__origin__ = None
@@ -62,14 +73,9 @@ class ContainerType(BaseType):
 
     @classmethod
     def from_type(cls, ptip: type) -> ContainerType:
-        new_instance = cls()
-        new_instance.__origin__ = create_basetype(ptip.__origin__)
-        for arg in ptip.__args__:
-            if arg in skip_types:
-                continue
-            new_instance.__args__.append(create_basetype(arg))
-        new_instance.__args__ = tuple(new_instance.__args__)
+        new_instance = cls.from_type_pieces(ptip.__origin__, ptip.__args__)
         new_instance.__pythontype__ = ptip
+        new_instance.validate()
         return new_instance
     
     @classmethod
@@ -81,14 +87,13 @@ class ContainerType(BaseType):
                 continue
             new_instance.__args__.append(create_basetype(arg))
         new_instance.__args__ = tuple(new_instance.__args__)
+        new_instance.__pythontype__ = types.GenericAlias(new_instance.__origin__.to_type(), 
+                                                         [_arg.to_type() for _arg in new_instance.__args__])
+        new_instance.validate()
         return new_instance
-
     
     def to_type(self):
-        if self.__pythontype__:
-            return self.__pythontype__
-        new_type = types.GenericAlias(self.__origin__.to_type(), [_arg.to_type() for _arg in self.__args__])
-        return new_type
+        return self.__pythontype__
 
     def __str__(self):
         retstr = f"{self.__origin__.__name__} < "
@@ -120,28 +125,41 @@ class ContainerType(BaseType):
 
 
 class ProductType(BaseType):
+    def validate(self):
+        if not isinstance(self.__origin__, BaseType):
+            raise TypeError(f"{self}'s origin, {self.__origin__}, is not a BaseType")
+        for _arg in self.__args__:
+            if not isinstance(_arg, BaseType):
+                raise TypeError(f"{self}'s argument, {_arg}, is not a BaseType")
+
     def __init__(self):
-        self.ptip = None
+        self.__pythontype__ = None
         self.__origin__ = None
         self.__args__ = []
 
     @classmethod
-    def from_type(cls, ptip: type) -> ProductType:
+    def from_type_pieces(cls, _orig: type, _args: list[type]) -> ContainerType:
         new_instance = cls()
-        new_instance.__origin__ == create_basetype(ptip.__origin__)
-        for arg in ptip.__args__:
+        new_instance.__origin__ = create_basetype(_orig)
+        for arg in _args:
             if arg in skip_types:
                 continue
             new_instance.__args__.append(create_basetype(arg))
         new_instance.__args__ = tuple(new_instance.__args__)
-        new_instance.ptip = ptip
+        new_instance.__pythontype__ = types.GenericAlias(new_instance.__origin__.to_type(), 
+                                                         [_arg.to_type() for _arg in new_instance.__args__])
+        new_instance.validate()
+        return new_instance
+
+    @classmethod
+    def from_type(cls, ptip: type) -> ProductType:
+        new_instance = cls.from_type_pieces(ptip.__origin__, ptip.__args__)
+        new_instance.__pythontype__ = ptip
+        new_instance.validate()
         return new_instance
 
     def to_type(self):
-        if self.ptip is not None:
-            return self.ptip
-        new_type = types.GenericAlias(tuple, [_arg.to_type() for _arg in self.__args__])
-        return new_type
+        return self.__pythontype__
 
     def __str__(self):
         retstr = "("
@@ -170,24 +188,39 @@ class ProductType(BaseType):
 
 
 class DictType(BaseType):
+    def validate(self):
+        if not isinstance(self.__origin__, BaseType):
+            raise TypeError(f"{self}'s origin, {self.__origin__}, is not a BaseType")
+        for _arg in self.__args__:
+            if not isinstance(_arg, BaseType):
+                raise TypeError(f"{self}'s argument, {_arg}, is not a BaseType")
+
     def __init__(self):
-        self.ptip = None
+        self.__pythontype__ = None
         self.__origin__ = None
         self.__args__ = []
     
     @classmethod
-    def from_type(cls, ptip: type) -> DictType:
+    def from_type_pieces(cls, _orig: type, _args: tuple[type]) -> DictType:
         new_instance = cls()
-        new_instance.__origin__ = create_basetype(ptip.__origin__)
-        if len(ptip.__args__) != 2:
-            raise TypeError(f"{ptip} is not a dictionary type")
-        new_instance.__args__ = (create_basetype(ptip.__args__[0]), create_basetype(ptip.__args__[1]))
-        new_instance.ptip = ptip
+        new_instance.__origin__ = create_basetype(_orig)
+        if len(_args) != 2:
+            raise TypeError(f"{_orig}, {_args} not a dictionary type")
+        new_instance.__args__ = (create_basetype(_args[0]), create_basetype(_args[1]))
+        new_instance.__pythontype__ = types.GenericAlias(_orig, [_args[0], _args[1]])
+        new_instance.validate()
+        return new_instance
+
+    @classmethod
+    def from_type(cls, ptip: types.GenericAlias) -> DictType:
+        new_instance = cls.from_type_pieces(ptip.__origin__, ptip.__args__)
+        new_instance.__pythontype__ = ptip
+        new_instance.validate()
         return new_instance
     
     def to_type(self):
-        if self.ptip is not None:
-            return self.ptip
+        if self.__pythontype__ is not None:
+            return self.__pythontype__
         new_type = types.GenericAlias(dict, [self.__args__[0].to_type(), self.__args__[1].to_type()])
         return new_type
 
@@ -218,27 +251,37 @@ class DictType(BaseType):
 
 
 class SumType(BaseType):
-    def __init__(self, type_seq: Sequence[type]):
-        self.ptip = None
+    def validate(self):
+        for _arg in self.__args__:
+            if not isinstance(_arg, BaseType):
+                raise TypeError(f"{self}'s argument, {_arg}, is not a BaseType")
+
+    def __init__(self):
+        self.__pythontype__ = None
         self.__args__ = []
-        for arg in type_seq:
-            self.__args__.append(create_basetype(arg))
-        self.__args__ = tuple(self.__args__)
 
     @classmethod
     def from_type(cls, ptip: type):
-        new_instance = cls(ptip.__args__)
-        new_instance.ptip = ptip
+        new_instance = cls.from_type_seq(ptip.__args__)
+        new_instance.__pythontype__ = ptip
+        new_instance.validate()
         return new_instance
     
+    @classmethod
+    def from_type_seq(cls, type_seq: Sequence[type]):
+        new_instance = cls()
+        new_instance.__args__ = []
+        for _arg in type_seq:
+            new_instance.__args__.append(create_basetype(_arg))
+        new_instance.__args__ = tuple(new_instance.__args__)
+        new_instance.__pythontype__ = type_seq[0]
+        for i in range(1, len(type_seq)):
+            new_instance.__pythontype__ |= type_seq[i]
+        new_instance.validate()
+        return new_instance
+        
     def to_type(self):
-        if self.ptip is not None:
-            return self.ptip
-        new_type = types.UnionType()
-        new_type = self.__args__[0]
-        for i in range(1, self.__args__):
-            new_type = new_type | self.__args__[i]
-        return new_type
+        return self.__pythontype__
 
     def __str__(self):
         retstr = ""
@@ -275,14 +318,14 @@ class SumType(BaseType):
 
 class AtomType(BaseType):
     def __init__(self, ptip):
-        self.ptip = ptip
+        self.__pythontype__ = ptip
 
     @property
     def __name__(self):
-        return self.ptip.__name__
+        return self.__pythontype__.__name__
 
     def __str__(self):
-        return f"{self.ptip.__name__}"
+        return f"{self.__pythontype__.__name__}"
     
     def __repr__(self):
         return str(self)
@@ -298,21 +341,32 @@ class AtomType(BaseType):
         return hash(self) == hash(other)
     
     def to_type(self):
-        return self.ptip
+        return self.__pythontype__
     
     # def __add__(self, other: AtomType | SumType) -> SumType:
     #     if isinstance(other, AtomType):
             
+
 class TypevarType(BaseType):
     def __init__(self, ptip: TypeVar):
-        self.ptip = ptip
+        self.__pythontype__ = None
+        self.__name__ = ''
+    
+    @classmethod
+    def from_str(cls, _str: str) -> TypevarType:
+        new_instance = cls()
+        new_instance.__name__ = _str
+        new_instance.__pythontype__ = typing.TypeVar(new_instance.__name__)
+        return new_instance
 
-    @property
-    def __name__(self):
-        return self.ptip.__name__
+    @classmethod
+    def from_type(cls, ptip: TypeVar):
+        new_instance = cls.from_str(ptip.__name__)
+        new_instance.__pythontype__ = ptip
+        return new_instance
 
     def __str__(self):
-        return f"{self.ptip.__name__}"
+        return f"{self.__name__}"
     
     def __repr__(self):
         return str(self)
@@ -324,15 +378,27 @@ class TypevarType(BaseType):
         return hash(self) == hash(other)
 
     def to_type(self):
-        return self.ptip
+        return self.__pythontype__
 
 
 class AbstractState(dict):
+    def validate(self):
+        for k, v in self.items():
+            if not isinstance(k, str) and not isinstance(v, BaseType):
+                raise TypeError(f"{self} is not a valid AbstractState")
+
     def __init__(self, initial_data=None):
         super().__init__()
         if initial_data:
             for k, v in initial_data.items():
                 self.__setitem__(k, v)
+        self.validate()
+
+    @classmethod
+    def from_dict(cls, _d: dict[str, type]) -> AbstractState:
+        new_dict = {k: create_basetype(v) for k, v in _d.items()}
+        new_as = cls(new_dict)
+        return new_as
 
     def __setitem__(self, key, value):
         if not isinstance(key, str):
@@ -520,6 +586,12 @@ def str_tests():
     print(fs)
 
 
+def constructor_tests():
+    _d = {'a': int, 'b': float}
+    abs_state = AbstractState.from_dict(_d)
+    print(abs_state)
+
+
 def encode_tests():
     as1 = AbstractState()
     as1['a'] = create_basetype(int)
@@ -537,5 +609,6 @@ if __name__ == "__main__":
     title = "Simple typing converter"
     print(title)
     print("=" * len(title))
-    str_tests()
-    encode_tests()
+    # str_tests()
+    # encode_tests()
+    constructor_tests()
