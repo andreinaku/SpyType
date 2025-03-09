@@ -56,11 +56,12 @@ class BaseType(ABC):
 
 class ContainerType(BaseType):
     def __init__(self):
+        self.__pythontype__ = None
         self.__origin__ = None
         self.__args__ = []
 
     @classmethod
-    def from_type(cls, ptip: type) -> ProductType:
+    def from_type(cls, ptip: type) -> ContainerType:
         new_instance = cls()
         new_instance.__origin__ = create_basetype(ptip.__origin__)
         for arg in ptip.__args__:
@@ -68,8 +69,27 @@ class ContainerType(BaseType):
                 continue
             new_instance.__args__.append(create_basetype(arg))
         new_instance.__args__ = tuple(new_instance.__args__)
+        new_instance.__pythontype__ = ptip
         return new_instance
     
+    @classmethod
+    def from_type_pieces(cls, _orig: type, _args: list[type]) -> ContainerType:
+        new_instance = cls()
+        new_instance.__origin__ = create_basetype(_orig)
+        for arg in _args:
+            if arg in skip_types:
+                continue
+            new_instance.__args__.append(create_basetype(arg))
+        new_instance.__args__ = tuple(new_instance.__args__)
+        return new_instance
+
+    
+    def to_type(self):
+        if self.__pythontype__:
+            return self.__pythontype__
+        new_type = types.GenericAlias(self.__origin__.to_type(), [_arg.to_type() for _arg in self.__args__])
+        return new_type
+
     def __str__(self):
         retstr = f"{self.__origin__.__name__} < "
         for arg in self.__args__:
@@ -454,6 +474,7 @@ def str_tests():
     print(_tip)
     tip = "List[int]"
     _tip = create_basetype(eval(tip))
+    print(_tip.to_type())
     print(_tip)
     tip = "List[int | float]"
     _tip = create_basetype(eval(tip))

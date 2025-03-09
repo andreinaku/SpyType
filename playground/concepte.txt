@@ -34,3 +34,14 @@ concepte:
   - subclase intre clase abstracte
   - tip.matches(protocol) -> de cautat daca exista deja un termen
   - tip.implements(abstract_class)
+
+
+int.matches(protocol1) == int <= protocol1
+
+class foo:
+    def f(a: protocol1, b: protocol2) -> bool: ...
+
+x = 5  : x: int
+f(x)  # ok
+
+x: Tx ^ (Tx <= int /\ Tx <= protocol1)

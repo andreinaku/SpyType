@@ -370,7 +370,7 @@ class AnnotationTranslator(ast.NodeVisitor):
 
     def go_translate(self):
         self.visit(self.tree)
-
+ 
 
 def seek_from_stubs(fname: str,
                     visited_nodes: list[ast.AST],
