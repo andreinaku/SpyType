@@ -7,13 +7,15 @@ from types import *
 import types
 # from _fakeshed import *
 import json
-import _ast
 from copy import deepcopy
-# from typing_test import create_basetype, AbstractState, FunctionSpec
 from typing_test import *
 from io import *
-import re
 from dataclasses import dataclass
+from pprint import pprint
+import os
+
+
+tv_declarations = []
 
 
 from _fakeshed import (
@@ -101,6 +103,7 @@ class TypeVarSeeker(ast.NodeVisitor):
         self.calls = []
         self.funcname = "TypeVar"
         self.visited_nodes = visited_nodes
+        self.declarations = []
     
     def visit_Assign(self, node: ast.Assign):
         if len(node.targets) > 1:
@@ -118,11 +121,15 @@ class TypeVarSeeker(ast.NodeVisitor):
         if len(node.value.args) < 1 and not isinstance(node.value.args[0], ast.Constant):
             return
         assign_str = astor.to_source(node).strip()
+        self.declarations.append(assign_str)
         exec(assign_str, globals())
         # print(f"execced {assign_str}")
 
     def gather_typevars(self):
         self.visit(self.tree)
+
+    def get_declarations(self):
+        return self.declarations
 
 
 class TypeAliasSeeker(ast.NodeVisitor):
@@ -136,12 +143,12 @@ class TypeAliasSeeker(ast.NodeVisitor):
     def visit_Assign(self, node: ast.Assign):
         if node in self.visited_nodes:
             return
-        self.visited_nodes.append(node)
         if not isinstance(node.targets[0], ast.Name) and node.targets[0] not in self.alias_exceptions:
             return
         node_src = astor.to_source(node).strip()
         try:
             exec(node_src, globals())
+            self.visited_nodes.append(node)
         except:
             print(f"possibly recursive: {node_src}")
 
@@ -265,16 +272,16 @@ class AnnotationTranslator(ast.NodeVisitor):
         def add_to_class_dict(classname: str, funcname: str, funcspec: FunctionSpec):
             if classname in self.class_dict:
                 if funcname in self.class_dict[classname]:
-                    # if funcspec not in self.class_dict[classname][funcname]:
-                    #     self.class_dict[classname][funcname].append(funcspec)
-                    if (funcspec, astor.to_source(node).strip()) not in self.class_dict[classname][funcname]:
-                        self.class_dict[classname][funcname].append((funcspec, astor.to_source(node).strip()))
+                    if funcspec not in self.class_dict[classname][funcname]:
+                        self.class_dict[classname][funcname].append(funcspec)
+                    # if (funcspec, astor.to_source(node).strip()) not in self.class_dict[classname][funcname]:
+                    #     self.class_dict[classname][funcname].append((funcspec, astor.to_source(node).strip()))
                 else:
-                    # self.class_dict[classname][funcname] = [funcspec]
-                    self.class_dict[classname][funcname] = [(funcspec, astor.to_source(node).strip())]
+                    self.class_dict[classname][funcname] = [funcspec]
+                    # self.class_dict[classname][funcname] = [(funcspec, astor.to_source(node).strip())]
             else:
-                # self.class_dict[classname] = {funcname: [funcspec]}
-                self.class_dict[classname] = {funcname: [(funcspec, astor.to_source(node).strip())]}
+                self.class_dict[classname] = {funcname: [funcspec]}
+                # self.class_dict[classname] = {funcname: [(funcspec, astor.to_source(node).strip())]}
 
         def has_annotation(_node: ast.arg):
             if not hasattr(_node, "annotation") or _node.annotation is None:
@@ -392,7 +399,9 @@ def seek_from_stubs(fname: str,
             continue
         TypeAliasSeeker(_node, visited_nodes).gather_typealiases()
         ProtocolSeeker(_node, visited_nodes).gather_protocols()
-        TypeVarSeeker(_node, visited_nodes).gather_typevars()
+        tvseeker = TypeVarSeeker(_node, visited_nodes)
+        tvseeker.gather_typevars()
+        tv_declarations = tvseeker.get_declarations()
         # g, b = AnnotationSeeker(_node, visited_nodes, class_stats, class_dict, collect_mode).collect()
         g, b = AnnotationSeeker(_node, class_stats, context).collect()
         good_annotations += deepcopy(g)
@@ -425,6 +434,13 @@ def serialize_class_dict(cd):
     return serialized
 
 
+def dump_to_pyfile(class_dict, outfile='class_dict.py'):
+    with open(outfile, 'w') as f:
+        f.write(f'import typing{os.linesep}{os.linesep}')
+        f.write(f'import types{os.linesep}{os.linesep}')
+        pprint(class_dict, stream=f)
+
+
 if __name__ == "__main__":
     fname = "playground/fakeins.pyi"
     visited_nodes = []
@@ -439,3 +455,7 @@ if __name__ == "__main__":
         json.dump(badlist, f, indent=4)
     with open("class_dict.json", "w") as f:
         json.dump(serialize_class_dict(class_dict), f, indent=4)
+    dump_to_pyfile(class_dict)
+    #
+    typevars = {name: obj for name, obj in globals().items() if isinstance(obj, TypeVar)}
+    print(typevars)

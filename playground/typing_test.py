@@ -96,11 +96,12 @@ class ContainerType(BaseType):
         return self.__pythontype__
 
     def __str__(self):
-        retstr = f"{self.__origin__.__name__} < "
-        for arg in self.__args__:
-            retstr += f"{arg}, "
-        retstr = retstr[:-2] + " >"
-        return retstr
+        # retstr = f"{self.__origin__.__name__} < "
+        # for arg in self.__args__:
+        #     retstr += f"{arg}, "
+        # retstr = retstr[:-2] + " >"
+        # return retstr
+        return str(self.__pythontype__)
     
     def __repr__(self):
         return str(self)
@@ -162,11 +163,12 @@ class ProductType(BaseType):
         return self.__pythontype__
 
     def __str__(self):
-        retstr = "("
-        for arg in self.__args__:
-            retstr += f"{arg} , "
-        retstr += ")"
-        return retstr
+        # retstr = "("
+        # for arg in self.__args__:
+        #     retstr += f"{arg} , "
+        # retstr += ")"
+        # return retstr
+        return str(self.__pythontype__)
     
     def __repr__(self):
         return str(self)
@@ -225,11 +227,12 @@ class DictType(BaseType):
         return new_type
 
     def __str__(self):
-        retstr = f"{self.__origin__.__name__} < "
-        for arg in self.__args__:
-            retstr += f"{arg}, "
-        retstr = retstr[:-2] + " >"
-        return retstr
+        # retstr = f"{self.__origin__.__name__} < "
+        # for arg in self.__args__:
+        #     retstr += f"{arg}, "
+        # retstr = retstr[:-2] + " >"
+        # return retstr
+        return str(self.__pythontype__)
     
     def __repr__(self):
         return str(self)
@@ -285,8 +288,8 @@ class SumType(BaseType):
 
     def __str__(self):
         retstr = ""
-        for arg in self.__args__:
-            retstr += f"{arg} + "
+        for _arg in self.__args__:
+            retstr += f"{_arg} | "
         retstr = retstr[:-3]
         return retstr
     
@@ -348,7 +351,7 @@ class AtomType(BaseType):
             
 
 class TypevarType(BaseType):
-    def __init__(self, ptip: TypeVar):
+    def __init__(self):
         self.__pythontype__ = None
         self.__name__ = ''
     
@@ -386,7 +389,7 @@ class AbstractState(dict):
         for k, v in self.items():
             if not isinstance(k, str) and not isinstance(v, BaseType):
                 raise TypeError(f"{self} is not a valid AbstractState")
-
+                
     def __init__(self, initial_data=None):
         super().__init__()
         if initial_data:
@@ -407,16 +410,16 @@ class AbstractState(dict):
             raise TypeError(f"{value} is not BaseType")
         super().__setitem__(key, value)
 
-    def __str__(self):
-        retstr = ''
-        for k, v in self.items():
-            retstr += rf'{k}:{v} /\ '
-        if retstr:
-            retstr = retstr[:-4]
-        return retstr
+    # def __str__(self):
+    #     retstr = ''
+    #     for k, v in self.items():
+    #         retstr += rf'{k}:{v} /\ '
+    #     if retstr:
+    #         retstr = retstr[:-4]
+    #     return retstr
     
-    def __repr__(self):
-        return str(self)
+    # def __repr__(self):
+    #     return str(self)
 
     def __hash__(self):
         tuppled = tuple(self.items())
@@ -439,11 +442,19 @@ class FunctionSpec(tuple):
             raise TypeError(f"{second} is not an AbstractState")
         return super().__new__(cls, (first, second))
 
-    def __str__(self):
-        return f'({self[0]}) -> ({self[1]})'
+    @classmethod
+    def from_dict_tuple(cls, dtuple: tuple[dict[str, BaseType]]) -> FunctionSpec:
+        if len(dtuple) != 2:
+            raise TypeError(f"{dtuple} has more than 2 elements")
+        if not isinstance(dtuple[0], dict) or not isinstance(dtuple[1], dict):
+            raise TypeError(f"one of the {dtuple} elements is not a dict")
+        return FunctionSpec(AbstractState.from_dict(dtuple[0]), AbstractState.from_dict(dtuple[1]))
 
-    def __repr__(self):
-        return str(self)
+    # def __str__(self):
+    #     return f'({self[0]}) -> ({self[1]})'
+
+    # def __repr__(self):
+    #     return str(self)
     
     def __eq__(self, other) -> bool:
         return self[0] == other[0] and self[1] == other[1]
@@ -491,6 +502,8 @@ def is_product_type(ptip: type):
         return False
     if is_dict_type(ptip):
         return False
+    if is_union_type(ptip):
+        return False
     if ptip.__origin__ in product_types:
         return True
     if len(ptip.__args__) > 1:
@@ -516,7 +529,7 @@ def create_basetype(ptip):
     elif is_atom_type(ptip):
         return AtomType(ptip)
     elif is_var_type(ptip):
-        return TypevarType(ptip)
+        return TypevarType.from_type(ptip)
     elif is_literal_type(ptip):
         new_ptip = get_literal_args(ptip)
         return create_basetype(new_ptip)
@@ -587,10 +600,19 @@ def str_tests():
 
 
 def constructor_tests():
-    _d = {'a': int, 'b': float}
-    abs_state = AbstractState.from_dict(_d)
-    print(abs_state)
-
+    as_in = AbstractState.from_dict({'a': int, 'b': float})
+    as_out = AbstractState.from_dict({'return': float})
+    fspec = FunctionSpec(as_in, as_out)
+    print(as_in)
+    print(as_out)
+    print(fspec)
+    fspec = FunctionSpec.from_dict_tuple(
+        ({'a': list[int], 'b': int | float}, {'return': str | list[int]})
+    )
+    print(fspec)
+    T1 = TypeVar('T1')
+    ss = create_basetype(int | T1)
+    print(ss)
 
 def encode_tests():
     as1 = AbstractState()
