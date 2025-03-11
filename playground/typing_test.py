@@ -8,6 +8,8 @@ from os import PathLike
 import collections.abc
 import ast
 import json
+from dataclasses import dataclass
+from enum import Enum
 
 '''
 type: int, float, str, ....
@@ -15,6 +17,15 @@ _GenericAlias:
 * List, Set, .... -> SequenceType
 * Tuple, Dict -> ProductType
 '''
+
+class Relation(Enum):
+    LEQ = '<='
+    EQ = '=='
+    GEQ = '>='
+    LT = '<'
+    GT = '>'
+    NEQ = '!='
+
 
 container_types = [typing.List, typing.Set, typing.FrozenSet,  # from typing
                    list, set, frozenset,  # from types
@@ -34,6 +45,52 @@ approximated_types = {
     typing.LiteralString: str,
     typing.Sized: collections.abc.Sized
 }
+
+class Constraint(tuple):
+    def __new__(cls, rel: Relation, left: BaseType, right: BaseType) -> Constraint:
+        if not isinstance(rel, Relation):
+            raise TypeError(f"First element must be a Relation, got {type(rel).__name__}")
+        if not isinstance(left, BaseType):
+            raise TypeError(f"Second element must be a BaseType, got {type(left).__name__}")
+        if not isinstance(right, BaseType):
+            raise TypeError(f"Third element must be a BaseType, got {type(right).__name__}")
+        return super().__new__(cls, (rel, left, right))
+
+    @property
+    def relation(self):
+        return self[0]
+    
+    @property
+    def left(self):
+        return self[1]
+    
+    @property
+    def right(self):
+        return self[2]
+    
+    def __str__(self):
+        return f"{self.left} {self.relation.value} {self.right}"
+
+    def __repr__(self):
+        return str(self)
+
+
+class ConstraintSet(set):
+    def __init__(self, iterable=None):
+        super().__init__()
+        if iterable is not None:
+            for item in iterable:
+                self.add(item)
+
+    def add(self, item):
+        if not isinstance(item, Constraint):
+            raise TypeError(f"ConstraintSet can only contain Constraint objects, got {type(item).__name__}")
+        super().add(item)
+
+    def update(self, *others):
+        for other in others:
+            for item in other:
+                self.add(item)
 
 
 class BaseType(ABC):
@@ -96,11 +153,6 @@ class ContainerType(BaseType):
         return self.__pythontype__
 
     def __str__(self):
-        # retstr = f"{self.__origin__.__name__} < "
-        # for arg in self.__args__:
-        #     retstr += f"{arg}, "
-        # retstr = retstr[:-2] + " >"
-        # return retstr
         return str(self.__pythontype__)
     
     def __repr__(self):
@@ -163,11 +215,6 @@ class ProductType(BaseType):
         return self.__pythontype__
 
     def __str__(self):
-        # retstr = "("
-        # for arg in self.__args__:
-        #     retstr += f"{arg} , "
-        # retstr += ")"
-        # return retstr
         return str(self.__pythontype__)
     
     def __repr__(self):
@@ -227,11 +274,6 @@ class DictType(BaseType):
         return new_type
 
     def __str__(self):
-        # retstr = f"{self.__origin__.__name__} < "
-        # for arg in self.__args__:
-        #     retstr += f"{arg}, "
-        # retstr = retstr[:-2] + " >"
-        # return retstr
         return str(self.__pythontype__)
     
     def __repr__(self):
@@ -345,9 +387,6 @@ class AtomType(BaseType):
     
     def to_type(self):
         return self.__pythontype__
-    
-    # def __add__(self, other: AtomType | SumType) -> SumType:
-    #     if isinstance(other, AtomType):
             
 
 class TypevarType(BaseType):
@@ -410,17 +449,6 @@ class AbstractState(dict):
             raise TypeError(f"{value} is not BaseType")
         super().__setitem__(key, value)
 
-    # def __str__(self):
-    #     retstr = ''
-    #     for k, v in self.items():
-    #         retstr += rf'{k}:{v} /\ '
-    #     if retstr:
-    #         retstr = retstr[:-4]
-    #     return retstr
-    
-    # def __repr__(self):
-    #     return str(self)
-
     def __hash__(self):
         tuppled = tuple(self.items())
         return hash(tuppled)
@@ -450,12 +478,6 @@ class FunctionSpec(tuple):
             raise TypeError(f"one of the {dtuple} elements is not a dict")
         return FunctionSpec(AbstractState.from_dict(dtuple[0]), AbstractState.from_dict(dtuple[1]))
 
-    # def __str__(self):
-    #     return f'({self[0]}) -> ({self[1]})'
-
-    # def __repr__(self):
-    #     return str(self)
-    
     def __eq__(self, other) -> bool:
         return self[0] == other[0] and self[1] == other[1]
 
@@ -627,10 +649,19 @@ def encode_tests():
     print(json_str)
 
 
+def constraint_tests():
+    T1 = TypeVar('T1')
+    bt1 = create_basetype(int)
+    bt2 = create_basetype(T1)
+    ct = Constraint(Relation.LEQ, bt1, bt2)
+    print(ct)
+
+
 if __name__ == "__main__":
     title = "Simple typing converter"
     print(title)
     print("=" * len(title))
     # str_tests()
     # encode_tests()
-    constructor_tests()
+    # constructor_tests()
+    constraint_tests()
