@@ -424,6 +424,8 @@ class TypevarType(BaseType):
 
 
 class AbstractState(dict):
+    # TODO: implement lub
+    # TODO: implement <=
     def validate(self):
         for k, v in self.items():
             if not isinstance(k, str) and not isinstance(v, BaseType):
