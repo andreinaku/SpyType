@@ -13,9 +13,17 @@ from io import *
 from dataclasses import dataclass
 from pprint import pprint
 import os
+import logging
 
 
 tv_declarations = []
+logging.basicConfig(
+    filename='seeker.err',  # Log file name
+    level=logging.ERROR,        # Log level (ERROR logs exceptions)
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+translated_funcs = 0
+not_translated_funcs = 0
 
 
 from _fakeshed import (
@@ -45,11 +53,6 @@ from _fakeshed import (
     SupportsRichComparisonT,
     SupportsWrite
 )
-
-@dataclass
-class Context:
-    skips: list[str]
-    selftypes: list[str]
 
 
 class NotTranslatableException(Exception):
@@ -97,42 +100,7 @@ class ProtocolSeeker(ast.NodeVisitor):
         self.visit(self.tree)
 
 
-class TypeVarSeeker(ast.NodeVisitor):
-    def __init__(self, tree: ast.AST, visited_nodes: list[ast.AST]):
-        self.tree = tree
-        self.calls = []
-        self.funcname = "TypeVar"
-        self.visited_nodes = visited_nodes
-        self.declarations = []
-    
-    def visit_Assign(self, node: ast.Assign):
-        if len(node.targets) > 1:
-            return
-        if node in self.visited_nodes:
-            return
-        self.visited_nodes.append(node)
-        target = node.targets[0]
-        if not isinstance(target, ast.Name):
-            return
-        if not isinstance(node.value, ast.Call):
-            return
-        if not isinstance(node.value.func, ast.Name) and node.value.func.id != self.funcname:
-            return
-        if len(node.value.args) < 1 and not isinstance(node.value.args[0], ast.Constant):
-            return
-        assign_str = astor.to_source(node).strip()
-        self.declarations.append(assign_str)
-        exec(assign_str, globals())
-        # print(f"execced {assign_str}")
-
-    def gather_typevars(self):
-        self.visit(self.tree)
-
-    def get_declarations(self):
-        return self.declarations
-
-
-class TypeAliasSeeker(ast.NodeVisitor):
+class AssignSeeker(ast.NodeVisitor):
     def __init__(self, tree: ast.AST, visited_nodes: list[ast.AST]):
         self.tree = tree
         self.alias_exceptions = {
@@ -146,6 +114,8 @@ class TypeAliasSeeker(ast.NodeVisitor):
         if not isinstance(node.targets[0], ast.Name) and node.targets[0] not in self.alias_exceptions:
             return
         node_src = astor.to_source(node).strip()
+        if isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name) and node.value.func.id == "TypeVar":
+            tv_declarations.append(node_src)
         try:
             exec(node_src, globals())
             self.visited_nodes.append(node)
@@ -170,96 +140,13 @@ class TypeAliasSeeker(ast.NodeVisitor):
         self.visit(self.tree)
 
 
-class AnnotationSeeker(ast.NodeVisitor):
-    def __init__(self, tree: ast.AST, class_stats: dict[str, dict[str, int]], context: Context):
-        self.tree = tree
-        self.problems = []
-        self.goodies = []
-        self.selftypes = context.selftypes
-        self.skips = context.skips
-        self.class_stats = class_stats
-        self.current_class = None
-
-    def visit_ClassDef(self, node):
-        if is_protocol_classdef(node):
-            return
-        self.current_class = node
-        self.class_stats[self.current_class.name] = {'translatable': 0, 'total': 0}
-        self.generic_visit(node)
-        self.current_class = None
-
-    def visit_FunctionDef(self, node: ast.FunctionDef):
-
-        def get_annotation_str(annot_node: ast.AST) -> str:
-            if not hasattr(annot_node, "annotation"):
-                return None
-            if annot_node.annotation is None:
-                if annot_node.arg == "self":
-                    return self.current_class.name
-            argstr = astor.to_source(annot_node.annotation).strip()
-            if argstr in self.selftypes:  # the type is the class name, for self-ish annotations
-                argstr = self.current_class.name
-            for skip in self.skips:
-                if skip in argstr:
-                    raise TypeError(f"{argstr}: (skipped)")
-            return argstr
-        
-        def annotation_to_basetype(argstr: str) -> BaseType | None:
-            if argstr is None:
-                return None
-            try:
-                evalled = eval(argstr)
-            except Exception as e:
-                raise Exception(f"{argstr}: {str(e)}")
-            return create_basetype(evalled)
-        
-        def parse_annotation(_arg: ast.AST) -> bool:
-            try:
-                argstr = get_annotation_str(_arg)
-                bt = annotation_to_basetype(argstr)
-                if bt is not None:
-                    self.goodies.append(argstr)
-                return True
-            except Exception as e:
-                self.problems.append(str(e))
-                return False
-
-        if self.current_class is None:
-            stats_key = 'indie'
-        else:
-            stats_key = self.current_class.name
-        is_translatable = True
-        self.class_stats[stats_key]['total'] += 1   
-        arg_lists = [node.args.posonlyargs, node.args.args]
-        for arg_list in arg_lists:
-            for _arg in arg_list:
-                is_translatable &= parse_annotation(_arg)
-                
-        _arg = node.args.vararg
-        is_translatable &= parse_annotation(_arg)
-
-        for _arg in node.args.kwonlyargs:
-            is_translatable &= parse_annotation(_arg)
-
-        _arg = node.args.kwarg
-        is_translatable &= parse_annotation(_arg)
-        
-        _arg = node.returns
-        is_translatable &= parse_annotation(_arg)
-        if is_translatable:
-            self.class_stats[stats_key]['translatable'] += 1
-    
-    def collect(self) -> list[str]:
-        self.visit(self.tree)
-        return self.goodies, self.problems
-    
-
 class AnnotationTranslator(ast.NodeVisitor):
-    def __init__(self, tree: ast.AST, class_dict: dict[str, dict[str, list[FunctionSpec]]], context: Context):
+    def __init__(self, tree: ast.AST):
         self.tree = tree
-        self.selftypes = context.selftypes
-        self.skips = context.skips
-        self.class_dict = class_dict
+        self.selftypes = ["Self", "_typeshed.Self", "type[Self]", "type[_typeshed.Self]", "list[_typeshed.Self]"]
+        self.skips = ["Callable"]
+        self.class_dict: dict[str, dict[str, list[FunctionSpec]]] = dict()
+        self.current_class = None
     
     def visit_ClassDef(self, node):
         if is_protocol_classdef(node):
@@ -269,6 +156,9 @@ class AnnotationTranslator(ast.NodeVisitor):
         self.current_class = None
     
     def visit_FunctionDef(self, node: ast.FunctionDef):
+        global translated_funcs
+        global not_translated_funcs
+
         def add_to_class_dict(classname: str, funcname: str, funcspec: FunctionSpec):
             if classname in self.class_dict:
                 if funcname in self.class_dict[classname]:
@@ -371,45 +261,16 @@ class AnnotationTranslator(ast.NodeVisitor):
             except Exception:
                 raise NotTranslatableException("not translatable")
         except NotTranslatableException:
-            add_to_class_dict(stats_key, node.name, FunctionSpec(AbstractState(), AbstractState()))
+            # add_to_class_dict(stats_key, node.name, FunctionSpec(AbstractState(), AbstractState()))
+            logging.error(f"An exception occured for:{os.linesep}{astor.to_source(node).strip()}")
+            not_translated_funcs += 1
         fs = FunctionSpec(first=as_in, second=as_out)
         add_to_class_dict(stats_key, node.name, fs)
+        translated_funcs += 1
 
     def go_translate(self):
         self.visit(self.tree)
- 
-
-def seek_from_stubs(fname: str,
-                    visited_nodes: list[ast.AST],
-                    class_stats: dict[str, dict[str, int]],
-                    class_dict: dict[str, list[FunctionSpec]],
-                    collect_mode: bool) -> list[str]:
-    with open(fname, 'r') as f:
-        tree = ast.parse(f.read())
-    context = Context(
-        skips = ["Callable"],
-        selftypes = ["Self", "_typeshed.Self", "type[Self]", "type[_typeshed.Self]", "list[_typeshed.Self]"]
-    )
-    # self.selftypes = {"Self", "_typeshed.Self", "type[Self]", "type[_typeshed.Self]", "list[_typeshed.Self]"}
-    # self.skips = ["Callable"]
-    good_annotations = []
-    bad_annotations = []
-    for _node in tree.body:
-        if _node in visited_nodes:
-            continue
-        TypeAliasSeeker(_node, visited_nodes).gather_typealiases()
-        ProtocolSeeker(_node, visited_nodes).gather_protocols()
-        tvseeker = TypeVarSeeker(_node, visited_nodes)
-        tvseeker.gather_typevars()
-        tv_declarations = tvseeker.get_declarations()
-        # g, b = AnnotationSeeker(_node, visited_nodes, class_stats, class_dict, collect_mode).collect()
-        g, b = AnnotationSeeker(_node, class_stats, context).collect()
-        good_annotations += deepcopy(g)
-        bad_annotations += deepcopy(b)
-    good_annotations = list(set(good_annotations))
-    bad_annotations = list(set(bad_annotations))
-    AnnotationTranslator(tree, class_dict, context).go_translate()
-    return good_annotations, bad_annotations
+        return self.class_dict
 
 
 def check_stats(class_stats: dict[str, dict[str, int]]):
@@ -436,26 +297,40 @@ def serialize_class_dict(cd):
 
 def dump_to_pyfile(class_dict, outfile='class_dict.py'):
     with open(outfile, 'w') as f:
-        f.write(f'import typing{os.linesep}{os.linesep}')
-        f.write(f'import types{os.linesep}{os.linesep}')
+        f.write(f'import typing{os.linesep}')
+        f.write(f'from typing import *{os.linesep}')
+        f.write(f'import types{os.linesep}')
+        f.write(f'from types import *{os.linesep}{os.linesep}')
+        for tv_decl in tv_declarations:
+            f.write(f"{tv_decl}{os.linesep}")
+        f.write(os.linesep)
         pprint(class_dict, stream=f)
+
+
+def parse_stub(stub_path: str, visited_nodes):
+    with open(stub_path, 'r') as f:
+        tree = ast.parse(f.read())
+    for _node in tree.body:
+        AssignSeeker(_node, visited_nodes).gather_typealiases()
+        ProtocolSeeker(_node, visited_nodes).gather_protocols()
+    class_dict = AnnotationTranslator(tree).go_translate()
+    return class_dict
+
+
+def parse_stub_code(code: str):
+    tree = ast.parse(code)
+    class_dict = AnnotationTranslator(tree).go_translate()
+    return class_dict
 
 
 if __name__ == "__main__":
     fname = "playground/fakeins.pyi"
-    visited_nodes = []
-    class_stats = dict()
-    class_stats = {'indie': {'translatable': 0, 'total': 0}}
-    class_dict = dict()
+    # fname = "playground/teststub.pyi"
 
-    goodlist, badlist = seek_from_stubs(fname, visited_nodes, class_stats, class_dict, False)
-    parse_stats(class_stats)
-    print(f"good = {len(goodlist)} items\nbad = {len(badlist)} items")
-    with open("badseeks.json", "w") as f:
-        json.dump(badlist, f, indent=4)
-    with open("class_dict.json", "w") as f:
-        json.dump(serialize_class_dict(class_dict), f, indent=4)
-    dump_to_pyfile(class_dict)
-    #
-    typevars = {name: obj for name, obj in globals().items() if isinstance(obj, TypeVar)}
-    print(typevars)
+    cd = parse_stub(fname, [])
+    total_funcs = translated_funcs + not_translated_funcs
+    print(f"Translated: {translated_funcs/total_funcs * 100:.2f}%")
+
+    code = 'def foo(a: int, b: float) -> float: ...'
+    cd2 = parse_stub_code(code)
+    print(cd2)
