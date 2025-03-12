@@ -114,6 +114,10 @@ class BaseType(ABC):
     def to_type(self):
         ...
 
+    @classmethod
+    def lub(cls, bt1: BaseType, bt2: BaseType) -> SumType:
+        return SumType.from_basetypes([bt1, bt2])
+    
 
 class ContainerType(BaseType):
     def validate(self):
@@ -303,7 +307,7 @@ class SumType(BaseType):
 
     def __init__(self):
         self.__pythontype__ = None
-        self.__args__ = []
+        self.__args__ = None
 
     @classmethod
     def from_type(cls, ptip: type):
@@ -318,12 +322,32 @@ class SumType(BaseType):
         new_instance.__args__ = []
         for _arg in type_seq:
             new_instance.__args__.append(create_basetype(_arg))
-        new_instance.__args__ = tuple(new_instance.__args__)
+        new_instance.__args__ = frozenset(new_instance.__args__)
         new_instance.__pythontype__ = type_seq[0]
         for i in range(1, len(type_seq)):
             new_instance.__pythontype__ |= type_seq[i]
         new_instance.validate()
         return new_instance
+    
+    @classmethod
+    def from_basetypes(cls, btype_seq: Sequence[BaseType]):
+        new_instance = cls()
+        new_instance.__args__ = []
+        for btype in btype_seq:
+            if isinstance(btype, SumType):
+                # new_instance.__args__ = [_arg for _arg in btype.__args__ if _arg not in new_instance.__args__]
+                for _arg in btype.__args__:
+                    if _arg not in new_instance.__args__: 
+                        new_instance.__args__.append(_arg)
+                continue
+            new_instance.__args__.append(btype)
+        new_instance.__args__ = frozenset(new_instance.__args__)
+        new_instance.__pythontype__ = btype_seq[0].to_type()
+        for i in range(1, len(btype_seq)):
+            new_instance.__pythontype__ |= btype_seq[i].to_type()
+        new_instance.validate()
+        return new_instance
+
         
     def to_type(self):
         return self.__pythontype__
@@ -424,7 +448,6 @@ class TypevarType(BaseType):
 
 
 class AbstractState(dict):
-    # TODO: implement lub
     # TODO: implement <=
     def validate(self):
         for k, v in self.items():
@@ -638,6 +661,17 @@ def constructor_tests():
     ss = create_basetype(int | T1)
     print(ss)
 
+    bt1 = create_basetype(int)
+    bt2 = create_basetype(int | float)
+    bt3 = BaseType.lub(bt1, bt2)
+    print(bt3)
+
+    bt1 = create_basetype(int)
+    bt2 = create_basetype(str | float)
+    bt3 = BaseType.lub(bt1, bt2)
+    print(bt3)
+
+
 def encode_tests():
     as1 = AbstractState()
     as1['a'] = create_basetype(int)
@@ -665,5 +699,5 @@ if __name__ == "__main__":
     print("=" * len(title))
     # str_tests()
     # encode_tests()
-    # constructor_tests()
-    constraint_tests()
+    constructor_tests()
+    # constraint_tests()
