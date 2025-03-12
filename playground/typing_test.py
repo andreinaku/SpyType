@@ -118,6 +118,13 @@ class BaseType(ABC):
     def lub(cls, bt1: BaseType, bt2: BaseType) -> SumType:
         return SumType.from_basetypes([bt1, bt2])
     
+    def __leq__(self, other: BaseType) -> bool:
+        if isinstance(self, AtomType) and isinstance(other, AtomType):
+            return self == other
+        if isinstance(self, ContainerType) and isinstance(other, ContainerType):
+            return self.__args__ <= other.__args__
+        
+
 
 class ContainerType(BaseType):
     def validate(self):
