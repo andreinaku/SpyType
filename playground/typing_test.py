@@ -122,7 +122,7 @@ class BaseType(ABC):
         if isinstance(self, AtomType) and isinstance(other, AtomType):
             return self == other
         if isinstance(self, ContainerType) and isinstance(other, ContainerType):
-            return self.__args__ <= other.__args__
+            return (self.__origin__ <= other.__origin__) and (self.__args__ <= other.__args__)
         
 
 
