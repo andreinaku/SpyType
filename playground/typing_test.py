@@ -10,6 +10,7 @@ import ast
 import json
 from dataclasses import dataclass
 from enum import Enum
+import pickle
 
 '''
 type: int, float, str, ....
@@ -45,6 +46,24 @@ approximated_types = {
     typing.LiteralString: str,
     typing.Sized: collections.abc.Sized
 }
+
+with open('playground/type_pairs.pkl', 'rb') as f:
+    type_pairs = pickle.load(f)
+new_pairs = set()
+for ttuple in type_pairs:
+    t1, t2 = ttuple
+    if t1 in approximated_types:
+        if t2 in approximated_types:
+            new_pairs.add((approximated_types[t1], approximated_types[t2]))
+        else:
+            new_pairs.add((approximated_types[t1], t2))
+    if t2 in approximated_types:
+        if t1 in approximated_types:
+            new_pairs.add((approximated_types[t1], approximated_types[t2]))
+        else:
+            new_pairs.add((t1, approximated_types[t2]))
+type_pairs |= new_pairs
+
 
 class Constraint(tuple):
     def __new__(cls, rel: Relation, left: BaseType, right: BaseType) -> Constraint:
@@ -118,12 +137,14 @@ class BaseType(ABC):
     def lub(cls, bt1: BaseType, bt2: BaseType) -> SumType:
         return SumType.from_basetypes([bt1, bt2])
     
-    def __leq__(self, other: BaseType) -> bool:
+    def __le__(self, other: BaseType) -> bool:
         if isinstance(self, AtomType) and isinstance(other, AtomType):
-            return self == other
-        if isinstance(self, ContainerType) and isinstance(other, ContainerType):
-            return (self.__origin__ <= other.__origin__) and (self.__args__ <= other.__args__)
-        
+            type_tuple = (self.to_type(), other.to_type())
+            if type_tuple in type_pairs:
+                return True
+            return False
+        # TODO: add logic for other types
+        return False
 
 
 class ContainerType(BaseType):
@@ -700,11 +721,19 @@ def constraint_tests():
     print(ct)
 
 
+def lesser_tests():
+    bt1 = create_basetype(list)
+    bt2 = create_basetype(typing.Sized)
+    aux = bt1 <= bt2
+    print(aux)
+
+
 if __name__ == "__main__":
     title = "Simple typing converter"
     print(title)
     print("=" * len(title))
     # str_tests()
     # encode_tests()
-    constructor_tests()
+    # constructor_tests()
     # constraint_tests()
+    lesser_tests()
