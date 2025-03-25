@@ -139,10 +139,19 @@ class BaseType(ABC):
     
     def __le__(self, other: BaseType) -> bool:
         if isinstance(self, AtomType) and isinstance(other, AtomType):
+            if self == other:
+                return True
             type_tuple = (self.to_type(), other.to_type())
             if type_tuple in type_pairs:
                 return True
             return False
+        elif isinstance(self, AtomType) and isinstance(other, SumType):
+            for t in other.get_args():
+                if self.to_type() <= other.to_type():
+                    return True
+            return False
+        elif
+
         # TODO: add logic for other types
         return False
 
@@ -411,6 +420,9 @@ class SumType(BaseType):
             if elem not in self.__args__:
                 return False
         return True
+    
+    def get_args(self):
+        return self.__args__
 
 
 class AtomType(BaseType):
