@@ -556,6 +556,14 @@ class AbstractState(dict):
             if bt != other[k]:
                 return False
         return True
+    
+    def __le__(self, other: AbstractState) -> bool:
+        if self.keys() != other.keys():
+            return False
+        for k, bt in self.items():
+            if not bt <= other[k]:
+                return False
+        return True
 
 
 class FunctionSpec(tuple):
@@ -771,6 +779,14 @@ def lesser_tests():
     print(aux)
     bt1 = create_basetype(int)
     bt2 = create_basetype(int | float | str)
+    aux = bt1 <= bt2
+    print(aux)
+    bt1 = create_basetype(list[int])
+    bt2 = create_basetype(list[int | float | str])
+    aux = bt1 <= bt2
+    print(aux)
+    bt1 = create_basetype(tuple[int, float])
+    bt2 = create_basetype(tuple[int | float, float | str])
     aux = bt1 <= bt2
     print(aux)
 
