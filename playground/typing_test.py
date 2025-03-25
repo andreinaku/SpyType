@@ -147,10 +147,27 @@ class BaseType(ABC):
             return False
         elif isinstance(self, AtomType) and isinstance(other, SumType):
             for t in other.get_args():
-                if self.to_type() <= other.to_type():
+                if self <= t:
                     return True
             return False
-        elif
+        elif isinstance(self, ContainerType) and isinstance(other, ContainerType):
+            if not self.get_orig() <= other.get_orig():
+                return False
+            if not self.get_contained() <= other.get_contained():
+                return False
+            return True
+        elif isinstance(self, ProductType) and isinstance(other, ProductType):
+            if not self.get_orig() <= other.get_orig():
+                return False
+            args1 = self.get_args()
+            args2 = other.get_args()
+            arg_nr = len(args1)
+            if arg_nr != len(args2):
+                return False
+            for i in range(0, arg_nr):
+                if not args1[i] <= args2[i]:
+                    return False
+            return True
 
         # TODO: add logic for other types
         return False
@@ -160,6 +177,8 @@ class ContainerType(BaseType):
     def validate(self):
         if not isinstance(self.__origin__, BaseType):
             raise TypeError(f"{self}'s origin, {self.__origin__}, is not a BaseType")
+        if len(self.__args__) > 1:
+            raise TypeError(f"{self.__args__} has more than 1 argument")
         for _arg in self.__args__:
             if not isinstance(_arg, BaseType):
                 raise TypeError(f"{self}'s argument, {_arg}, is not a BaseType")
@@ -168,6 +187,12 @@ class ContainerType(BaseType):
         self.__pythontype__ = None
         self.__origin__ = None
         self.__args__ = []
+
+    def get_orig(self):
+        return self.__origin__
+    
+    def get_contained(self):
+        return self.__args__[0]
 
     @classmethod
     def from_type(cls, ptip: type) -> ContainerType:
@@ -230,6 +255,12 @@ class ProductType(BaseType):
         self.__pythontype__ = None
         self.__origin__ = None
         self.__args__ = []
+
+    def get_orig(self):
+        return self.__origin__
+
+    def get_args(self):
+        return self.__args__
 
     @classmethod
     def from_type_pieces(cls, _orig: type, _args: list[type]) -> ContainerType:
@@ -736,6 +767,10 @@ def constraint_tests():
 def lesser_tests():
     bt1 = create_basetype(list)
     bt2 = create_basetype(typing.Sized)
+    aux = bt1 <= bt2
+    print(aux)
+    bt1 = create_basetype(int)
+    bt2 = create_basetype(int | float | str)
     aux = bt1 <= bt2
     print(aux)
 
