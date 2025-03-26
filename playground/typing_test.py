@@ -11,6 +11,7 @@ import json
 from dataclasses import dataclass
 from enum import Enum
 import pickle
+import _typeshed
 
 '''
 type: int, float, str, ....
