@@ -127,7 +127,7 @@ sequenceDiagram
     Generator->>Maude: Parse Term 'c [nil]'
     Maude-->>Generator: Term Object
     
-    Generator->>Maude: Parse Strategy
+    Generator->>Maude: Parse With Selected Strategy
     Maude-->>Generator: Strategy Object
     
     Generator->>Maude: term.srewrite(strategy)
