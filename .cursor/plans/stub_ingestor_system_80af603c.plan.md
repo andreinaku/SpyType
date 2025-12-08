@@ -3,7 +3,7 @@ name: Stub Ingestor System
 overview: Design a stub file parser that converts Python type annotations into ExistentialType structures, with support for sum types (unions), generic types, Callable/FunctionType, Literal types, and TypeVars.
 todos:
   - id: update-existential-types
-    content: Add `sum_of` field and optional `is_typevar` flag to ExistentialType; update is_subtype_of for sum semantics
+    content: Add `sum_of` field to ExistentialType; add TypeVarType subclass; update is_subtype_of for sum semantics
     status: pending
   - id: parse-annotation
     content: Implement parse_annotation() to handle ast.Name, ast.Subscript, ast.BinOp, ast.Constant, ast.Attribute, ast.Tuple
@@ -15,7 +15,7 @@ todos:
     content: Handle Literal[...] → infer type from literal value
     status: pending
   - id: handle-typevar
-    content: Implement visit_Assign to detect TypeVar declarations and create TypeVarET
+    content: Implement visit_Assign to detect TypeVar declarations and create TypeVarType instances
     status: pending
   - id: visit-classdef
     content: Implement visit_ClassDef to parse classes, base classes, and method signatures
@@ -57,13 +57,30 @@ Update `is_subtype_of` to handle sum semantics:
 - Atomic `A <: B` if A equals B or A is in B's sum components
 - Sum `A1 + A2 <: B` if both A1 and A2 are subtypes of B
 
-### 3. Add TypeVar Marker (Optional)
+### 3. Add TypeVarType Subclass
 
-Add a boolean field to distinguish TypeVars:
+Create a `TypeVarType` subclass (following the `FunctionType` pattern):
 
 ```python
-is_typevar: bool = False
+@dataclass
+class TypeVarType(ExistentialType):
+    # Inherits all fields from ExistentialType
+    # - name: holds the TypeVar name directly (e.g., "_T", "_KT", "_VT")
+    # - bound: holds the bound type if specified (e.g., SizedET)
+    pass  # No additional fields needed
 ```
+
+**Example usage:**
+
+```python
+# _T = TypeVar("_T")
+TypeVarType(name="_T")
+
+# _T = TypeVar("_T", bound=Sized)
+TypeVarType(name="_T", bound=SizedET)
+```
+
+This follows the same pattern as `FunctionType` and allows easy identification via `isinstance(t, TypeVarType)`.
 
 ---
 
@@ -119,15 +136,17 @@ ExistentialType(sum_of=[IntET, NoneTypeET])
 
 #### 3. TypeVar Handler
 
-Detect `TypeVar` assignments and create TypeVarET:
+Detect `TypeVar` assignments and create `TypeVarType` instances:
 
 ```python
 # _T = TypeVar("_T")
+TypeVarType(name="_T")
+
 # _T = TypeVar("_T", bound=SomeType)
-ExistentialType(name="_T", is_typevar=True, bound=SomeTypeET)
+TypeVarType(name="_T", bound=SomeTypeET)
 ```
 
-**Note:** TypeVars keep their original name (e.g., `_T`, `_KT`, `_VT`) without the `ET` suffix, since they are placeholders rather than concrete types.
+**Note:** TypeVars keep their original name (e.g., `_T`, `_KT`, `_VT`) without the `ET` suffix, since they are placeholders rather than concrete types. Use `isinstance(t, TypeVarType)` to identify them.
 
 #### 4. Class Visitor (`visit_ClassDef`)
 
