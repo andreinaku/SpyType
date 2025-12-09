@@ -44,6 +44,10 @@ class StubIngestor(ast.NodeVisitor):
             return_type = self.parse_annotation(node.returns)
 
     def visit_ClassDef(self, node: ast.ClassDef):
+        # The class visitor should:
+        # - create an ExistentialType for the class, if it doesn't already exist.
+        # - parse the base classes and add them to the class's bound field.
+        # - iterate over the class body and parse the method signatures.
         et_name = to_et_name(node.name)
         current_et = self.registry.get_or_create(et_name)
         pass
