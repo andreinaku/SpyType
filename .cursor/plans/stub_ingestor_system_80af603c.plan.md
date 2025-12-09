@@ -4,7 +4,7 @@ overview: Design a stub file parser that converts Python type annotations into E
 todos:
   - id: update-existential-types
     content: Add `sum_of` field to ExistentialType; add TypeVarType subclass; update is_subtype_of for sum semantics
-    status: pending
+    status: completed
   - id: parse-annotation
     content: Implement parse_annotation() to handle ast.Name, ast.Subscript, ast.BinOp, ast.Constant, ast.Attribute, ast.Tuple
     status: pending

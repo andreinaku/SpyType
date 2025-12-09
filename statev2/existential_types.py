@@ -12,10 +12,11 @@ class ExistentialType:
     bound: 'ExistentialType' | None = None
     generics: list['ExistentialType'] = field(default_factory=list)
     signature: dict[str, 'ExistentialType'] = field(default_factory=dict)
+    sum_of: list['ExistentialType'] = field(default_factory=list)
 
     is_bottom: bool = False
     is_top: bool = False
-    
+
     def is_subtype_of(self, other: 'ExistentialType') -> bool:
         return False
 
@@ -54,10 +55,19 @@ class FunctionType(ExistentialType):
         return True
 
 
+@dataclass
+class TypeVarType(ExistentialType):
+    # Already inherits all fields from ExistentialType
+    # - name: holds the TypeVar name directly (e.g., "_T", "_KT", "_VT")
+    # - bound: holds the bound type if specified (e.g., SizedET)
+    pass
+
+
 class TypeRegistry:
     def __init__(self):
         self._types: dict[str, ExistentialType] = {}
-        self.get_or_create("NoneTypeET")
+        # Special types
+        self._types["NoneTypeET"] = NoneTypeET  # NoneTypeET is a singleton
         self.get_or_create("AnyTypeET")
         self.get_or_create("ObjectET", is_top=True)
         
@@ -68,3 +78,16 @@ class TypeRegistry:
     
     def get_all_types(self) -> list[ExistentialType]:
         return list(self._types.values())
+    
+    def print_registry(self) -> None:
+        print(f"TypeRegistry ({len(self._types)} types):")
+        for name, et in self._types.items():
+            bound_str = f", bound={et.bound.name}" if et.bound else ""
+            generics_str = f", generics=[{', '.join(g.name for g in et.generics)}]" if et.generics else ""
+            flags = []
+            if et.is_top:
+                flags.append("top")
+            if et.is_bottom:
+                flags.append("bottom")
+            flags_str = f", flags=[{', '.join(flags)}]" if flags else ""
+            print(f"  {name}: {type(et).__name__}{bound_str}{generics_str}{flags_str}")
