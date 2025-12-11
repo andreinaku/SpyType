@@ -10,7 +10,8 @@ from stub_ingestor import StubIngestor
 
 def main():
     # Read the test_stubs.pyi file
-    stub_path = "test_stubs.pyi"
+    script_dir = Path(__file__).parent
+    stub_path = script_dir / "test_stubs.pyi"
     with open(stub_path, "r") as f:
         source = f.read()
     
@@ -30,6 +31,12 @@ def main():
     print("TypeRegistry after parsing test_stubs.pyi")
     print("=" * 60)
     registry.print_registry()
+    intet = registry.get_or_create("IntET")
+    supportsneget = registry.get_or_create("SupportsNegET")
+    floatet = registry.get_or_create("FloatET")
+    print(intet.is_subtype_of(supportsneget))
+    print(supportsneget.is_subtype_of(intet))
+    print(floatet.is_subtype_of(intet))
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 NONE_TYPE_NAME = "NoneTypeET"
 OBJECT_TYPE_NAME = "ObjectET"
 BOTTOM_TYPE_NAME = "BottomET"
+SELF_TYPE_MARKER = "SelfET"
 
 @dataclass
 class ExistentialType:
@@ -17,19 +18,42 @@ class ExistentialType:
     is_bottom: bool = False
     is_top: bool = False
 
-    def is_subtype_of(self, other: 'ExistentialType') -> bool:
+    def is_subtype_of(self, other: 'ExistentialType', assumptions: set[tuple[str, str]] | None = None) -> bool:
+        # TODO: Support sum types
+        if len(self.sum_of) > 0 or len(other.sum_of) > 0:
+            raise NotImplementedError("Sum types are not supported yet")
+
+        # TODO: Maybe add axioms for subtyping?
+
+        if assumptions is None:
+            assumptions = set()
+        
+        pair = (self.name, other.name)
+        if pair in assumptions:
+            return True
+
         if self.name == other.name:
             return True
-        if self.name == OBJECT_TYPE_NAME and other.name != OBJECT_TYPE_NAME:
+        if other.is_top:  # Everything is a subtype of top (Object)
             return True
-        if self.name == BOTTOM_TYPE_NAME and other.name != BOTTOM_TYPE_NAME:
+        if self.is_bottom:  # Bottom is a subtype of everything
             return True
-        return False
+
+        # Add the pair to assumptions to avoid infinite recursion
+        assumptions.add(pair)
+
+        # Structural subtyping: subtype must have all methods of supertype
+        for func_name, func_type in other.signature.items():
+            if func_name not in self.signature:
+                return False
+            if not self.signature[func_name].is_subtype_of(func_type, assumptions):
+                return False
+        return True
 
 
 # NoneTypeET is the existential type for the type of None
 NoneTypeET = ExistentialType(NONE_TYPE_NAME)
-
+SelfMarkerET = ExistentialType(SELF_TYPE_MARKER)
 
 @dataclass
 class FunctionType(ExistentialType):
@@ -44,21 +68,24 @@ class FunctionType(ExistentialType):
         else:
             return f"() -> {codomain_repr}"
 
-    def is_subtype_of(self, other: 'FunctionType') -> bool:
+    def is_subtype_of(self, other: 'FunctionType', assumptions: set[tuple[str, str]] | None = None) -> bool:
         if not isinstance(other, FunctionType):
             return False
-        if self.codomain is None and other.codomain is not None:
-            return False
-        if self.codomain is not None and other.codomain is None:
-            return False
-        if self.codomain is not None and other.codomain is not None:
-            return self.codomain.is_subtype_of(other.codomain)
+        if assumptions is None:
+            assumptions = set()
+        
+        # Check domain (contravariant)
         if len(self.domain) != len(other.domain):
             return False
         for i in range(len(self.domain)):
-            if not other.domain[i].is_subtype_of(self.domain[i]):
+            if not other.domain[i].is_subtype_of(self.domain[i], assumptions):
                 return False
-        return True
+        # Check codomain (covariant)
+        if self.codomain is None and other.codomain is None:
+            return True
+        if self.codomain is None or other.codomain is None:
+            return False
+        return self.codomain.is_subtype_of(other.codomain, assumptions)
 
 
 @dataclass

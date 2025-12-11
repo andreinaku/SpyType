@@ -1,5 +1,5 @@
 import ast
-from existential_types import TypeRegistry, ExistentialType, FunctionType, NoneTypeET
+from existential_types import TypeRegistry, ExistentialType, FunctionType, NoneTypeET, SelfMarkerET
 from typing import Any
 
 
@@ -63,7 +63,7 @@ class StubIngestor(ast.NodeVisitor):
                     if isinstance(d, ast.Name)
                 ]
                 is_staticmethod = "staticmethod" in decorator_names
-                is_classmethod = "classmethod" in decorator_names
+                # is_classmethod = "classmethod" in decorator_names
                 
                 # Parse parameter annotations
                 param_types: list[ExistentialType] = []
@@ -71,8 +71,9 @@ class StubIngestor(ast.NodeVisitor):
                     # @staticmethod: no self/cls, use all args
                     args = item.args.args
                 else:
-                    # Regular method or @classmethod: first param is self/cls (type is the class)
-                    param_types.append(current_et)
+                    # # Regular method or @classmethod: first param is self/cls (type is the class)
+                    # param_types.append(current_et)
+                    param_types.append(SelfMarkerET)
                     args = item.args.args[1:]  # Skip 'self' or 'cls'
                 
                 for arg in args:
