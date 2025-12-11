@@ -50,7 +50,62 @@ class StubIngestor(ast.NodeVisitor):
         # - iterate over the class body and parse the method signatures.
         et_name = to_et_name(node.name)
         current_et = self.registry.get_or_create(et_name)
-        pass
+        
+        # Iterate over the class body to extract method and attribute signatures
+        for item in node.body:
+            if isinstance(item, ast.FunctionDef):
+                # Create a FunctionType for the method
+                method_name = item.name
+                
+                # Check for @staticmethod or @classmethod decorators
+                decorator_names = [
+                    d.id for d in item.decorator_list 
+                    if isinstance(d, ast.Name)
+                ]
+                is_staticmethod = "staticmethod" in decorator_names
+                is_classmethod = "classmethod" in decorator_names
+                
+                # Parse parameter annotations
+                param_types: list[ExistentialType] = []
+                if is_staticmethod:
+                    # @staticmethod: no self/cls, use all args
+                    args = item.args.args
+                else:
+                    # Regular method or @classmethod: first param is self/cls (type is the class)
+                    param_types.append(current_et)
+                    args = item.args.args[1:]  # Skip 'self' or 'cls'
+                
+                for arg in args:
+                    if arg.annotation is not None:
+                        param_type = self.parse_annotation(arg.annotation)
+                        param_types.append(param_type)
+                
+                # Parse return type annotation
+                return_type: ExistentialType | None = None
+                if item.returns is not None:
+                    return_type = self.parse_annotation(item.returns)
+                
+                # Create FunctionType and add to signature
+                func_type = FunctionType(
+                    name=method_name,
+                    domain=param_types,
+                    codomain=return_type
+                )
+                current_et.signature[method_name] = func_type
+                
+            elif isinstance(item, ast.AnnAssign):
+                # Create a FunctionType for the attribute (Unit -> AttributeType)
+                if isinstance(item.target, ast.Name):
+                    attr_name = item.target.id
+                    attr_type = self.parse_annotation(item.annotation)
+                    
+                    # Attribute as a getter: () -> AttributeType
+                    func_type = FunctionType(
+                        name=attr_name,
+                        domain=[NoneTypeET],  # Unit type (type of None)
+                        codomain=attr_type
+                    )
+                    current_et.signature[attr_name] = func_type
 
     def visit_Assign(self, node: ast.Assign):
         pass

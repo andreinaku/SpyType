@@ -57,3 +57,7 @@ while_1 : {
 python spytype.py -i benchmarks\mine\benchfuncs.py -o benchfuncs.spytype
 ```
 This will write the inferred specifications for every function in the `benchfuncs.py` file into `benchfuncs.spytype`.
+
+
+# Attribution & Tools
+**Generated Code Disclaimer** Portions of this framework, specifically the modules that handle the ingestion of existential types and test cases, were generated with the help of Cursor and Claude Opus 4.5 agents. The core logic was manually speficied and verified by the author to ensure consistency with the formal definitions.

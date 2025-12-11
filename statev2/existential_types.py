@@ -1,10 +1,10 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from inspect import signature
 
 
 NONE_TYPE_NAME = "NoneTypeET"
-
+OBJECT_TYPE_NAME = "ObjectET"
+BOTTOM_TYPE_NAME = "BottomET"
 
 @dataclass
 class ExistentialType:
@@ -18,6 +18,12 @@ class ExistentialType:
     is_top: bool = False
 
     def is_subtype_of(self, other: 'ExistentialType') -> bool:
+        if self.name == other.name:
+            return True
+        if self.name == OBJECT_TYPE_NAME and other.name != OBJECT_TYPE_NAME:
+            return True
+        if self.name == BOTTOM_TYPE_NAME and other.name != BOTTOM_TYPE_NAME:
+            return True
         return False
 
 
@@ -67,9 +73,9 @@ class TypeRegistry:
     def __init__(self):
         self._types: dict[str, ExistentialType] = {}
         # Special types
-        self._types["NoneTypeET"] = NoneTypeET  # NoneTypeET is a singleton
-        self.get_or_create("AnyTypeET")
-        self.get_or_create("ObjectET", is_top=True)
+        self._types[NONE_TYPE_NAME] = NoneTypeET  # NoneTypeET is the unit type in our type system
+        self.get_or_create(OBJECT_TYPE_NAME, is_top=True)  # ObjectET is the top type
+        self.get_or_create(BOTTOM_TYPE_NAME, is_bottom=True)  # The bottom type
         
     def get_or_create(self, name: str, **kwargs) -> ExistentialType:
         if name not in self._types:
@@ -80,14 +86,16 @@ class TypeRegistry:
         return list(self._types.values())
     
     def print_registry(self) -> None:
-        print(f"TypeRegistry ({len(self._types)} types):")
         for name, et in self._types.items():
-            bound_str = f", bound={et.bound.name}" if et.bound else ""
-            generics_str = f", generics=[{', '.join(g.name for g in et.generics)}]" if et.generics else ""
-            flags = []
-            if et.is_top:
-                flags.append("top")
-            if et.is_bottom:
-                flags.append("bottom")
-            flags_str = f", flags=[{', '.join(flags)}]" if flags else ""
-            print(f"  {name}: {type(et).__name__}{bound_str}{generics_str}{flags_str}")
+            if et.signature:
+                print(f"{name}: {{")
+                for method_name, method_type in et.signature.items():
+                    if isinstance(method_type, FunctionType):
+                        domain_str = " x ".join(t.name for t in method_type.domain) if method_type.domain else ""
+                        codomain_str = method_type.codomain.name if method_type.codomain else "NoneTypeET"
+                        print(f'    "{method_name}": {domain_str} -> {codomain_str}')
+                    else:
+                        print(f'    "{method_name}": {method_type.name}')
+                print("}")
+            else:
+                print(f"{name}: {{}}")
