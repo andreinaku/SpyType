@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 NONE_TYPE_NAME = "NoneTypeET"
 OBJECT_TYPE_NAME = "ObjectET"
 BOTTOM_TYPE_NAME = "BottomET"
-SELF_TYPE_MARKER = "SelfET"
+# SELF_TYPE_MARKER = "SelfET"
 
 @dataclass
 class ExistentialType:
@@ -53,7 +53,7 @@ class ExistentialType:
 
 # NoneTypeET is the existential type for the type of None
 NoneTypeET = ExistentialType(NONE_TYPE_NAME)
-SelfMarkerET = ExistentialType(SELF_TYPE_MARKER)
+# SelfMarkerET = ExistentialType(SELF_TYPE_MARKER)
 
 @dataclass
 class FunctionType(ExistentialType):
