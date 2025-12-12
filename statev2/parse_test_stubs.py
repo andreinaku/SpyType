@@ -38,6 +38,11 @@ def main():
     print(supportsneget.is_subtype_of(intet))
     print(floatet.is_subtype_of(intet))
 
+    cfloatet = registry.get_or_create("CfloatET")
+    cintet = registry.get_or_create("CintET")
+    print(cfloatet.is_subtype_of(cintet))
+    print(cintet.is_subtype_of(cfloatet))
+
 
 if __name__ == "__main__":
     main()

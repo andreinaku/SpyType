@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 NONE_TYPE_NAME = "NoneTypeET"
 OBJECT_TYPE_NAME = "ObjectET"
 BOTTOM_TYPE_NAME = "BottomET"
+ANY_TYPE_NAME = "AnyTypeET"
 # SELF_TYPE_MARKER = "SelfET"
 
 @dataclass
@@ -24,6 +25,7 @@ class ExistentialType:
             raise NotImplementedError("Sum types are not supported yet")
 
         # TODO: Maybe add axioms for subtyping?
+        # TODO: Add support for "constant" types in __init__ methods of basetype-classes.
 
         if assumptions is None:
             assumptions = set()
@@ -43,6 +45,10 @@ class ExistentialType:
         assumptions.add(pair)
 
         # Structural subtyping: subtype must have all methods of supertype
+        # But if supertype has no methods, nominal identity is required
+        if not other.signature:
+            return False  # No structural basis for subtyping, and names already differ
+
         for func_name, func_type in other.signature.items():
             if func_name not in self.signature:
                 return False
@@ -103,6 +109,7 @@ class TypeRegistry:
         self._types[NONE_TYPE_NAME] = NoneTypeET  # NoneTypeET is the unit type in our type system
         self.get_or_create(OBJECT_TYPE_NAME, is_top=True)  # ObjectET is the top type
         self.get_or_create(BOTTOM_TYPE_NAME, is_bottom=True)  # The bottom type
+        self.get_or_create(ANY_TYPE_NAME)  # Any type placeholder for unknown types
         
     def get_or_create(self, name: str, **kwargs) -> ExistentialType:
         if name not in self._types:
