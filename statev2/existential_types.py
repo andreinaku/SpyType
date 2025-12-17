@@ -6,7 +6,7 @@ NONE_TYPE_NAME = "NoneTypeET"
 OBJECT_TYPE_NAME = "ObjectET"
 BOTTOM_TYPE_NAME = "BottomET"
 ANY_TYPE_NAME = "AnyTypeET"
-# SELF_TYPE_MARKER = "SelfET"
+SELF_TYPE_MARKER = "SelfET"
 
 @dataclass
 class ExistentialType:
@@ -20,6 +20,8 @@ class ExistentialType:
     is_top: bool = False
 
     def is_subtype_of(self, other: 'ExistentialType', assumptions: set[tuple[str, str]] | None = None) -> bool:
+        # This is not <: but rather <=
+        
         # TODO: Support sum types
         if len(self.sum_of) > 0 or len(other.sum_of) > 0:
             raise NotImplementedError("Sum types are not supported yet")
@@ -34,23 +36,29 @@ class ExistentialType:
         if pair in assumptions:
             return True
 
+        # If the names are the same, then they are equal
         if self.name == other.name:
             return True
         if other.is_top:  # Everything is a subtype of top (Object)
             return True
         if self.is_bottom:  # Bottom is a subtype of everything
             return True
+        
+        # Every type is equal to Self
+        if self.name == SELF_TYPE_MARKER:
+            return True  # Self is a subtype of everything
+        if other.name == SELF_TYPE_MARKER:
+            return True  # Everything is a subtype of Self
 
         # Add the pair to assumptions to avoid infinite recursion
         assumptions.add(pair)
 
-        # Structural subtyping: subtype must have all methods of supertype
-        # But if supertype has no methods, nominal identity is required
         if not other.signature:
             return False  # No structural basis for subtyping, and names already differ
 
+        # Structural subtyping: subtype must have all methods of supertype
         for func_name, func_type in other.signature.items():
-            if func_name not in self.signature:
+            if func_name not in self.signature: 
                 return False
             if not self.signature[func_name].is_subtype_of(func_type, assumptions):
                 return False
@@ -59,7 +67,7 @@ class ExistentialType:
 
 # NoneTypeET is the existential type for the type of None
 NoneTypeET = ExistentialType(NONE_TYPE_NAME)
-# SelfMarkerET = ExistentialType(SELF_TYPE_MARKER)
+SelfMarkerET = ExistentialType(SELF_TYPE_MARKER)
 
 @dataclass
 class FunctionType(ExistentialType):
@@ -110,6 +118,7 @@ class TypeRegistry:
         self.get_or_create(OBJECT_TYPE_NAME, is_top=True)  # ObjectET is the top type
         self.get_or_create(BOTTOM_TYPE_NAME, is_bottom=True)  # The bottom type
         self.get_or_create(ANY_TYPE_NAME)  # Any type placeholder for unknown types
+        self.get_or_create(SELF_TYPE_MARKER)  # Self type marker
         
     def get_or_create(self, name: str, **kwargs) -> ExistentialType:
         if name not in self._types:

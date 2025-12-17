@@ -32,16 +32,18 @@ def main():
     print("=" * 60)
     registry.print_registry()
     intet = registry.get_or_create("IntET")
-    supportsneget = registry.get_or_create("SupportsNegET")
+    supportsneget = registry.get_or_create("SupportsnegET")
+    supportsselfmulet = registry.get_or_create("SupportsselfmulET")
     floatet = registry.get_or_create("FloatET")
-    print(intet.is_subtype_of(supportsneget))
-    print(supportsneget.is_subtype_of(intet))
-    print(floatet.is_subtype_of(intet))
+    print(intet.is_subtype_of(supportsselfmulet))
+    # print(intet.is_subtype_of(floatet))
+    # print(supportsneget.is_subtype_of(intet))
+    # print(floatet.is_subtype_of(intet))
 
-    cfloatet = registry.get_or_create("CfloatET")
-    cintet = registry.get_or_create("CintET")
-    print(cfloatet.is_subtype_of(cintet))
-    print(cintet.is_subtype_of(cfloatet))
+    # cfloatet = registry.get_or_create("CfloatET")
+    # cintet = registry.get_or_create("CintET")
+    # print(cfloatet.is_subtype_of(cintet))
+    # print(cintet.is_subtype_of(cfloatet))
 
 
 if __name__ == "__main__":
